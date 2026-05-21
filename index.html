@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Richard's Abou Jamra Interception Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<div id="loadScreen">
+  <div style="font-size:1.1em;color:var(--text);letter-spacing:.18em;text-transform:uppercase;font-family:'Rajdhani',sans-serif;">Loading Combat Systems…</div>
+  <div class="load-bar-bg"><div class="load-bar"></div></div>
+</div>
+<div id="damageFlash"></div>
+<div id="notif"></div>
+
+<!-- Crosshair -->
+<div id="crosshair"><div class="ch-dot"></div></div>
+
+<!-- Scope -->
+<div id="scopeOverlay">
+  <div class="scope-bg"></div>
+  <div class="scope-lens">
+    <div class="scope-reticle">
+      <div class="sc-h"></div>
+      <div class="sc-v"></div>
+      <div class="sc-dot"></div>
+      <div class="sc-tick sc-tick-h" style="left:15%"></div>
+      <div class="sc-tick sc-tick-h" style="right:15%"></div>
+      <div class="sc-tick sc-tick-v" style="top:15%"></div>
+      <div class="sc-tick sc-tick-v" style="bottom:15%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loadingScreen" class="screen active" style="background:var(--bg);flex-direction:column;">
+  <div style="font-family:'Rajdhani',sans-serif;font-size:1.4em;letter-spacing:.2em;color:var(--text2);text-transform:uppercase;">Loading…</div>
+</div>
+
+<!-- ACCOUNT SCREEN -->
+<div id="accountScreen" class="screen" style="background:var(--bg);">
+  <div class="mp-card" style="width:380px;">
+    <div class="mp-title" style="margin-bottom:2px;">Richard's Interception</div>
+    <div class="mp-sub" style="margin-bottom:16px;">Create an account to save your progress online</div>
+    <div class="acct-tabs">
+      <button class="acct-tab active" id="tabLogin" onclick="acctShowTab('login')">Login</button>
+      <button class="acct-tab" id="tabRegister" onclick="acctShowTab('register')">Register</button>
+    </div>
+    <div id="acctLoginForm">
+      <input class="mp-input" id="loginUsername" placeholder="Username" maxlength="20"
+        style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_]/g,'')"/>
+      <input class="mp-input" id="loginPassword" type="password" placeholder="Password"/>
+      <div class="mp-err" id="loginErr"></div>
+      <button class="menu-btn btn-primary" style="width:100%;margin:0 0 8px;" onclick="doLogin()">Login →</button>
+    </div>
+    <div id="acctRegForm" style="display:none;">
+      <input class="mp-input" id="regUsername" placeholder="Username (letters, numbers, _)" maxlength="20"
+        style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_]/g,'')"/>
+      <input class="mp-input" id="regPassword" type="password" placeholder="Password (min 6 chars, 1 number)"/>
+      <input class="mp-input" id="regConfirm" type="password" placeholder="Confirm Password"/>
+      <div class="mp-err" id="registerErr"></div>
+      <button class="menu-btn btn-primary" style="width:100%;margin:0 0 8px;" onclick="doRegister()">Create Account →</button>
+    </div>
+    <div class="acct-status" id="acctStatus"></div>
+    <div class="acct-note">Password: min 6 characters, must contain a number.</div>
+  </div>
+</div>
+
+<!-- MAIN MENU -->
+<div id="mainMenu" class="screen">
+  <div>
+    <div class="game-title" id="gameTitle">Richard Abou Jamra<span>Interception Simulation</span></div>
+    <div class="game-subtitle">Missile Defense &nbsp;·&nbsp; FPS Combat</div>
+    <button class="menu-btn btn-primary" id="btnPlay">New Game</button>
+    <button class="menu-btn btn-secondary" id="btnContinue">Continue</button>
+    <button class="menu-btn btn-mp" id="btnMultiplayer">Multiplayer</button>
+    <button class="menu-btn btn-yellow" id="btnShop">Armory &amp; Shop</button>
+    <button class="menu-btn btn-secondary" id="btnStats" style="font-size:.8em;padding:10px 24px;">Statistics &amp; Cards</button>
+    <button class="menu-btn btn-secondary" id="btnCredits" style="font-size:.8em;padding:10px 24px;">Controls &amp; Info</button>
+    <div class="save-badge" id="saveBadge">No save found</div>
+    <div id="bpBadge" style="margin-top:8px;font-family:'Rajdhani',sans-serif;font-size:.78em;letter-spacing:.1em;color:var(--amber);display:none">
+      BATTLE PASS <span id="bpLevelLabel">LV 0</span>
+      <div style="width:160px;height:5px;background:#222;border-radius:3px;margin:4px auto 0;overflow:hidden">
+        <div id="bpXpBar" style="height:100%;background:linear-gradient(90deg,#F0C040,#FF8800);border-radius:3px;width:0%"></div>
+      </div>
+    </div>
+    <div id="menuUserBadge"></div>
+  </div>
+</div>
+
+<!-- AUTH SCREEN (callsign entry — no password needed, P2P) -->
+<div id="authScreen" class="screen">
+  <div class="mp-card">
+    <div class="mp-title">Multiplayer</div>
+    <div class="mp-sub">Choose your callsign</div>
+    <input class="mp-input" id="mpUsername" placeholder="Callsign (e.g. RAJ_ACE)" maxlength="16" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_]/g,'')"/>
+    <div class="mp-err" id="mpUsernameErr"></div>
+    <button class="menu-btn btn-primary" style="width:100%;margin:0 0 8px;" onclick="mpSetUsername()">Continue →</button>
+    <button class="menu-btn btn-secondary" style="width:100%;margin:0;" onclick="showScreen('mainMenu')">← Back</button>
+  </div>
+</div>
+
+<!-- LOBBY SCREEN -->
+<div id="lobbyScreen" class="screen">
+  <div class="mp-card">
+    <div class="mp-title">Multiplayer</div>
+    <div class="mp-sub" id="lobbyUser">Callsign: —</div>
+    <div class="mp-tab-row" style="margin-bottom:14px;">
+      <button class="mp-tab active" id="mpTabCoop" onclick="mpSetMode('coop')" title="Fight missiles together">🤝 Coop</button>
+      <button class="mp-tab" id="mpTabBattle" onclick="mpSetMode('battle')" title="1v1 player vs player">⚔️ Battle</button>
+    </div>
+    <button class="menu-btn btn-primary" style="width:100%;margin:0 0 10px;" onclick="mpCreateRoom()">Create Room</button>
+    <div class="mp-sep"></div>
+    <input class="mp-input" id="joinCode" placeholder="6-char room code" maxlength="6" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"/>
+    <button class="menu-btn btn-secondary" style="width:100%;margin:0 0 6px;" onclick="mpJoinRoom()">Join Room</button>
+    <div class="mp-err" id="lobbyErr"></div>
+    <button class="menu-btn btn-secondary" style="width:100%;margin:4px 0 0;font-size:.78em;" onclick="showScreen('mainMenu')">← Back</button>
+  </div>
+</div>
+
+<!-- WAITING ROOM -->
+<div id="waitingScreen" class="screen">
+  <div class="mp-card">
+    <div class="mp-title" id="waitingTitle">Waiting Room</div>
+    <div class="mp-sub">Code: <b id="waitingCode" style="color:var(--amber);letter-spacing:.18em;font-size:1.1em;">—</b><button class="copy-btn" onclick="copyRoomCode()" title="Copy room code">Copy</button></div>
+    <div id="waitingMode" style="font-size:.76em;color:var(--text2);letter-spacing:.1em;margin:4px 0 12px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;">Mode: Coop</div>
+    <div id="waitingPlayerList"></div>
+    <div class="mp-err" id="waitingErr"></div>
+    <button class="menu-btn btn-primary" id="btnStartMp" style="width:100%;margin:8px 0 6px;display:none;" onclick="mpStartGame()">▶ Start Game</button>
+    <button class="menu-btn btn-secondary" style="width:100%;margin:0;" onclick="mpLeaveRoom()">Leave Room</button>
+  </div>
+</div>
+
+<!-- LOCATION SELECT -->
+<div id="locationSelect" class="screen">
+  <canvas id="mapCanvas" width="1600" height="900"></canvas>
+  <div id="mapTopBar">
+    <div class="screen-title">Select Theater</div>
+    <div class="screen-sub">Click a location to deploy</div>
+  </div>
+  <div id="mapInfoPanel">
+    <div id="mapLocName">Select a theater</div>
+    <div id="mapLocDesc">Click a marker on the map to deploy.</div>
+    <div id="mapLocDetails" style="display:none">
+      <div class="map-detail-row"><span class="map-detail-lbl">Environment</span><span id="mapEnv">—</span></div>
+      <div class="map-detail-row"><span class="map-detail-lbl">Difficulty</span><span id="mapDiff">—</span></div>
+      <div class="map-detail-row"><span class="map-detail-lbl">Threat Level</span><span id="mapThreat">—</span></div>
+      <button class="menu-btn btn-primary" id="btnDeploy2" style="margin-top:14px;width:100%;">Deploy →</button>
+    </div>
+  </div>
+  <button class="btn-secondary back-btn" id="btnLocBack">← Back</button>
+</div>
+
+<!-- CUSTOMIZATION -->
+<div id="customization" class="screen">
+  <div style="text-align:center;width:100%;padding:16px;">
+    <div class="screen-title" style="margin-bottom:18px;">Customize Richard</div>
+    <div class="custom-wrap">
+      <canvas id="charPreviewCanvas" width="180" height="280"></canvas>
+      <div class="custom-panel">
+        <div class="credits-badge" id="creditsDisplay">💰 Credits: 0</div>
+        <div class="custom-sec">
+          <label>Outfit Color</label>
+          <div class="swatch-row" id="outfitSwatches"></div>
+        </div>
+        <div class="custom-sec">
+          <label>Armor Style</label>
+          <div class="tog-row" id="armorToggles">
+            <button class="tog-btn" data-armor="light">Light</button>
+            <button class="tog-btn" data-armor="heavy">Heavy</button>
+            <button class="tog-btn" data-armor="stealth">Stealth</button>
+          </div>
+        </div>
+        <div class="custom-sec">
+          <label>Helmet</label>
+          <div class="tog-row" id="helmetToggles">
+            <button class="tog-btn" data-helmet="yes">With Helmet</button>
+            <button class="tog-btn" data-helmet="no">No Helmet</button>
+          </div>
+        </div>
+        <div class="custom-sec">
+          <label>Visor Color</label>
+          <div class="swatch-row" id="visorSwatches"></div>
+        </div>
+        <div class="custom-sec">
+          <label>Skin Tone</label>
+          <div class="swatch-row" id="skinSwatches"></div>
+        </div>
+        <div class="custom-sec">
+          <label>Backpack</label>
+          <div class="tog-row" id="bpToggles">
+            <button class="tog-btn" data-bp="missile">Missile Pack</button>
+            <button class="tog-btn" data-bp="standard">Standard</button>
+            <button class="tog-btn" data-bp="none">None</button>
+          </div>
+        </div>
+        <div class="custom-actions">
+          <button class="menu-btn btn-primary" id="btnDeploy" style="width:130px;font-size:.88em;margin:0;">Deploy →</button>
+          <button class="back-btn" id="btnCustomBack">← Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="screen">
+  <div class="hud-row">
+    <div class="hud-panel"><div class="hud-lbl">Wave</div><div class="hud-val blue" id="hudWave">1</div></div>
+    <div class="hud-panel" style="text-align:center;min-width:150px;">
+      <div class="hud-lbl">City Integrity</div>
+      <div class="hud-val green" id="hudCity">100%</div>
+      <div class="bar-bg"><div class="bar-fill bar-city" id="cityBar" style="width:100%"></div></div>
+    </div>
+    <div class="hud-panel" style="text-align:right;"><div class="hud-lbl">Score</div><div class="hud-val gold" id="hudScore">0</div></div>
+  </div>
+  <div class="hud-center-wrap">
+    <div class="wave-announce" id="waveAnnounce"></div>
+  </div>
+  <div class="hud-row">
+    <div class="hud-panel"><div class="hud-lbl">Missiles Inbound</div><div class="hud-val red" id="hudMissiles">0</div></div>
+    <div class="hud-panel" style="text-align:center;min-width:130px;">
+      <div class="hud-lbl" id="hudLoc" style="font-size:.78em;color:#8ABBA0;">—</div>
+      <div class="hud-lbl" style="margin-top:2px;font-size:.62em;">HOSTILE ORIGIN</div>
+      <div class="hud-val red" id="hudOrigin" style="font-size:1.1em;">—</div>
+    </div>
+    <div class="hud-panel" style="text-align:right;">
+      <div class="hud-lbl">Ammo</div>
+      <div class="hud-val orange" id="hudAmmo">12 / 12</div>
+      <div class="bar-bg"><div class="bar-fill bar-ammo" id="ammoBar" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div id="clickNotice">
+    <h3>Click to Enter Combat Mode</h3>
+    <p style="line-height:1.7em">
+    <b>MOVE</b> — WASD &nbsp;|&nbsp; <b>AIM</b> — Mouse &nbsp;|&nbsp; <b>FIRE</b> — LMB &nbsp;|&nbsp; <b>SCOPE / HOOK</b> — RMB<br>
+    <b>JUMP</b> — Space &nbsp;|&nbsp; <b>SPRINT</b> — Shift &nbsp;|&nbsp; <b>RELOAD</b> — R &nbsp;|&nbsp; <b>PAUSE</b> — ESC<br>
+    <b>WEAPONS</b> — 1 Pistol &nbsp;2 Launcher &nbsp;3 Shotgun &nbsp;4 Sniper &nbsp;5 SMG &nbsp;(or scroll)<br>
+    <b>GADGETS</b> — G Flashbang &nbsp;|&nbsp; T Airstrike &nbsp;|&nbsp; B Cover<br>
+    <b>ULTIMATES</b> — F Cyber Bullet &nbsp;|&nbsp; V RAJPN Fist Bump<br>
+    <span style="color:var(--text2);font-size:.85em">Ultimates require purchase from Armory. Hookshot (RMB w/ Shotgun) deals 3 dmg + cooldown.</span>
+    </p>
+  </div>
+</div>
+<div id="weaponBar"></div>
+<div id="cyberBulletHud" style="display:none;position:fixed;bottom:80px;right:20px;
+  font-family:'Rajdhani',sans-serif;font-size:.8em;letter-spacing:.08em;text-transform:uppercase;
+  color:#FF4422;text-align:center;z-index:30;">
+  <div style="font-size:1.6em;">🚗</div>
+  <div style="font-size:.65em;color:var(--text2)">[F] CYBER BULLET</div>
+  <div id="cyberBulletLabel">READY</div>
+</div>
+<div id="rajpnFistHud" style="display:none;position:fixed;bottom:80px;right:140px;
+  font-family:'Rajdhani',sans-serif;font-size:.8em;letter-spacing:.08em;text-transform:uppercase;
+  color:#FF8833;text-align:center;z-index:30;">
+  <div style="font-size:1.6em;">👊</div>
+  <div style="font-size:.65em;color:var(--text2)">[V] FIST BUMP</div>
+  <div id="rajpnFistLabel">READY</div>
+</div>
+<div id="gadgetHud" style="display:none;position:fixed;bottom:80px;left:20px;
+  font-family:'Rajdhani',sans-serif;font-size:.78em;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text2);z-index:30;display:flex;flex-direction:column;gap:4px;">
+  <div id="gadgetFlashbang"></div>
+  <div id="gadgetAirstrike"></div>
+  <div id="gadgetCover"></div>
+</div>
+<div id="healthBars"></div>
+<div id="coopLeaderboard" style="display:none;position:fixed;top:14px;left:14px;
+  font-family:'Rajdhani',sans-serif;font-size:.78em;letter-spacing:.07em;text-transform:uppercase;
+  background:rgba(0,0,0,.6);border:1px solid #334;border-radius:5px;padding:7px 12px;z-index:30;
+  color:var(--text2);min-width:190px">
+  <div style="color:var(--amber);font-weight:700;font-size:.9em;margin-bottom:4px">COOP STATS</div>
+  <div id="coopLbRows"></div>
+</div>
+<canvas id="minimap" width="160" height="160"></canvas>
+<div id="modMenu">
+  <div class="mod-title">// LLOYD MOD MENU //</div>
+  <div class="mod-opt" id="modOptAimbot">
+    <span class="mod-opt-name">Aimbot (nearest target)</span>
+    <div class="mod-toggle" id="togAimbot"></div>
+  </div>
+  <div class="mod-opt" id="modOptInfAmmo">
+    <span class="mod-opt-name">Infinite Ammo</span>
+    <div class="mod-toggle" id="togInfAmmo"></div>
+  </div>
+  <div class="mod-opt" id="modOptGod">
+    <span class="mod-opt-name">God Mode</span>
+    <div class="mod-toggle" id="togGod"></div>
+  </div>
+  <div style="display:flex;justify-content:center;padding:10px 0 2px;">
+    <button class="mod-btn" id="btnModCurrency">+999,999 CREDITS</button>
+  </div>
+  <div class="mod-close-hint">ESC to close</div>
+</div>
+
+<!-- PAUSE -->
+<div id="pauseMenu" class="screen">
+  <div style="text-align:center;">
+    <div class="pause-title">— Paused —</div>
+    <button class="menu-btn btn-red" id="btnResume">▶ Resume</button>
+    <button class="menu-btn btn-blue" id="btnPauseCustom">✎ Customize Richard</button>
+    <button class="menu-btn btn-green" id="btnPauseMainMenu">⌂ Main Menu</button>
+    <button class="menu-btn btn-secondary" id="btnPauseSettings" style="font-size:.78em;padding:10px 24px;margin-top:8px;">⚙ Settings</button>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settingsScreen" class="screen">
+  <div style="text-align:center;max-width:380px;margin:0 auto;">
+    <div class="pause-title">— Settings —</div>
+    <div id="settingsLogoutConfirm" style="display:none;background:rgba(255,60,60,.12);border:1px solid #FF4422;border-radius:8px;padding:14px 18px;margin-bottom:14px;color:#FF8888;font-size:.9em;">
+      Are you sure you want to log out?<br>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:10px;">
+        <button class="menu-btn btn-red" id="btnLogoutConfirm" style="padding:8px 22px;font-size:.85em;">Yes, Log Out</button>
+        <button class="menu-btn btn-secondary" id="btnLogoutCancel" style="padding:8px 22px;font-size:.85em;">Cancel</button>
+      </div>
+    </div>
+    <button class="menu-btn btn-secondary" id="btnLogout" style="font-size:.85em;padding:10px 24px;">⏻ Log Out</button>
+    <button class="menu-btn btn-secondary" id="btnSettingsBack" style="font-size:.85em;padding:10px 24px;margin-top:6px;">← Back</button>
+  </div>
+</div>
+
+<!-- WAVE COMPLETE -->
+<div id="waveComplete" class="screen">
+  <div>
+    <div class="wc-title">WAVE CLEARED!</div>
+    <div class="wc-sub" id="wcSub">Wave 1 Complete</div>
+    <div class="stat-box">
+      <div class="stat-row"><span class="stat-lbl">Missiles Intercepted</span><span class="stat-val" id="stIntercepted">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">Missiles Missed</span><span class="stat-val" id="stMissed">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">Buildings Lost</span><span class="stat-val" id="stBuildings">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">Accuracy</span><span class="stat-val" id="stAccuracy">0%</span></div>
+      <div class="stat-row"><span class="stat-lbl">Wave Score</span><span class="stat-val" id="stWaveScore">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">Clean Wave Bonus</span><span class="stat-val" id="stCleanBonus">—</span></div>
+    </div>
+    <div class="earned" id="wcEarned">+0 Credits Earned</div>
+    <button class="menu-btn btn-red" id="btnNextWave" style="width:230px;margin:0 auto;">Next Wave →</button>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameOver" class="screen">
+  <div style="text-align:center;">
+    <div class="go-title">CITY DESTROYED</div>
+    <div class="go-sub">The missiles have won. The city has fallen.</div>
+    <div class="stat-box">
+      <div class="stat-row"><span class="stat-lbl">Waves Survived</span><span class="stat-val" id="goWaves">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">Total Score</span><span class="stat-val" id="goScore">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">Missiles Intercepted</span><span class="stat-val" id="goIntercepted">0</span></div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;margin-top:18px;flex-wrap:wrap;">
+      <button class="menu-btn btn-red" id="btnRetry" style="width:175px;font-size:.88em;">↺ Try Again</button>
+      <button class="menu-btn btn-blue" id="btnGoMenu" style="width:175px;font-size:.88em;">⌂ Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- BATTLE END SCREEN -->
+<div id="battleEndScreen" class="screen">
+  <div style="text-align:center;max-width:420px;">
+    <div id="battleEndTitle" style="font-size:2.6em;font-family:'Rajdhani',sans-serif;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">VICTORY</div>
+    <div id="battleEndSub" style="font-size:.9em;letter-spacing:.12em;color:var(--text2);margin-bottom:18px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;">Gulag — Best of 3</div>
+    <div class="stat-box" style="margin-bottom:16px;">
+      <div class="stat-row"><span class="stat-lbl">Rounds Won</span><span class="stat-val" id="beRoundsWon">2</span></div>
+      <div class="stat-row"><span class="stat-lbl">Rounds Lost</span><span class="stat-val" id="beRoundsLost">1</span></div>
+      <div class="stat-row"><span class="stat-lbl">Credits Earned</span><span class="stat-val gold" id="beCredits">+700</span></div>
+    </div>
+    <div id="beRematchStatus" style="font-size:.78em;color:var(--text2);letter-spacing:.08em;font-family:'Rajdhani',sans-serif;min-height:1.4em;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="menu-btn btn-red" id="btnBattleRematch" style="width:180px;">↺ Rematch</button>
+      <button class="menu-btn btn-blue" id="btnBattleMenu" style="width:180px;">⌂ Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP -->
+<div id="shopScreen" class="screen">
+  <div style="text-align:center;width:100%;padding:20px 16px;">
+    <div class="screen-title">Armory &amp; Shop</div>
+    <div class="credits-badge" id="shopCreds" style="margin:8px 0 14px;">💰 Credits: 0</div>
+    <div class="shop-tab-row">
+      <button class="shop-tab-btn active" data-tab="weapons" onclick="setShopTab('weapons')">⚔️ Weapons</button>
+      <button class="shop-tab-btn" data-tab="upgrades" onclick="setShopTab('upgrades')">⚡ Upgrades</button>
+      <button class="shop-tab-btn" data-tab="gadgets" onclick="setShopTab('gadgets')">🎒 Gadgets</button>
+      <button class="shop-tab-btn" data-tab="ultimate" onclick="setShopTab('ultimate')">🚗 Ultimate</button>
+      <button class="shop-tab-btn" data-tab="cosmetics" onclick="setShopTab('cosmetics')">🎨 Cosmetics</button>
+    </div>
+    <div class="shop-grid" id="shopGrid"></div>
+    <button class="back-btn" id="btnShopBack" style="margin-top:20px;">← Back</button>
+  </div>
+</div>
+
+<!-- CONTROLS INFO -->
+<div id="infoScreen" class="screen">
+  <div style="text-align:center;max-width:480px;padding:20px;">
+    <div class="screen-title" style="margin-bottom:18px;">Controls &amp; Info</div>
+    <div style="background:rgba(255,255,255,.04);border:1px solid #1e2030;border-radius:10px;padding:20px;text-align:left;line-height:1.9;font-size:.85em;">
+      <b style="color:var(--amber)">Movement</b><br>
+      W A S D — Move &nbsp;|&nbsp; Shift — Sprint &nbsp;|&nbsp; Space — Jump<br><br>
+      <b style="color:var(--amber)">Combat</b><br>
+      LMB — Fire &nbsp;|&nbsp; RMB — Scope / Hook (Shotgun) &nbsp;|&nbsp; R — Reload<br>
+      1 Pistol &nbsp;2 Launcher &nbsp;3 Shotgun &nbsp;4 Sniper &nbsp;5 SMG &nbsp;|&nbsp; Scroll — cycle weapons<br><br>
+      <b style="color:var(--amber)">Gadgets</b><br>
+      G — Flashbang (stuns soldiers in 18m) &nbsp;|&nbsp; T — Airstrike (destroys missiles in radius) &nbsp;|&nbsp; B — Cover (deploy barrier)<br><br>
+      <b style="color:var(--amber)">Ultimates</b> (buy in Armory first)<br>
+      F — Cyber Bullet: guided car missile locks &amp; destroys nearest missile (15s CD)<br>
+      V — RAJPN Fist Bump: two giant fists shoot from sides, fist bump explodes all missiles in corridor (20s CD)<br><br>
+      <b style="color:var(--amber)">Multiplayer</b><br>
+      Coop: fight missiles together — top-left leaderboard tracks intercepts &amp; kills<br>
+      Battle: 1v1 gulag arena — best of 3 rounds, use any weapon, no missiles<br><br>
+      <b style="color:var(--amber)">Cards (end of wave)</b><br>
+      Pick 1 of 3 cards after each wave. Common = beneficial, Rare+ = mostly harder (but pay credits).<br>
+      Check encyclopedia in Statistics to track what you've found.<br><br>
+      <b style="color:var(--amber)">Battle Pass</b><br>
+      Earn XP by completing waves. Level up every 500 XP. Track on main menu.<br><br>
+      <b style="color:var(--amber)">Objective</b><br>
+      Shoot incoming missiles before they hit your city. City integrity 0% = Game Over.<br>
+      Boss missiles (large, red) require multiple hits. Kill streak x1.5 at 3, x2 at 5.
+    </div>
+    <button class="back-btn" id="btnInfoBack" style="margin-top:18px;">← Back</button>
+  </div>
+</div>
+
+<!-- CARD PICK SCREEN -->
+<div id="cardScreen" class="screen">
+  <div style="text-align:center;padding:20px;width:100%;">
+    <div class="screen-title">Choose Enhancement</div>
+    <div class="screen-sub" id="cardPickSub">Pick 1 of 3 — effects are permanent</div>
+    <div class="card-pick-wrap" id="cardChoices"></div>
+    <div style="font-size:.7em;color:var(--text2);font-family:'Rajdhani',sans-serif;letter-spacing:.08em;">Higher rarity = stronger effect. Unknown cards locked until first chosen.</div>
+  </div>
+</div>
+
+<!-- STATISTICS & ENCYCLOPEDIA -->
+<div id="statsScreen" class="screen">
+  <div style="text-align:center;width:100%;padding:20px;">
+    <div class="screen-title">Statistics &amp; Encyclopedia</div>
+    <div class="shop-tab-row" style="margin:14px 0;">
+      <button class="shop-tab-btn active" id="tabStatsBtn" onclick="setStatsTab('stats')">📊 Stats</button>
+      <button class="shop-tab-btn" id="tabEncyBtn" onclick="setStatsTab('encyclopedia')">📖 Cards</button>
+    </div>
+    <div id="statsTabContent"></div>
+    <div id="encyclopediaTabContent" style="display:none"></div>
+    <button class="back-btn" style="margin-top:20px;" onclick="showScreen('mainMenu')">← Back</button>
+  </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+
+<script src="js/config.js"></script>
+<script src="js/save.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/gameplay.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script src="js/multiplayer.js"></script>
+
+<!-- service worker -->
+<script>
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/rajis/sw.js').catch(()=>{});
+  }
+</script>
+</body>
+</html>

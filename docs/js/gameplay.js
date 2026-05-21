@@ -1,0 +1,689 @@
+// Waves + player + weapon system + hook + ultimates + gadgets
+// ═══════════════════════════════════════════════════════════════
+//  WAVE SYSTEM
+// ═══════════════════════════════════════════════════════════════
+function startWave(){
+  waveActive=true;
+  killStreak=0; killStreakTimer=0;
+  const isBonusWave=waveNum>0&&waveNum%5===0;
+  waveMissileTotal=(isBonusWave?2:1)*(3+waveNum*2+(waveNum>=3?1:0));
+  waveMissileSpawned=0;
+  waveMissileTimer=0;
+  waveMissileInterval=Math.max(isBonusWave?.9:1.4, 4-waveNum*.3);
+  waveIntercepted=0;
+  waveMissed=0;
+  waveShotsFired=0;
+  waveBldDestroyed=0;
+  waveScore=0;
+
+  if(isBonusWave){
+    showNotif(`⚡ BONUS WAVE ${waveNum}! Double missiles — double rewards!`);
+    showWaveAnnounce(`★ BONUS WAVE ${waveNum} ★ — ${waveMissileTotal} missiles inbound`);
+  } else {
+    showNotif(`WAVE ${waveNum} — Intercept all missiles!`);
+    showWaveAnnounce(`WAVE ${waveNum} — ${waveMissileTotal} missiles inbound`);
+  }
+  if(selectedLoc) spawnSoldiers(selectedLoc, Math.min(2+waveNum, 8));
+}
+
+function updateWave(dt){
+  if(!waveActive||mpIsGuest||battleActive) return;
+
+  // Spawn interval
+  waveMissileTimer-=dt;
+  if(waveMissileTimer<=0&&waveMissileSpawned<waveMissileTotal){
+    waveMissileTimer=waveMissileInterval;
+    const isBoss=waveNum>=3&&waveMissileSpawned===Math.floor(waveMissileTotal/2);
+    spawnMissile(isBoss);
+    waveMissileSpawned++;
+  }
+
+  // Check wave end
+  if(waveMissileSpawned>=waveMissileTotal&&missiles.filter(m=>!m.isDestroyed).length===0){
+    endWave();
+  }
+}
+
+function endWave(){
+  waveActive=false;
+  sfxWaveComplete();
+  if(document.pointerLockElement) document.exitPointerLock();
+  isLocked=false;
+
+  const accuracy=waveShotsFired>0?Math.round(waveIntercepted/waveShotsFired*100):0;
+  const baseEarned=waveIntercepted*80+Math.max(0,(waveMissileTotal-waveMissed)*50);
+  const cleanBonus=waveMissed===0?200+waveNum*50:0;
+  const earned=baseEarned+cleanBonus;
+  saveData.currency+=earned;
+  saveData.totalScore+=waveScore;
+  saveData.waveRecord=Math.max(saveData.waveRecord,waveNum);
+  saveData.totalIntercepted+=waveIntercepted;
+  saveData.totalShotsFired=(saveData.totalShotsFired||0)+waveShotsFired;
+  saveData.totalWaves=(saveData.totalWaves||0)+1;
+  saveSave();
+
+  document.getElementById('wcSub').textContent=`Wave ${waveNum} Complete`;
+  document.getElementById('stIntercepted').textContent=waveIntercepted;
+  document.getElementById('stMissed').textContent=waveMissed;
+  document.getElementById('stBuildings').textContent=waveBldDestroyed;
+  document.getElementById('stAccuracy').textContent=accuracy+'%';
+  document.getElementById('stWaveScore').textContent=waveScore;
+  document.getElementById('wcEarned').textContent=`+${earned} Credits Earned${cleanBonus?` (CLEAN WAVE +${cleanBonus})`:''}`;
+  document.getElementById('stCleanBonus').textContent=cleanBonus>0?`+${cleanBonus}`:'—';
+
+  waveNum++;
+  // XP for battle pass
+  const xpGained=100+Math.max(0,waveNum-1)*10;
+  saveData.bpXP=(saveData.bpXP||0)+xpGained;
+  const newLevel=Math.floor(saveData.bpXP/500);
+  if(newLevel>(saveData.bpLevel||0)){ saveData.bpLevel=newLevel; showNotif('BATTLE PASS LV '+newLevel+' UNLOCKED!'); }
+  saveSave();
+  updateSaveUI();
+  showScreen('waveComplete');
+  // Queue card pick only in solo/coop (not battle mode)
+  if(!battleActive) _pendingCardPick=true;
+}
+
+function triggerGameOver(){
+  waveActive=false;
+  saveData.totalScore+=score;
+  saveSave();
+  document.getElementById('goWaves').textContent=waveNum-1;
+  document.getElementById('goScore').textContent=score;
+  document.getElementById('goIntercepted').textContent=totalInterceptedSession;
+  setTimeout(()=>showScreen('gameOver'),600);
+}
+
+// Simple AABB push-out for gulag cover objects
+function _resolveGulagCollisions(){
+  const R=0.45, box=new THREE.Box3();
+  for(const obj of gulagCollidables){
+    box.setFromObject(obj);
+    // player eye=py, feet=py-PLAYER_H; collide if any vertical slice overlaps
+    if(px>box.min.x-R && px<box.max.x+R &&
+       pz>box.min.z-R && pz<box.max.z+R &&
+       py>box.min.y   && py<box.max.y+PLAYER_H){
+      const ox1=px-(box.min.x-R), ox2=(box.max.x+R)-px;
+      const oz1=pz-(box.min.z-R), oz2=(box.max.z+R)-pz;
+      const mn=Math.min(ox1,ox2,oz1,oz2);
+      if(mn===ox1){ px=box.min.x-R; vx=Math.min(0,vx); }
+      else if(mn===ox2){ px=box.max.x+R; vx=Math.max(0,vx); }
+      else if(mn===oz1){ pz=box.min.z-R; vz=Math.min(0,vz); }
+      else             { pz=box.max.z+R; vz=Math.max(0,vz); }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PLAYER CONTROLLER
+// ═══════════════════════════════════════════════════════════════
+function updatePlayer(dt){
+  // While being pulled by grapple — surrender ground control entirely
+  if(hookPulling){
+    px+=vx*dt; py+=vy*dt; pz+=vz*dt;
+    const _b=battleActive?39:MAP_BOUND;
+    px=Math.max(-_b,Math.min(_b,px));
+    pz=Math.max(-_b,Math.min(_b,pz));
+    if(py<=PLAYER_H){py=PLAYER_H;vy=0;onGround=true;}
+    camera.position.set(px,py,pz);
+    camera.rotation.order='YXZ';
+    camera.rotation.y=yaw;
+    camera.rotation.x=pitch;
+    bobX*=.85;bobY*=.85;
+    if(recoilT>0) recoilT=Math.max(0,recoilT-dt);
+    const recoilY=recoilT>0?recoilT/.12*.04:0;
+    const recoilZ=recoilT>0?recoilT/.12*.06:0;
+    if(weaponMesh) weaponMesh.position.set(.25+bobX,-.22-bobY+recoilY,-.42+recoilZ);
+    return;
+  }
+
+  const fw=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+  const rt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+  sprinting=!!keys['ShiftLeft']||!!keys['ShiftRight'];
+  const spd=sprinting?effectiveSprint:effectiveSpd;
+  let mx=0,mz=0;
+  if(keys['KeyW']){mx+=fw.x;mz+=fw.z;}
+  if(keys['KeyS']){mx-=fw.x;mz-=fw.z;}
+  if(keys['KeyA']){mx-=rt.x;mz-=rt.z;}
+  if(keys['KeyD']){mx+=rt.x;mz+=rt.z;}
+  const ml=Math.sqrt(mx*mx+mz*mz);
+  if(ml>0){vx=mx/ml*spd;vz=mz/ml*spd;}
+  else{vx*=.82;vz*=.82;}
+
+  if((keys['Space'])&&onGround){vy=JUMP_VEL;onGround=false;}
+  if(!onGround) vy+=GRAVITY*dt;
+
+  px+=vx*dt; py+=vy*dt; pz+=vz*dt;
+
+  if(py<=PLAYER_H){py=PLAYER_H;vy=0;onGround=true;}
+  const bound=battleActive?39:MAP_BOUND;
+  px=Math.max(-bound,Math.min(bound,px));
+  pz=Math.max(-bound,Math.min(bound,pz));
+  // Building collision (normal mode)
+  if(!battleActive){
+    const R=0.45;
+    for(const b of buildings){
+      if(b.isDestroyed) continue;
+      const hw=b.w/2+R, hd=b.d/2+R;
+      const bdx=px-b.pos.x, bdz=pz-b.pos.z;
+      if(Math.abs(bdx)<hw&&Math.abs(bdz)<hd&&py<b.h+PLAYER_H){
+        const ox=hw-Math.abs(bdx), oz=hd-Math.abs(bdz);
+        if(ox<oz){px=b.pos.x+(bdx>=0?hw:-hw);vx=0;}
+        else{pz=b.pos.z+(bdz>=0?hd:-hd);vz=0;}
+      }
+    }
+  }
+  // Gulag: push player out of cover objects
+  if(battleActive) _resolveGulagCollisions();
+
+  camera.position.set(px,py,pz);
+  camera.rotation.order='YXZ';
+  camera.rotation.y=yaw;
+  camera.rotation.x=pitch;
+
+  checkAmmoPack();
+
+  // Weapon bob + recoil
+  const moving=(Math.abs(vx)>0.5||Math.abs(vz)>0.5)&&onGround;
+  if(moving){bobT+=dt*(sprinting?13:8);bobX=Math.sin(bobT*.5)*.012;bobY=Math.abs(Math.sin(bobT))*.009;}
+  else{bobX*=.88;bobY*=.88;}
+  if(recoilT>0) recoilT=Math.max(0,recoilT-dt);
+  const recoilY=recoilT>0?recoilT/.12*.04:0;
+  const recoilZ=recoilT>0?recoilT/.12*.06:0;
+  if(weaponMesh){
+    weaponMesh.position.set(.25+bobX,-.22-bobY+recoilY,-.42+recoilZ);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WEAPON UPDATE
+// ═══════════════════════════════════════════════════════════════
+function updateWeapon(dt){
+  // Cooldown
+  if(fireCD>0) fireCD-=dt;
+
+  // Auto-fire for weapons with autoFire flag (e.g. P90 SMG)
+  if(mouseHeld&&isLocked&&gameActive&&!gamePaused&&WEAPONS[currentWeapon]?.autoFire) fireProjectile();
+
+  // Reload
+  if(isReloading){
+    reloadT-=dt;
+    if(reloadT<=0){isReloading=false;ammo=WEAPONS[currentWeapon].maxAmmo;weaponAmmo[currentWeapon]=ammo;}
+  } else if(ammo===0&&!isReloading){
+    startReload();
+  }
+
+  // Scope transition
+  const targetT=scoped?1:0;
+  scopeT+=(targetT-scopeT)*dt*9;
+  camera.fov=NORMAL_FOV+(SCOPE_FOV-NORMAL_FOV)*scopeT;
+  camera.updateProjectionMatrix();
+
+  const scopeEl=document.getElementById('scopeOverlay');
+  const crosshairEl=document.getElementById('crosshair');
+  if(scopeT>.08){
+    scopeEl.style.display='block';
+    crosshairEl.style.opacity=String(1-scopeT);
+  } else {
+    scopeEl.style.display='none';
+    crosshairEl.style.opacity='1';
+  }
+}
+
+function startReload(){
+  const wep=WEAPONS[currentWeapon];
+  if(isReloading||ammo===wep.maxAmmo) return;
+  isReloading=true;reloadT=wep.reloadTime;
+  sfxReload();showNotif('Reloading '+wep.name+'…');
+}
+
+function switchWeapon(id){
+  if(!weaponInventory.has(id)||id===currentWeapon) return;
+  weaponAmmo[currentWeapon]=ammo;
+  currentWeapon=id;
+  ammo=weaponAmmo[id];
+  isReloading=false;reloadT=0;fireCD=0;
+  if(weaponMesh){camera.remove(weaponMesh);}
+  weaponMesh=makeWeaponMesh();camera.add(weaponMesh);
+  showNotif(WEAPONS[id].name);
+  updateWeaponBar();
+}
+
+function updateWeaponBar(){
+  const bar=document.getElementById('weaponBar');
+  if(!bar) return;
+  bar.innerHTML='';
+  Object.values(WEAPONS).forEach((w,i)=>{
+    const locked=!weaponInventory.has(w.id);
+    const active=w.id===currentWeapon&&!locked;
+    const div=document.createElement('div');
+    div.className='wslot'+(active?' active':'')+(locked?' locked':'');
+    div.innerHTML=`<div class="ws-num">${i+1}</div><div class="ws-icon">${w.icon}</div>`+
+      `<div class="ws-name">${w.name}</div><div class="ws-ammo">${locked?'LOCKED':(w.id===currentWeapon?ammo:weaponAmmo[w.id])+'/'+w.maxAmmo}</div>`;
+    bar.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GRAPPLING HOOK
+// ═══════════════════════════════════════════════════════════════
+function _makeHookMesh(){
+  const g=new THREE.Group();
+  const metal=new THREE.MeshLambertMaterial({color:0x909090});
+  const dark =new THREE.MeshLambertMaterial({color:0x444444});
+  // Shaft
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.28,8),metal);
+  shaft.rotation.x=Math.PI/2; g.add(shaft);
+  // Ring at back (rope attachment)
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.032,.008,6,10),dark);
+  ring.position.z=.14; g.add(ring);
+  // 3 curved prongs at the front, spread 120° apart
+  for(let i=0;i<3;i++){
+    const angle=i*(Math.PI*2/3);
+    const prong=new THREE.Mesh(new THREE.CylinderGeometry(.009,.004,.13,4),dark);
+    // Base at tip of shaft
+    prong.position.set(Math.cos(angle)*.028, Math.sin(angle)*.028, -.12);
+    // Angle each prong outward and curve it backward
+    prong.rotation.z=angle;
+    prong.rotation.x=-0.55;
+    g.add(prong);
+    // Small barb tip on each prong
+    const barb=new THREE.Mesh(new THREE.ConeGeometry(.008,.04,4),dark);
+    barb.position.set(Math.cos(angle)*.038, Math.sin(angle)*.038, -.185);
+    barb.rotation.z=angle;
+    barb.rotation.x=-0.55;
+    g.add(barb);
+  }
+  return g;
+}
+
+function _ropePoints(from, to, segs){
+  const pts=[];
+  const dist=from.distanceTo(to);
+  const sag=dist*0.07;
+  for(let i=0;i<=segs;i++){
+    const t=i/segs;
+    const p=from.clone().lerp(to,t);
+    p.y-=Math.sin(t*Math.PI)*sag;
+    pts.push(p);
+  }
+  return pts;
+}
+
+function fireHook(){
+  if(hookActive||hookPulling||hookCD>0) return;
+  sfxHookFire();
+  const dir=new THREE.Vector3(); camera.getWorldDirection(dir);
+  hookPos=new THREE.Vector3(px,py,pz).add(dir.clone().multiplyScalar(.6));
+  hookVel=dir.clone().multiplyScalar(100);
+
+  hookMesh=_makeHookMesh();
+  // Orient so the prong-end (-Z) faces the travel direction
+  hookMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1), dir.clone().normalize());
+  hookMesh.position.copy(hookPos);
+  scene.add(hookMesh);
+
+  // Rope: dark braided-looking line
+  const lGeo=new THREE.BufferGeometry().setFromPoints([hookPos.clone(),hookPos.clone()]);
+  hookLine=new THREE.Line(lGeo, new THREE.LineBasicMaterial({color:0x5C3A1A,transparent:true,opacity:.92}));
+  scene.add(hookLine);
+  hookActive=true;
+}
+
+function updateHook(dt){
+  if(!hookActive&&!hookPulling) return;
+  const playerPos=new THREE.Vector3(px,py,pz);
+
+  if(hookActive&&hookPos&&hookVel){
+    hookPos.addScaledVector(hookVel, dt);
+    if(hookMesh){
+      hookMesh.position.copy(hookPos);
+      // Keep claw oriented along travel direction
+      if(hookVel.lengthSq()>0.01)
+        hookMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1), hookVel.clone().normalize());
+    }
+    hookLine.geometry.setFromPoints(_ropePoints(playerPos, hookPos, 10));
+    hookLine.geometry.attributes.position.needsUpdate=true;
+
+    const distToPlayer=hookPos.distanceTo(playerPos);
+    let latched=false;
+
+    // Soldiers
+    for(const s of soldiers){
+      if(hookPos.distanceTo(new THREE.Vector3(s.pos.x,ENEMY_TYPES[s.type].baseScale,s.pos.z))<2.0){
+        hookTarget={type:'soldier',ref:s}; sfxHookLatch(); hookActive=false; hookPulling=true; latched=true; break;
+      }
+    }
+    // Buildings — NOT missiles (moving targets cause infinite-pull bug)
+    if(!latched) for(const b of buildings){
+      if(b.isDestroyed) continue;
+      const dx=hookPos.x-b.pos.x, dz=hookPos.z-b.pos.z;
+      if(Math.abs(dx)<b.w/2+.5 && Math.abs(dz)<b.d/2+.5 && hookPos.y>0 && hookPos.y<b.h+1){
+        hookTarget={type:'static',pos:hookPos.clone()}; sfxHookLatch(); hookActive=false; hookPulling=true; latched=true; break;
+      }
+    }
+    // Ground
+    if(!latched&&hookPos.y<=0.3){
+      hookPos.y=0.3;
+      hookTarget={type:'static',pos:hookPos.clone()}; sfxHookLatch(); hookActive=false; hookPulling=true; latched=true;
+    }
+    // Max range — missed everything
+    if(!latched&&distToPlayer>60) releaseHook();
+
+  } else if(hookPulling){
+    if(!hookTarget){ releaseHook(); return; }
+
+    // Update anchor for moving targets (soldiers only — missiles removed)
+    if(hookTarget.type==='soldier'){
+      if(!soldiers.includes(hookTarget.ref)){ releaseHook(); return; }
+      hookPos=new THREE.Vector3(hookTarget.ref.pos.x, ENEMY_TYPES[hookTarget.ref.type].baseScale, hookTarget.ref.pos.z);
+    } else {
+      hookPos=hookTarget.pos.clone();
+    }
+
+    if(hookMesh) hookMesh.position.copy(hookPos);
+    hookLine.geometry.setFromPoints(_ropePoints(playerPos, hookPos, 10));
+    hookLine.geometry.attributes.position.needsUpdate=true;
+
+    const toHook=hookPos.clone().sub(playerPos);
+    const dist=toHook.length();
+
+    if(dist<1.6){
+      if(hookTarget.type==='soldier'){
+        const s=hookTarget.ref; const si=soldiers.indexOf(s);
+        if(si>=0){
+          s.health-=3;
+          if(s.health<=0){
+            scene.remove(s.group); s.barEl.remove(); spawnAmmoPack(s.pos); soldiers.splice(si,1);
+            score+=200; waveScore+=200; showNotif('MEATHOOK KILL! +200');
+          } else {
+            showNotif('Meathook hit! -3HP');
+          }
+        }
+      }
+      hookCD=1.4;
+      releaseHook(); return;
+    }
+
+    // Pull speed ramps up with distance so far shots feel snappy, close shots ease in
+    const pullSpd=Math.min(36, dist*10+6);
+    toHook.normalize();
+    vx=toHook.x*pullSpd;
+    vy=Math.min(toHook.y*pullSpd, 4);
+    vz=toHook.z*pullSpd;
+  }
+}
+
+function releaseHook(){
+  if(hookPulling) vy=Math.min(vy,4);
+  if(hookMesh){ scene.remove(hookMesh); hookMesh=null; }
+  if(hookLine){ scene.remove(hookLine); hookLine=null; }
+  hookActive=false; hookPulling=false; hookPos=null; hookVel=null; hookTarget=null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CYBER BULLET ULTIMATE
+// ═══════════════════════════════════════════════════════════════
+let _cyberBulletState=null; // {mesh, pos, vel, target, t}
+
+function fireCyberBullet(){
+  if(!cyberBulletOwned||cyberBulletCD>0) return;
+  // Find nearest missile
+  let target=null, bestDist=9999;
+  for(const m of missiles){
+    if(m.isDestroyed) continue;
+    const d=m.pos.distanceTo(new THREE.Vector3(px,py,pz));
+    if(d<bestDist){bestDist=d;target=m;}
+  }
+  if(!target){showNotif('No missile in range!');return;}
+  cyberBulletCD=15;
+  // Build car mesh
+  const carG=new THREE.Group();
+  const bodyMat=new THREE.MeshLambertMaterial({color:0xFF2200});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.8,4.8),bodyMat);
+  carG.add(body);
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.6,2.4),new THREE.MeshLambertMaterial({color:0xCC1800}));
+  roof.position.set(0,0.7,0); carG.add(roof);
+  // Wheels
+  const wMat=new THREE.MeshLambertMaterial({color:0x111111});
+  [[-1.2,-.4,1.6],[1.2,-.4,1.6],[-1.2,-.4,-1.6],[1.2,-.4,-1.6]].forEach(([x,y,z])=>{
+    const w=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.3,8),wMat);
+    w.rotation.z=Math.PI/2; w.position.set(x,y,z); carG.add(w);
+  });
+  // Chrome trim
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(2.42,0.1,4.82),new THREE.MeshLambertMaterial({color:0xCCCCCC,emissive:0x888888,emissiveIntensity:.4}));
+  trim.position.y=-.4; carG.add(trim);
+  // Flame thruster
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.5,2,8),new THREE.MeshLambertMaterial({color:0xFF8800,emissive:0xFF4400,emissiveIntensity:1,transparent:true,opacity:.85}));
+  flame.rotation.x=Math.PI/2; flame.position.z=3; carG.add(flame);
+
+  // Start position: far edge of map behind player
+  const angle=yaw+Math.PI+(Math.random()-.5)*.5;
+  const startX=px+Math.sin(angle)*80, startZ=pz+Math.cos(angle)*80;
+  carG.position.set(startX, 2, startZ);
+  scene.add(carG);
+  cyberBulletMesh=carG;
+
+  _cyberBulletState={
+    mesh:carG,
+    pos:new THREE.Vector3(startX,2,startZ),
+    target,
+    t:0,
+    startPos:new THREE.Vector3(startX,2,startZ),
+    startTargetPos:target.pos.clone()
+  };
+  showNotif('CYBER BULLET LAUNCHED!');
+  playTone(220,.08,'sawtooth',.3);setTimeout(()=>playTone(440,.1,'sawtooth',.25),120);
+}
+
+function updateCyberBullet(dt){
+  if(cyberBulletCD>0) cyberBulletCD=Math.max(0,cyberBulletCD-dt);
+  // HUD always updates so countdown is visible after animation ends
+  const _cbHud=document.getElementById('cyberBulletHud');
+  if(_cbHud){ _cbHud.style.display=cyberBulletOwned?'block':'none'; const _l=document.getElementById('cyberBulletLabel'); if(_l){_l.textContent=cyberBulletCD>0?Math.ceil(cyberBulletCD)+'s':'READY';_l.style.color=cyberBulletCD>0?'#888':'#FF4422';} }
+  if(!_cyberBulletState) return;
+  const cb=_cyberBulletState;
+  cb.t+=dt*0.7; // arc speed
+  if(cb.t>=1||cb.target.isDestroyed){
+    // Detonate
+    if(!cb.target.isDestroyed){
+      destroyMissile(cb.target,true);
+      score+=500; waveScore+=500;
+      showNotif('CYBER BULLET HIT! +500');
+    }
+    triggerScreenShake(1.2);
+    spawnExplosion(cb.pos, 3, 0xFF6600);
+    scene.remove(cb.mesh);
+    cyberBulletMesh=null;
+    _cyberBulletState=null;
+    return;
+  }
+  // Parabolic arc toward target
+  const t=cb.t;
+  const tp=cb.target.pos;
+  const sp=cb.startPos;
+  const nx=sp.x+(tp.x-sp.x)*t;
+  const nz=sp.z+(tp.z-sp.z)*t;
+  const ny=sp.y+(tp.y-sp.y)*t + Math.sin(t*Math.PI)*30; // parabola peak=30
+  cb.pos.set(nx,ny,nz);
+  cb.mesh.position.copy(cb.pos);
+  // Orient car nose toward target
+  const dir=new THREE.Vector3(tp.x-sp.x, tp.y-sp.y+Math.cos(t*Math.PI)*30, tp.z-sp.z).normalize();
+  cb.mesh.lookAt(cb.pos.clone().add(dir));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RAJPN FIST BUMP ULTIMATE
+// ═══════════════════════════════════════════════════════════════
+let rajpnFistOwned=false, rajpnFistCD=0;
+let _rajpnState=null;
+
+function _makeFistGroup(isLeft){
+  const g=new THREE.Group();
+  const d=isLeft?1:-1; // knuckles face +x for left, -x for right
+  const skinMat=new THREE.MeshLambertMaterial({color:0xC8955A,emissive:0xFF6600,emissiveIntensity:.35});
+  const kMat=new THREE.MeshLambertMaterial({color:0x9A7030,emissive:0x663300,emissiveIntensity:.2});
+  const nailMat=new THREE.MeshLambertMaterial({color:0xE8C898});
+  // Palm
+  const palm=new THREE.Mesh(new THREE.BoxGeometry(2.4,2.0,2.8),skinMat); g.add(palm);
+  // 4 finger knuckles on punching face
+  for(let i=0;i<4;i++){
+    const k=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.58,0.52),kMat);
+    k.position.set(1.2*d, 0.5, -0.9+i*0.6); g.add(k);
+    const n=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.14,0.3),nailMat);
+    n.position.set(1.41*d, 0.7, -0.9+i*0.6); g.add(n);
+  }
+  // Thumb
+  const thumb=new THREE.Mesh(new THREE.BoxGeometry(0.48,1.0,0.52),kMat);
+  thumb.position.set(0.75*d,-0.8,-0.85); g.add(thumb);
+  const tn=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.14,0.3),nailMat);
+  tn.position.set(0.75*d,-0.35,-1.05); g.add(tn);
+  // Wrist/arm stub
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.7,2.2),skinMat);
+  arm.position.set(-1.3*d,-0.1,0); g.add(arm);
+  return g;
+}
+
+function fireRajpnFist(){
+  if(!rajpnFistOwned||rajpnFistCD>0||_rajpnState){ showNotif('RAJPN FIST BUMP not ready!'); return; }
+  rajpnFistCD=20;
+  // Forward and right vectors from player yaw
+  const fwX=-Math.sin(yaw), fwZ=-Math.cos(yaw);
+  const rtX= Math.cos(yaw), rtZ=-Math.sin(yaw);
+  const ARM=32, FWD=8;
+  const cx=px+fwX*FWD, cy=py+1, cz=pz+fwZ*FWD;
+  const lFist=_makeFistGroup(true);
+  const rFist=_makeFistGroup(false);
+  // Place fists at player's sides, clearly ahead
+  lFist.position.set(px-rtX*ARM+fwX*FWD, cy, pz-rtZ*ARM+fwZ*FWD);
+  rFist.position.set(px+rtX*ARM+fwX*FWD, cy, pz+rtZ*ARM+fwZ*FWD);
+  // Orient fists to face the clap direction
+  lFist.rotation.y=yaw;
+  rFist.rotation.y=yaw;
+  scene.add(lFist); scene.add(rFist);
+  _rajpnState={lFist,rFist,t:0,done:false,rtX,rtZ,cx,cy,cz};
+  showNotif('RAJPN FIST BUMP!');
+  playTone(220,.08,'sawtooth',.5);
+}
+
+function updateRajpnFist(dt){
+  if(rajpnFistCD>0) rajpnFistCD=Math.max(0,rajpnFistCD-dt);
+  // HUD always updates so countdown is visible after animation ends
+  const _rfHud=document.getElementById('rajpnFistHud');
+  if(_rfHud){ _rfHud.style.display=rajpnFistOwned?'block':'none'; const _l=document.getElementById('rajpnFistLabel'); if(_l){_l.textContent=rajpnFistCD>0?Math.ceil(rajpnFistCD)+'s':'READY';_l.style.color=rajpnFistCD>0?'#888':'#FF8833';} }
+  if(!_rajpnState) return;
+  const s=_rajpnState;
+  s.t+=dt;
+  const speed=28;
+  // Move fists along right axis toward center
+  s.lFist.position.x+=s.rtX*speed*dt;
+  s.lFist.position.z+=s.rtZ*speed*dt;
+  s.rFist.position.x-=s.rtX*speed*dt;
+  s.rFist.position.z-=s.rtZ*speed*dt;
+  // Detect clap: fists within 3 units of each other
+  const fdx=s.lFist.position.x-s.rFist.position.x, fdz=s.lFist.position.z-s.rFist.position.z;
+  if(!s.done && Math.sqrt(fdx*fdx+fdz*fdz)<3){
+    s.done=true;
+    playTone(120,.12,'sawtooth',.7);
+    playTone(440,.08,'sine',.5);
+    // Destroy missiles within 18 units of clap center
+    for(let i=missiles.length-1;i>=0;i--){
+      const m=missiles[i];
+      if(m.isDestroyed) continue;
+      const dist=Math.sqrt((m.pos.x-s.cx)**2+(m.pos.y-s.cy)**2+(m.pos.z-s.cz)**2);
+      if(dist<18){
+        spawnExplosion(m.pos.clone(),m.isBoss?1.8:1.2,0xFF6600);
+        destroyMissile(m,true);
+        missiles.splice(i,1);
+        score+=m.isBoss?500:100; waveScore+=m.isBoss?500:100;
+        showNotif('FIST BUMP INTERCEPT! +'+(m.isBoss?500:100));
+      }
+    }
+    spawnExplosion(new THREE.Vector3(s.cx,s.cy,s.cz),3,0xFF4400);
+  }
+  // Despawn after 1.5s past bump or 2.5s total
+  if(s.t>2.5||(s.done&&s.t>1.8)){
+    scene.remove(s.lFist); scene.remove(s.rFist);
+    _rajpnState=null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GADGETS
+// ═══════════════════════════════════════════════════════════════
+function useFlashbang(){
+  if((activeGadgets.flashbang||0)<1){showNotif('No flashbangs!');return;}
+  activeGadgets.flashbang--;
+  // Stun all soldiers in radius 18
+  let hit=0;
+  soldiers.forEach(s=>{
+    const d=Math.sqrt((s.pos.x-px)**2+(s.pos.z-pz)**2);
+    if(d<18){s._stunT=3.5;hit++;}
+  });
+  showNotif('Flashbang! '+hit+' stunned.');
+  // Flash white
+  const fl=document.getElementById('damageFlash');
+  if(fl){fl.style.background='rgba(255,255,220,.85)';fl.classList.add('flash');
+    setTimeout(()=>{fl.style.background='';fl.classList.remove('flash');},400);}
+  playTone(3200,.25,'sine',.3);
+  updateGadgetHud();
+}
+
+function useAirstrike(){
+  if((activeGadgets.airstrike||0)<1){showNotif('No airstrikes!');return;}
+  activeGadgets.airstrike--;
+  // Drop missile from above onto nearest target cluster
+  let tx=px,tz=pz;
+  if(missiles.length>0){const m=missiles[0];tx=m.pos.x;tz=m.pos.z;}
+  // Delay then big explosion at target
+  showNotif('Airstrike incoming!');
+  playTone(880,.1,'square',.2);
+  setTimeout(()=>{
+    // Destroy all missiles in radius 12 around target
+    let destroyed=0;
+    for(let i=missiles.length-1;i>=0;i--){
+      const m=missiles[i];
+      const d=Math.sqrt((m.pos.x-tx)**2+(m.pos.z-tz)**2);
+      if(d<12&&!m.isDestroyed){destroyMissile(m,true);destroyed++;}
+    }
+    score+=destroyed*200; waveScore+=destroyed*200;
+    triggerScreenShake(.8);
+    spawnExplosion(new THREE.Vector3(tx,8,tz), 3, 0xFF4400);
+    showNotif('Airstrike! '+destroyed+' missiles destroyed!');
+  },3000);
+  updateGadgetHud();
+}
+
+function useCover(){
+  if((activeGadgets.cover||0)<1){showNotif('No cover charges!');return;}
+  activeGadgets.cover--;
+  // Place a barrier 4 units ahead of player
+  const fwx=-Math.sin(yaw)*4, fwz=-Math.cos(yaw)*4;
+  const bGeo=new THREE.BoxGeometry(3,.1,1.2);// lay flat then rotate
+  const barrier=new THREE.Mesh(new THREE.BoxGeometry(3,2.5,0.3),
+    new THREE.MeshLambertMaterial({color:0x556633}));
+  barrier.position.set(px+fwx, 1.25, pz+fwz);
+  barrier.rotation.y=yaw;
+  scene.add(barrier);
+  // Remove after 20s
+  setTimeout(()=>scene.remove(barrier),20000);
+  showNotif('Cover deployed! (20s)');
+  playTone(330,.1,'sine',.15);
+  updateGadgetHud();
+}
+
+function updateGadgetHud(){
+  const fb=document.getElementById('gadgetFlashbang');
+  const as=document.getElementById('gadgetAirstrike');
+  const cv=document.getElementById('gadgetCover');
+  const hud=document.getElementById('gadgetHud');
+  if(!hud) return;
+  const fb_c=activeGadgets.flashbang||0;
+  const as_c=activeGadgets.airstrike||0;
+  const cv_c=activeGadgets.cover||0;
+  hud.style.display=(fb_c+as_c+cv_c)>0||cyberBulletOwned||rajpnFistOwned?'flex':'none';
+  if(fb) fb.textContent=fb_c>0?'[G] Flashbang x'+fb_c:'';
+  if(as) as.textContent=as_c>0?'[T] Airstrike x'+as_c:'';
+  if(cv) cv.textContent=cv_c>0?'[B] Cover x'+cv_c:'';
+}
+

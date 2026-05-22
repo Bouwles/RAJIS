@@ -1,4 +1,4 @@
-# Richard Abou Jamra Intercept Simulation
+# Richard Abou Jamra Interception Simulation
 
 A browser-based 3D first-person missile defense game built with Three.js. Shoot down incoming missiles before they destroy the city, survive escalating waves, and compete against other players online.
 
@@ -34,7 +34,7 @@ Choose your map before starting. Each has different weather, building density, a
 
 You start with a pistol and an RPG launcher. More weapons unlock in the shop.
 
-| Weapon | Type | Notes |
+| Weapon | Type 
 |---|---|---|
 | M9 Pistol | Semi-auto sidearm | Default, free |
 | RPG Launcher | Explosive | Default, high damage, slow fire |
@@ -58,10 +58,9 @@ Standard WASD movement with mouse look. Full air control while grappling.
 
 Unlock these in the shop and activate them in-game with the assigned key.
 
-**Cyber Bullet** -- Fires a homing smart projectile that tracks and destroys the nearest missile. Has a cooldown.
+**Cyber Bullet** -- Fires a homing car that tracks and destroys the nearest missile. Has a cooldown.
 
-**RAJPN Fist Bump** -- Sends two massive fists slamming together in front of you, destroying any missiles caught in the blast. Clearly visible and fires forward.
-
+**RAJPN Fist Bump** -- Sends two massive fists slamming together in front of you, destroying any missiles caught in the blast.
 ---
 
 ## Gadgets

@@ -111,6 +111,8 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(name).classList.add('active');
   currentScreen=name;
+  const sf=document.getElementById('btnSettingsFloat');
+  if(sf) sf.style.display=(name==='hud'||name==='accountScreen'||name==='loadingScreen')?'none':'flex';
   if(name==='locationSelect') startMapAnimation();
   else stopMapAnimation();
 }

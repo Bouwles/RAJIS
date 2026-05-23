@@ -350,3 +350,17 @@ body{font-family:'Inter',sans-serif;color:var(--text);user-select:none;-webkit-u
 .ency-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 8px;text-align:center;}
 .ency-card.locked{opacity:.35;filter:grayscale(1);}
 .ency-card.unlocked{border-color:var(--green-ok);}
+/* ── FLOATING SETTINGS BUTTON ── */
+#btnSettingsFloat{position:fixed;top:14px;right:14px;z-index:200;width:40px;height:40px;border-radius:50%;
+  background:rgba(30,32,36,.82);border:1px solid var(--border);color:var(--text2);font-size:1.25em;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;padding:0;}
+#btnSettingsFloat:hover{background:var(--bg3);color:var(--text);}
+/* hide during active gameplay so it doesn't clutter HUD */
+.screen#hud.active ~ #btnSettingsFloat,
+body.hud-active #btnSettingsFloat{display:none;}
+/* ── SETTINGS SCREEN ── */
+#settingsScreen{background:var(--bg);flex-direction:column;}
+.settings-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px;text-align:left;}
+.settings-section-label{font-family:'Rajdhani',sans-serif;font-size:.72em;letter-spacing:.18em;text-transform:uppercase;color:var(--text2);margin-bottom:12px;}
+.settings-logout-btn{width:100%;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.45);color:#FF8888;font-size:.9em;padding:11px 0;border-radius:7px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:.1em;transition:background .15s,border-color .15s;}
+.settings-logout-btn:hover{background:rgba(192,57,43,.28);border-color:rgba(192,57,43,.75);color:#FFAAAA;}

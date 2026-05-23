@@ -50,7 +50,7 @@
 <!-- ACCOUNT SCREEN -->
 <div id="accountScreen" class="screen" style="background:var(--bg);">
   <div class="mp-card" style="width:380px;">
-    <div class="mp-title" style="margin-bottom:2px;">Richard's Interception</div>
+    <div class="mp-title" style="margin-bottom:2px;">Richard Abou Jamra Interception Simulation</div>
     <div class="mp-sub" style="margin-bottom:16px;">Create an account to save your progress online</div>
     <div class="acct-tabs">
       <button class="acct-tab active" id="tabLogin" onclick="acctShowTab('login')">Login</button>
@@ -242,14 +242,7 @@
   </div>
   <div id="clickNotice">
     <h3>Click to Enter Combat Mode</h3>
-    <p style="line-height:1.7em">
-    <b>MOVE</b> — WASD &nbsp;|&nbsp; <b>AIM</b> — Mouse &nbsp;|&nbsp; <b>FIRE</b> — LMB &nbsp;|&nbsp; <b>SCOPE / HOOK</b> — RMB<br>
-    <b>JUMP</b> — Space &nbsp;|&nbsp; <b>SPRINT</b> — Shift &nbsp;|&nbsp; <b>RELOAD</b> — R &nbsp;|&nbsp; <b>PAUSE</b> — ESC<br>
-    <b>WEAPONS</b> — 1 Pistol &nbsp;2 Launcher &nbsp;3 Shotgun &nbsp;4 Sniper &nbsp;5 SMG &nbsp;(or scroll)<br>
-    <b>GADGETS</b> — G Flashbang &nbsp;|&nbsp; T Airstrike &nbsp;|&nbsp; B Cover<br>
-    <b>ULTIMATES</b> — F Cyber Bullet &nbsp;|&nbsp; V RAJPN Fist Bump<br>
-    <span style="color:var(--text2);font-size:.85em">Ultimates require purchase from Armory. Hookshot (RMB w/ Shotgun) deals 3 dmg + cooldown.</span>
-    </p>
+    <p style="color:var(--text2);font-size:.88em;margin-top:6px;">ESC to pause &nbsp;|&nbsp; See Controls &amp; Info for full keybinds</p>
   </div>
 </div>
 <div id="weaponBar"></div>
@@ -275,6 +268,7 @@
   <div id="gadgetCover"></div>
 </div>
 <div id="healthBars"></div>
+<button id="btnSettingsFloat" onclick="document.getElementById('settingsLogoutConfirm').style.display='none';showScreen('settingsScreen');" title="Settings">&#9881;</button>
 <div id="coopLeaderboard" style="display:none;position:fixed;top:14px;left:14px;
   font-family:'Rajdhani',sans-serif;font-size:.78em;letter-spacing:.07em;text-transform:uppercase;
   background:rgba(0,0,0,.6);border:1px solid #334;border-radius:5px;padding:7px 12px;z-index:30;
@@ -310,23 +304,25 @@
     <button class="menu-btn btn-red" id="btnResume">▶ Resume</button>
     <button class="menu-btn btn-blue" id="btnPauseCustom">✎ Customize Richard</button>
     <button class="menu-btn btn-green" id="btnPauseMainMenu">⌂ Main Menu</button>
-    <button class="menu-btn btn-secondary" id="btnPauseSettings" style="font-size:.78em;padding:10px 24px;margin-top:8px;">⚙ Settings</button>
   </div>
 </div>
 
 <!-- SETTINGS -->
 <div id="settingsScreen" class="screen">
-  <div style="text-align:center;max-width:380px;margin:0 auto;">
-    <div class="pause-title">— Settings —</div>
-    <div id="settingsLogoutConfirm" style="display:none;background:rgba(255,60,60,.12);border:1px solid #FF4422;border-radius:8px;padding:14px 18px;margin-bottom:14px;color:#FF8888;font-size:.9em;">
-      Are you sure you want to log out?<br>
-      <div style="display:flex;gap:10px;justify-content:center;margin-top:10px;">
-        <button class="menu-btn btn-red" id="btnLogoutConfirm" style="padding:8px 22px;font-size:.85em;">Yes, Log Out</button>
-        <button class="menu-btn btn-secondary" id="btnLogoutCancel" style="padding:8px 22px;font-size:.85em;">Cancel</button>
+  <div style="text-align:center;max-width:400px;margin:0 auto;">
+    <div class="pause-title">Settings</div>
+    <div class="settings-section">
+      <div class="settings-section-label">Account</div>
+      <div id="settingsLogoutConfirm" style="display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.5);border-radius:8px;padding:16px 18px;margin-bottom:14px;color:#FF8888;font-size:.9em;line-height:1.6;">
+        Are you sure you want to log out?<br>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:12px;">
+          <button class="menu-btn btn-red" id="btnLogoutConfirm" style="width:140px;font-size:.88em;">Log Out</button>
+          <button class="menu-btn btn-secondary" id="btnLogoutCancel" style="width:140px;font-size:.88em;">Cancel</button>
+        </div>
       </div>
+      <button class="menu-btn settings-logout-btn" id="btnLogout">Log Out</button>
     </div>
-    <button class="menu-btn btn-secondary" id="btnLogout" style="font-size:.85em;padding:10px 24px;">⏻ Log Out</button>
-    <button class="menu-btn btn-secondary" id="btnSettingsBack" style="font-size:.85em;padding:10px 24px;margin-top:6px;">← Back</button>
+    <button class="menu-btn btn-secondary" id="btnSettingsBack" style="font-size:.85em;padding:10px 28px;margin-top:6px;">← Back</button>
   </div>
 </div>
 

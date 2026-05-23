@@ -86,8 +86,10 @@ function setupEvents(){
     isLocked=document.pointerLockElement===canvas;
     if(isLocked){
       document.getElementById('clickNotice').style.display='none';
+      document.getElementById('btnSettingsFloat').style.display='none';
     } else if(gameActive&&!gamePaused){
-      document.getElementById('clickNotice').style.display='flex';
+      // Browser swallows Escape keydown while in pointer lock — pause here instead
+      pauseGame();
     }
   });
 
@@ -127,8 +129,9 @@ function setupEvents(){
     keys[e.code]=true;
     if(!gameActive) return;
     if(e.code==='Escape'){
-      if(!gamePaused) pauseGame();
-      else resumeGame();
+      // pointer lock case handled by pointerlockchange; this covers non-locked pause/resume
+      if(gamePaused) resumeGame();
+      else if(!isLocked) pauseGame();
     }
     if(gamePaused) return;
     if(!isLocked) return;
@@ -207,10 +210,6 @@ function setupEvents(){
   });
   document.getElementById('btnPauseMainMenu').addEventListener('click',()=>{
     if(confirm('Return to main menu? Current progress will be lost.')) returnToMenu();
-  });
-  document.getElementById('btnPauseSettings').addEventListener('click',()=>{
-    document.getElementById('settingsLogoutConfirm').style.display='none';
-    showScreen('settingsScreen');
   });
 
   document.getElementById('btnNextWave').addEventListener('click',()=>{

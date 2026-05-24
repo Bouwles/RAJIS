@@ -2,7 +2,7 @@
 
 A browser-based 3D first-person missile defense game built with Three.js. Shoot down incoming missiles before they destroy the city, survive escalating waves, and compete against other players online.
 
-Play it here: https://bouwles.github.io/rajis
+Play it here: [https://bouwles.github.io/rajis](https://bouwles.github.io/RAJIS/)
 
 ---
 

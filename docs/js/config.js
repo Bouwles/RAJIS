@@ -58,6 +58,46 @@ async function fbLogin(username, password){
   return {user: cred.user, username: data?.username||username, saveData: sd};
 }
 
+async function fbGoogleSignIn(){
+  if(!_fbAuth||!_fbDb){
+    document.getElementById('loginErr').textContent='Firebase not configured.'; return;
+  }
+  _acctSetBusy(true);
+  document.getElementById('acctStatus').textContent='Opening Google sign-in…';
+  try{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const cred = await _fbAuth.signInWithPopup(provider);
+    const user = cred.user;
+    _fbUser = user;
+    // Check if user doc exists
+    const docRef = _fbDb.collection('users').doc(user.uid);
+    const snap = await docRef.get();
+    let username, sd;
+    if(snap.exists && snap.data()?.username){
+      username = snap.data().username;
+      sd = Object.assign(defaultSave(), snap.data().saveData||{});
+    } else {
+      // New Google user — derive username from display name
+      let base = (user.displayName||'PLAYER').toUpperCase().replace(/[^A-Z0-9_]/g,'').slice(0,14)||'PLAYER';
+      // Ensure unique by appending uid suffix if needed
+      const usnap = await _fbDb.collection('usernames').doc(base.toLowerCase()).get();
+      if(usnap.exists && usnap.data().uid !== user.uid){
+        base = base.slice(0,10) + user.uid.slice(0,4).toUpperCase();
+      }
+      username = base;
+      sd = defaultSave(); sd.username = username;
+      await docRef.set({username, saveData: sd});
+      await _fbDb.collection('usernames').doc(username.toLowerCase()).set({uid: user.uid});
+    }
+    _acctFinishLogin({user, username, saveData: sd});
+  }catch(e){
+    const msg = e.code==='auth/popup-closed-by-user'?'Sign-in cancelled.':(e.message||'Google sign-in failed.');
+    document.getElementById('loginErr').textContent = msg;
+    document.getElementById('acctStatus').textContent='';
+    _acctSetBusy(false);
+  }
+}
+
 async function fbSave(sd){
   if(!_fbUser||!_fbDb) return;
   try{ await _fbDb.collection('users').doc(_fbUser.uid).set({saveData: sd},{merge:true}); }catch(e){}

@@ -6,7 +6,7 @@
 <title>Richard Abou Jamra Interception Simulation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -17,7 +17,7 @@
 
 <canvas id="gameCanvas"></canvas>
 <div id="loadScreen">
-  <div style="font-size:1.1em;color:var(--text);letter-spacing:.18em;text-transform:uppercase;font-family:'Rajdhani',sans-serif;">Loading Combat Systems…</div>
+  <div style="font-size:.82em;color:var(--text3);letter-spacing:.28em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;font-weight:600;">Initializing Combat Systems</div>
   <div class="load-bar-bg"><div class="load-bar"></div></div>
 </div>
 <div id="damageFlash"></div>
@@ -78,23 +78,31 @@
 
 <!-- MAIN MENU -->
 <div id="mainMenu" class="screen">
-  <div>
+  <div class="menu-left">
     <div class="game-title" id="gameTitle">Richard Abou Jamra<span>Interception Simulation</span></div>
     <div class="game-subtitle">Missile Defense &nbsp;·&nbsp; FPS Combat</div>
-    <button class="menu-btn btn-primary" id="btnPlay">New Game</button>
+    <button class="menu-btn btn-primary" id="btnPlay">New Mission</button>
     <button class="menu-btn btn-secondary" id="btnContinue">Continue</button>
     <button class="menu-btn btn-mp" id="btnMultiplayer">Multiplayer</button>
     <button class="menu-btn btn-yellow" id="btnShop">Armory &amp; Shop</button>
-    <button class="menu-btn btn-secondary" id="btnStats" style="font-size:.8em;padding:10px 24px;">Statistics &amp; Cards</button>
-    <button class="menu-btn btn-secondary" id="btnCredits" style="font-size:.8em;padding:10px 24px;">Controls &amp; Info</button>
+    <button class="menu-btn btn-secondary" id="btnStats" style="font-size:.84em;">Statistics &amp; Cards</button>
+    <button class="menu-btn btn-secondary" id="btnCredits" style="font-size:.84em;">Controls &amp; Info</button>
     <div class="save-badge" id="saveBadge">No save found</div>
-    <div id="bpBadge" style="margin-top:8px;font-family:'Rajdhani',sans-serif;font-size:.78em;letter-spacing:.1em;color:var(--amber);display:none">
+    <div id="bpBadge" style="margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-size:.76em;letter-spacing:.1em;color:var(--amber);display:none">
       BATTLE PASS <span id="bpLevelLabel">LV 0</span>
-      <div style="width:160px;height:5px;background:#222;border-radius:3px;margin:4px auto 0;overflow:hidden">
-        <div id="bpXpBar" style="height:100%;background:linear-gradient(90deg,#F0C040,#FF8800);border-radius:3px;width:0%"></div>
+      <div style="width:140px;height:3px;background:rgba(53,59,71,.6);margin:5px auto 0;overflow:hidden">
+        <div id="bpXpBar" style="height:100%;background:linear-gradient(90deg,var(--amber),#E08020);width:0%"></div>
       </div>
     </div>
     <div id="menuUserBadge"></div>
+    <div class="menu-version">Build 2025</div>
+  </div>
+  <div class="menu-right">
+    <div class="menu-bg-grid"></div>
+    <div class="menu-bg-vignette"></div>
+    <div class="menu-bg-accent"></div>
+    <div class="menu-bg-accent2"></div>
+    <div class="menu-bg-coords">33.8938° N, 35.5018° E</div>
   </div>
 </div>
 
@@ -149,6 +157,10 @@
     <div class="screen-sub">Click a location to deploy</div>
   </div>
   <div id="mapInfoPanel">
+    <div class="map-panel-header">
+      <span class="map-panel-tag">Mission Zone</span>
+      <span class="map-panel-status">AWAITING TARGET</span>
+    </div>
     <div id="mapLocName">Select a theater</div>
     <div id="mapLocDesc">Click a marker on the map to deploy.</div>
     <div id="mapLocDetails" style="display:none">
@@ -347,8 +359,8 @@
 <!-- GAME OVER -->
 <div id="gameOver" class="screen">
   <div style="text-align:center;">
-    <div class="go-title">CITY DESTROYED</div>
-    <div class="go-sub">The missiles have won. The city has fallen.</div>
+    <div class="go-title">CITY DEFENSE FAILED</div>
+    <div class="go-sub">Missiles overwhelmed all defenses. City destroyed.</div>
     <div class="stat-box">
       <div class="stat-row"><span class="stat-lbl">Waves Survived</span><span class="stat-val" id="goWaves">0</span></div>
       <div class="stat-row"><span class="stat-lbl">Total Score</span><span class="stat-val" id="goScore">0</span></div>

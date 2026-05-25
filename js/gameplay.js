@@ -8,7 +8,7 @@ function startWave(){
   const isBonusWave=waveNum>0&&waveNum%5===0;
   waveMissileTotal=(isBonusWave?2:1)*(3+waveNum*2+(waveNum>=3?1:0));
   waveMissileSpawned=0;
-  waveMissileTimer=0;
+  waveMissileTimer=1.5;
   waveMissileInterval=Math.max(isBonusWave?.9:1.4, 4-waveNum*.3);
   waveIntercepted=0;
   waveMissed=0;
@@ -39,7 +39,7 @@ function updateWave(dt){
   }
 
   // Check wave end
-  if(waveMissileSpawned>=waveMissileTotal&&missiles.filter(m=>!m.isDestroyed).length===0){
+  if(waveMissileTotal>0&&waveMissileSpawned>=waveMissileTotal&&missiles.filter(m=>!m.isDestroyed).length===0){
     endWave();
   }
 }
@@ -243,6 +243,7 @@ function switchWeapon(id){
   currentWeapon=id;
   ammo=weaponAmmo[id];
   isReloading=false;reloadT=0;fireCD=0;
+  scoped=false;scopeT=0;
   if(weaponMesh){camera.remove(weaponMesh);}
   weaponMesh=makeWeaponMesh();camera.add(weaponMesh);
   showNotif(WEAPONS[id].name);
@@ -437,25 +438,110 @@ function fireCyberBullet(){
   }
   if(!target){showNotif('No missile in range!');return;}
   cyberBulletCD=15;
-  // Build car mesh
+  // Build Camaro SS-inspired Cyber Bullet muscle car
   const carG=new THREE.Group();
-  const bodyMat=new THREE.MeshLambertMaterial({color:0xFF2200});
-  const body=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.8,4.8),bodyMat);
-  carG.add(body);
-  const roof=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.6,2.4),new THREE.MeshLambertMaterial({color:0xCC1800}));
-  roof.position.set(0,0.7,0); carG.add(roof);
-  // Wheels
-  const wMat=new THREE.MeshLambertMaterial({color:0x111111});
-  [[-1.2,-.4,1.6],[1.2,-.4,1.6],[-1.2,-.4,-1.6],[1.2,-.4,-1.6]].forEach(([x,y,z])=>{
-    const w=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.3,8),wMat);
-    w.rotation.z=Math.PI/2; w.position.set(x,y,z); carG.add(w);
+  const blk=new THREE.MeshLambertMaterial({color:0x080A0A});
+  const drk=new THREE.MeshLambertMaterial({color:0x050505});
+  const chr=new THREE.MeshLambertMaterial({color:0x707070});
+  const gls=new THREE.MeshLambertMaterial({color:0x1A2030,transparent:true,opacity:.65});
+  const whl=new THREE.MeshLambertMaterial({color:0x0B0B0B});
+  const rim=new THREE.MeshLambertMaterial({color:0x191919});
+  const hl=new THREE.MeshLambertMaterial({color:0xEEEECC,emissive:0xFFFF88,emissiveIntensity:.7});
+  const tl=new THREE.MeshLambertMaterial({color:0xCC1100,emissive:0xFF2200,emissiveIntensity:.65});
+  // Lower sill (widest)
+  const sill=new THREE.Mesh(new THREE.BoxGeometry(2.62,0.3,5.0),blk);
+  sill.position.set(0,.15,-.1);carG.add(sill);
+  // Main body
+  const bd=new THREE.Mesh(new THREE.BoxGeometry(2.5,.52,4.9),blk);
+  bd.position.set(0,.56,-.1);carG.add(bd);
+  // Long hood
+  const hood=new THREE.Mesh(new THREE.BoxGeometry(2.36,.1,2.0),blk);
+  hood.position.set(0,.85,1.15);carG.add(hood);
+  const ridge=new THREE.Mesh(new THREE.BoxGeometry(.26,.055,1.78),drk);
+  ridge.position.set(0,.92,1.1);carG.add(ridge);
+  // Front fender flares
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.BoxGeometry(.13,.42,1.38),blk);
+    f.position.set(s*1.33,.56,1.1);carG.add(f);
   });
-  // Chrome trim
-  const trim=new THREE.Mesh(new THREE.BoxGeometry(2.42,0.1,4.82),new THREE.MeshLambertMaterial({color:0xCCCCCC,emissive:0x888888,emissiveIntensity:.4}));
-  trim.position.y=-.4; carG.add(trim);
-  // Flame thruster
-  const flame=new THREE.Mesh(new THREE.ConeGeometry(.5,2,8),new THREE.MeshLambertMaterial({color:0xFF8800,emissive:0xFF4400,emissiveIntensity:1,transparent:true,opacity:.85}));
-  flame.rotation.x=Math.PI/2; flame.position.z=3; carG.add(flame);
+  // Rear fender haunches (wider)
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.BoxGeometry(.17,.44,1.28),blk);
+    f.position.set(s*1.35,.56,-1.38);carG.add(f);
+  });
+  // Compact cabin / coupe roof
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(1.9,.58,2.2),blk);
+  cab.position.set(0,1.17,-.2);carG.add(cab);
+  // Windshield
+  const ws=new THREE.Mesh(new THREE.BoxGeometry(1.8,.5,.08),gls);
+  ws.rotation.x=.5;ws.position.set(0,1.36,.88);carG.add(ws);
+  // Side windows
+  [-1,1].forEach(s=>{
+    const sw=new THREE.Mesh(new THREE.BoxGeometry(.06,.38,.86),gls);
+    sw.position.set(s*.98,1.24,.28);carG.add(sw);
+  });
+  // Rear window
+  const rw=new THREE.Mesh(new THREE.BoxGeometry(1.76,.44,.08),gls);
+  rw.rotation.x=-.52;rw.position.set(0,1.28,-1.27);carG.add(rw);
+  // Thin angry headlights + DRL
+  [-1,1].forEach(s=>{
+    const h=new THREE.Mesh(new THREE.BoxGeometry(.56,.1,.09),hl);
+    h.position.set(s*.83,.84,2.52);carG.add(h);
+    const d=new THREE.Mesh(new THREE.BoxGeometry(.5,.038,.07),hl);
+    d.position.set(s*.83,.74,2.53);carG.add(d);
+  });
+  // Upper grille slot
+  const ug=new THREE.Mesh(new THREE.BoxGeometry(2.02,.11,.11),drk);
+  ug.position.set(0,.8,2.53);carG.add(ug);
+  // Lower wide grille
+  const lg=new THREE.Mesh(new THREE.BoxGeometry(2.18,.26,.15),drk);
+  lg.position.set(0,.38,2.54);carG.add(lg);
+  for(let i=0;i<3;i++){
+    const sl=new THREE.Mesh(new THREE.BoxGeometry(2.16,.024,.05),drk);
+    sl.position.set(0,.28+i*.074,2.56);carG.add(sl);
+  }
+  // Front splitter
+  const sp=new THREE.Mesh(new THREE.BoxGeometry(2.44,.05,.22),drk);
+  sp.position.set(0,.04,2.56);carG.add(sp);
+  const nc=new THREE.Mesh(new THREE.BoxGeometry(2.44,.03,.08),chr);
+  nc.position.set(0,.91,2.53);carG.add(nc);
+  // Side skirts
+  [-1,1].forEach(s=>{
+    const sk=new THREE.Mesh(new THREE.BoxGeometry(.07,.13,4.1),drk);
+    sk.position.set(s*1.3,.1,-.1);carG.add(sk);
+  });
+  // Rear taillights strip + corner
+  const tlb=new THREE.Mesh(new THREE.BoxGeometry(2.18,.055,.07),tl);
+  tlb.position.set(0,.74,-2.57);carG.add(tlb);
+  [-1,1].forEach(s=>{
+    const tc=new THREE.Mesh(new THREE.BoxGeometry(.6,.1,.08),tl);
+    tc.position.set(s*.78,.76,-2.57);carG.add(tc);
+  });
+  // Rear fascia
+  const rf=new THREE.Mesh(new THREE.BoxGeometry(2.42,.58,.11),blk);
+  rf.position.set(0,.52,-2.57);carG.add(rf);
+  // Spoiler lip
+  const spo=new THREE.Mesh(new THREE.BoxGeometry(2.2,.09,.26),drk);
+  spo.position.set(0,1.12,-2.47);carG.add(spo);
+  // Diffuser + exhausts
+  const dif=new THREE.Mesh(new THREE.BoxGeometry(2.08,.13,.18),drk);
+  dif.position.set(0,.09,-2.59);carG.add(dif);
+  [-.46,.46].forEach(x=>{
+    const ex=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.16,8),chr);
+    ex.rotation.x=Math.PI/2;ex.position.set(x,.12,-2.66);carG.add(ex);
+  });
+  // Wheels x4
+  [[-1.28,.3,1.6],[1.28,.3,1.6],[-1.28,.3,-1.6],[1.28,.3,-1.6]].forEach(([x,y,z])=>{
+    const ti=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.26,12),whl);
+    ti.rotation.z=Math.PI/2;ti.position.set(x,y,z);carG.add(ti);
+    const ri=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.22,10),rim);
+    ri.rotation.z=Math.PI/2;ri.position.set(x,y,z);carG.add(ri);
+    const cp=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.24,8),drk);
+    cp.rotation.z=Math.PI/2;cp.position.set(x,y,z);carG.add(cp);
+  });
+  // Flame thruster (rear)
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.44,1.8,8),new THREE.MeshLambertMaterial({color:0xFF8800,emissive:0xFF5500,emissiveIntensity:1,transparent:true,opacity:.8}));
+  flame.rotation.x=Math.PI/2;flame.position.z=3.2;carG.add(flame);
 
   // Start position: far edge of map behind player
   const angle=yaw+Math.PI+(Math.random()-.5)*.5;
@@ -517,6 +603,7 @@ function updateCyberBullet(dt){
 // ═══════════════════════════════════════════════════════════════
 let rajpnFistOwned=false, rajpnFistCD=0;
 let _rajpnState=null;
+const RAJPN_CD=12;
 
 function _makeFistGroup(isLeft){
   const g=new THREE.Group();
@@ -545,64 +632,69 @@ function _makeFistGroup(isLeft){
 }
 
 function fireRajpnFist(){
-  if(!rajpnFistOwned||rajpnFistCD>0||_rajpnState){ showNotif('RAJPN FIST BUMP not ready!'); return; }
-  rajpnFistCD=20;
-  // Forward and right vectors from player yaw
-  const fwX=-Math.sin(yaw), fwZ=-Math.cos(yaw);
-  const rtX= Math.cos(yaw), rtZ=-Math.sin(yaw);
-  const ARM=32, FWD=8;
-  const cx=px+fwX*FWD, cy=py+1, cz=pz+fwZ*FWD;
+  if(!rajpnFistOwned||rajpnFistCD>0||_rajpnState) return;
+  // Find nearest missile
+  let target=null, bestDist=9999;
+  for(const m of missiles){
+    if(m.isDestroyed) continue;
+    const d=m.pos.distanceTo(new THREE.Vector3(px,py,pz));
+    if(d<bestDist){bestDist=d;target=m;}
+  }
+  if(!target){showNotif('No missile to target!');return;}
+  rajpnFistCD=RAJPN_CD;
+  // Compute perpendicular to player→missile — fists always clap from both sides of target
+  const toMx=target.pos.x-px, toMz=target.pos.z-pz;
+  const toML=Math.sqrt(toMx*toMx+toMz*toMz)||1;
+  const perpX=toMz/toML, perpZ=-toMx/toML;
+  const ARM=34;
+  const ty=target.pos.y;
   const lFist=_makeFistGroup(true);
   const rFist=_makeFistGroup(false);
-  // Place fists at player's sides, clearly ahead
-  lFist.position.set(px-rtX*ARM+fwX*FWD, cy, pz-rtZ*ARM+fwZ*FWD);
-  rFist.position.set(px+rtX*ARM+fwX*FWD, cy, pz+rtZ*ARM+fwZ*FWD);
-  // Orient fists to face the clap direction
-  lFist.rotation.y=yaw;
-  rFist.rotation.y=yaw;
+  lFist.position.set(target.pos.x+perpX*ARM, ty+2, target.pos.z+perpZ*ARM);
+  rFist.position.set(target.pos.x-perpX*ARM, ty+2, target.pos.z-perpZ*ARM);
+  const fa=Math.atan2(-perpX,-perpZ);
+  lFist.rotation.y=fa; rFist.rotation.y=fa+Math.PI;
   scene.add(lFist); scene.add(rFist);
-  _rajpnState={lFist,rFist,t:0,done:false,rtX,rtZ,cx,cy,cz};
-  showNotif('RAJPN FIST BUMP!');
+  _rajpnState={
+    lFist,rFist,t:0,done:false,target,
+    startL:lFist.position.clone(),
+    startR:rFist.position.clone()
+  };
+  showNotif('RAJPN FIST BUMP — TARGET LOCKED!');
   playTone(220,.08,'sawtooth',.5);
 }
 
 function updateRajpnFist(dt){
   if(rajpnFistCD>0) rajpnFistCD=Math.max(0,rajpnFistCD-dt);
-  // HUD always updates so countdown is visible after animation ends
   const _rfHud=document.getElementById('rajpnFistHud');
   if(_rfHud){ _rfHud.style.display=rajpnFistOwned?'block':'none'; const _l=document.getElementById('rajpnFistLabel'); if(_l){_l.textContent=rajpnFistCD>0?Math.ceil(rajpnFistCD)+'s':'READY';_l.style.color=rajpnFistCD>0?'#888':'#FF8833';} }
   if(!_rajpnState) return;
   const s=_rajpnState;
-  s.t+=dt;
-  const speed=28;
-  // Move fists along right axis toward center
-  s.lFist.position.x+=s.rtX*speed*dt;
-  s.lFist.position.z+=s.rtZ*speed*dt;
-  s.rFist.position.x-=s.rtX*speed*dt;
-  s.rFist.position.z-=s.rtZ*speed*dt;
-  // Detect clap: fists within 3 units of each other
-  const fdx=s.lFist.position.x-s.rFist.position.x, fdz=s.lFist.position.z-s.rFist.position.z;
-  if(!s.done && Math.sqrt(fdx*fdx+fdz*fdz)<3){
+  s.t+=dt*1.4;
+  // Target position: track missile while alive, freeze on death
+  const tp=(!s.target.isDestroyed)?s.target.pos.clone():s.startL.clone().lerp(s.startR,0.5);
+  const tClamped=Math.min(s.t,1);
+  s.lFist.position.lerpVectors(s.startL,tp,tClamped);
+  s.rFist.position.lerpVectors(s.startR,tp,tClamped);
+  if(!s.done&&s.t>=1){
     s.done=true;
-    playTone(120,.12,'sawtooth',.7);
+    playTone(120,.14,'sawtooth',.8);
     playTone(440,.08,'sine',.5);
-    // Destroy missiles within 18 units of clap center
+    triggerScreenShake(1.5);
     for(let i=missiles.length-1;i>=0;i--){
       const m=missiles[i];
       if(m.isDestroyed) continue;
-      const dist=Math.sqrt((m.pos.x-s.cx)**2+(m.pos.y-s.cy)**2+(m.pos.z-s.cz)**2);
-      if(dist<18){
-        spawnExplosion(m.pos.clone(),m.isBoss?1.8:1.2,0xFF6600);
+      const dist=m.pos.distanceTo(tp);
+      if(dist<14){
+        spawnExplosion(m.pos.clone(),m.isBoss?2:1.4,0xFF6600);
         destroyMissile(m,true);
-        missiles.splice(i,1);
-        score+=m.isBoss?500:100; waveScore+=m.isBoss?500:100;
-        showNotif('FIST BUMP INTERCEPT! +'+(m.isBoss?500:100));
+        const pts=m.isBoss?600:150; score+=pts; waveScore+=pts;
+        showNotif('FIST BUMP INTERCEPT! +'+pts);
       }
     }
-    spawnExplosion(new THREE.Vector3(s.cx,s.cy,s.cz),3,0xFF4400);
+    spawnExplosion(tp,4,0xFF4400);
   }
-  // Despawn after 1.5s past bump or 2.5s total
-  if(s.t>2.5||(s.done&&s.t>1.8)){
+  if(s.t>2.5||(s.done&&s.t>1.6)){
     scene.remove(s.lFist); scene.remove(s.rFist);
     _rajpnState=null;
   }

@@ -254,7 +254,8 @@ function createRemotePlayerMesh(username){
   labelDiv.textContent=username;
   document.body.appendChild(labelDiv);
   scene.add(charModel);
-  return {mesh:charModel, pos:new THREE.Vector3(), yaw:0, username, label:labelDiv};
+  const startPos=new THREE.Vector3();
+  return {mesh:charModel, pos:startPos.clone(), targetPos:startPos.clone(), yaw:0, targetYaw:0, username, label:labelDiv};
 }
 function removeRemotePlayer(username){
   const rp=mpRemotePlayers.get(username);
@@ -262,7 +263,18 @@ function removeRemotePlayer(username){
   mpRemotePlayers.delete(username);
 }
 function updateRemotePlayers(){
+  const lastDt=Math.min((performance.now()-_rpLastT)/1000,.05);
+  _rpLastT=performance.now();
+  const alpha=Math.min(1,lastDt*30);
   mpRemotePlayers.forEach(rp=>{
+    // Smooth interpolation toward received position
+    rp.pos.lerp(rp.targetPos,alpha);
+    // Shortest-path yaw lerp
+    let dyaw=rp.targetYaw-rp.yaw;
+    if(dyaw>Math.PI) dyaw-=2*Math.PI;
+    if(dyaw<-Math.PI) dyaw+=2*Math.PI;
+    rp.yaw+=dyaw*alpha;
+
     rp.mesh.position.set(rp.pos.x, rp.pos.y-PLAYER_H, rp.pos.z);
     rp.mesh.rotation.y=rp.yaw+Math.PI;
     // Project label
@@ -278,6 +290,7 @@ function updateRemotePlayers(){
     }
   });
 }
+let _rpLastT=performance.now();
 
 // ── State broadcast @20Hz ───────────────────────────────────────
 function mpBroadcastState(){
@@ -307,7 +320,7 @@ function mpBroadcastState(){
 }
 function mpApplyRemoteState(data){
   let rp=mpRemotePlayers.get(data.username);
-  if(rp){ rp.pos.set(data.px,data.py,data.pz); rp.yaw=data.yaw; }
+  if(rp){ rp.targetPos.set(data.px,data.py,data.pz); rp.targetYaw=data.yaw; }
   if(data.username&&data.missiles!==undefined){
     mpRemoteStats[data.username]={missiles:data.missiles,soldiers:data.soldiers||0};
     _updateCoopLb();
@@ -366,6 +379,7 @@ function _applyBattleWeapon(w){
   weaponAmmo[w]=ammos[w]||30;
   ammo=weaponAmmo[w];
   isReloading=false; fireCD=0;
+  scoped=false; scopeT=0;
   if(weaponMesh) camera.remove(weaponMesh);
   weaponMesh=makeWeaponMesh(); camera.add(weaponMesh);
   updateWeaponBar();
@@ -540,6 +554,7 @@ function _battleRoundEnd(won){
       px=mpIsHost?-20:20; py=PLAYER_H; pz=0;
       vx=0;vy=0;vz=0;
       yaw=mpIsHost?Math.PI/2:-Math.PI/2;
+      scoped=false; scopeT=0;
       _updateBattleHud();
       if(mpIsHost){
         const w=BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];

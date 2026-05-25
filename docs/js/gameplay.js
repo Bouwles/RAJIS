@@ -8,7 +8,7 @@ function startWave(){
   const isBonusWave=waveNum>0&&waveNum%5===0;
   waveMissileTotal=(isBonusWave?2:1)*(3+waveNum*2+(waveNum>=3?1:0));
   waveMissileSpawned=0;
-  waveMissileTimer=0;
+  waveMissileTimer=1.5;
   waveMissileInterval=Math.max(isBonusWave?.9:1.4, 4-waveNum*.3);
   waveIntercepted=0;
   waveMissed=0;
@@ -39,7 +39,7 @@ function updateWave(dt){
   }
 
   // Check wave end
-  if(waveMissileSpawned>=waveMissileTotal&&missiles.filter(m=>!m.isDestroyed).length===0){
+  if(waveMissileTotal>0&&waveMissileSpawned>=waveMissileTotal&&missiles.filter(m=>!m.isDestroyed).length===0){
     endWave();
   }
 }
@@ -243,6 +243,7 @@ function switchWeapon(id){
   currentWeapon=id;
   ammo=weaponAmmo[id];
   isReloading=false;reloadT=0;fireCD=0;
+  scoped=false;scopeT=0;
   if(weaponMesh){camera.remove(weaponMesh);}
   weaponMesh=makeWeaponMesh();camera.add(weaponMesh);
   showNotif(WEAPONS[id].name);
@@ -517,6 +518,7 @@ function updateCyberBullet(dt){
 // ═══════════════════════════════════════════════════════════════
 let rajpnFistOwned=false, rajpnFistCD=0;
 let _rajpnState=null;
+const RAJPN_CD=12;
 
 function _makeFistGroup(isLeft){
   const g=new THREE.Group();
@@ -545,64 +547,64 @@ function _makeFistGroup(isLeft){
 }
 
 function fireRajpnFist(){
-  if(!rajpnFistOwned||rajpnFistCD>0||_rajpnState){ showNotif('RAJPN FIST BUMP not ready!'); return; }
-  rajpnFistCD=20;
-  // Forward and right vectors from player yaw
-  const fwX=-Math.sin(yaw), fwZ=-Math.cos(yaw);
-  const rtX= Math.cos(yaw), rtZ=-Math.sin(yaw);
-  const ARM=32, FWD=8;
-  const cx=px+fwX*FWD, cy=py+1, cz=pz+fwZ*FWD;
+  if(!rajpnFistOwned||rajpnFistCD>0||_rajpnState) return;
+  // Find nearest missile
+  let target=null, bestDist=9999;
+  for(const m of missiles){
+    if(m.isDestroyed) continue;
+    const d=m.pos.distanceTo(new THREE.Vector3(px,py,pz));
+    if(d<bestDist){bestDist=d;target=m;}
+  }
+  if(!target){showNotif('No missile to target!');return;}
+  rajpnFistCD=RAJPN_CD;
+  const rtX=Math.cos(yaw), rtZ=-Math.sin(yaw);
+  const ARM=30;
   const lFist=_makeFistGroup(true);
   const rFist=_makeFistGroup(false);
-  // Place fists at player's sides, clearly ahead
-  lFist.position.set(px-rtX*ARM+fwX*FWD, cy, pz-rtZ*ARM+fwZ*FWD);
-  rFist.position.set(px+rtX*ARM+fwX*FWD, cy, pz+rtZ*ARM+fwZ*FWD);
-  // Orient fists to face the clap direction
-  lFist.rotation.y=yaw;
-  rFist.rotation.y=yaw;
+  lFist.position.set(px-rtX*ARM, py+1, pz-rtZ*ARM);
+  rFist.position.set(px+rtX*ARM, py+1, pz+rtZ*ARM);
+  lFist.rotation.y=yaw; rFist.rotation.y=yaw;
   scene.add(lFist); scene.add(rFist);
-  _rajpnState={lFist,rFist,t:0,done:false,rtX,rtZ,cx,cy,cz};
-  showNotif('RAJPN FIST BUMP!');
+  _rajpnState={
+    lFist,rFist,t:0,done:false,target,
+    startL:lFist.position.clone(),
+    startR:rFist.position.clone()
+  };
+  showNotif('RAJPN FIST BUMP — TARGET LOCKED!');
   playTone(220,.08,'sawtooth',.5);
 }
 
 function updateRajpnFist(dt){
   if(rajpnFistCD>0) rajpnFistCD=Math.max(0,rajpnFistCD-dt);
-  // HUD always updates so countdown is visible after animation ends
   const _rfHud=document.getElementById('rajpnFistHud');
   if(_rfHud){ _rfHud.style.display=rajpnFistOwned?'block':'none'; const _l=document.getElementById('rajpnFistLabel'); if(_l){_l.textContent=rajpnFistCD>0?Math.ceil(rajpnFistCD)+'s':'READY';_l.style.color=rajpnFistCD>0?'#888':'#FF8833';} }
   if(!_rajpnState) return;
   const s=_rajpnState;
-  s.t+=dt;
-  const speed=28;
-  // Move fists along right axis toward center
-  s.lFist.position.x+=s.rtX*speed*dt;
-  s.lFist.position.z+=s.rtZ*speed*dt;
-  s.rFist.position.x-=s.rtX*speed*dt;
-  s.rFist.position.z-=s.rtZ*speed*dt;
-  // Detect clap: fists within 3 units of each other
-  const fdx=s.lFist.position.x-s.rFist.position.x, fdz=s.lFist.position.z-s.rFist.position.z;
-  if(!s.done && Math.sqrt(fdx*fdx+fdz*fdz)<3){
+  s.t+=dt*1.4;
+  // Target position: track missile while alive, freeze on death
+  const tp=(!s.target.isDestroyed)?s.target.pos.clone():s.startL.clone().lerp(s.startR,0.5);
+  const tClamped=Math.min(s.t,1);
+  s.lFist.position.lerpVectors(s.startL,tp,tClamped);
+  s.rFist.position.lerpVectors(s.startR,tp,tClamped);
+  if(!s.done&&s.t>=1){
     s.done=true;
-    playTone(120,.12,'sawtooth',.7);
+    playTone(120,.14,'sawtooth',.8);
     playTone(440,.08,'sine',.5);
-    // Destroy missiles within 18 units of clap center
+    triggerScreenShake(1.5);
     for(let i=missiles.length-1;i>=0;i--){
       const m=missiles[i];
       if(m.isDestroyed) continue;
-      const dist=Math.sqrt((m.pos.x-s.cx)**2+(m.pos.y-s.cy)**2+(m.pos.z-s.cz)**2);
-      if(dist<18){
-        spawnExplosion(m.pos.clone(),m.isBoss?1.8:1.2,0xFF6600);
+      const dist=m.pos.distanceTo(tp);
+      if(dist<14){
+        spawnExplosion(m.pos.clone(),m.isBoss?2:1.4,0xFF6600);
         destroyMissile(m,true);
-        missiles.splice(i,1);
-        score+=m.isBoss?500:100; waveScore+=m.isBoss?500:100;
-        showNotif('FIST BUMP INTERCEPT! +'+(m.isBoss?500:100));
+        const pts=m.isBoss?600:150; score+=pts; waveScore+=pts;
+        showNotif('FIST BUMP INTERCEPT! +'+pts);
       }
     }
-    spawnExplosion(new THREE.Vector3(s.cx,s.cy,s.cz),3,0xFF4400);
+    spawnExplosion(tp,4,0xFF4400);
   }
-  // Despawn after 1.5s past bump or 2.5s total
-  if(s.t>2.5||(s.done&&s.t>1.8)){
+  if(s.t>2.5||(s.done&&s.t>1.6)){
     scene.remove(s.lFist); scene.remove(s.rFist);
     _rajpnState=null;
   }

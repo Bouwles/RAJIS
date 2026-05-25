@@ -117,20 +117,69 @@ function updateProjectiles(dt){
         m.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult));
         if(m.health<=0){
           destroyMissile(m,true);
+          // RPG splash damage to nearby missiles
+          if(p.weapon==='launcher'){
+            const wep=WEAPONS.launcher;
+            const splashR=wep.splashRadius||10;
+            const splashMult=wep.splashDmgMult||0.5;
+            for(let si=missiles.length-1;si>=0;si--){
+              const sm=missiles[si];
+              if(sm.isDestroyed||sm===m) continue;
+              const sd=sm.pos.distanceTo(p.pos);
+              if(sd<splashR){
+                const falloff=1-(sd/splashR);
+                sm.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult*splashMult*falloff));
+                if(sm.health<=0) destroyMissile(sm,true);
+              }
+            }
+            triggerScreenShake(0.7);
+          }
         } else {
-          // Boss hit flash
           m.bodyMesh.material.emissive.set(0xFF4400);
           m.bodyMesh.material.emissiveIntensity=1;
-          setTimeout(()=>{
-            if(!m.isDestroyed){m.bodyMesh.material.emissiveIntensity=0;}
-          },150);
+          setTimeout(()=>{ if(!m.isDestroyed){m.bodyMesh.material.emissiveIntensity=0;} },150);
           spawnExplosion(p.pos.clone(),.8,0xFF8800);
         }
         hit=true; break;
       }
     }
 
-    if(!hit) hit=checkSoldierHits(p.pos);
+    // Rocket jump: launcher projectile near ground applies impulse to player
+    if(!hit&&p.weapon==='launcher'&&p.pos.y<2.0){
+      const pdx=p.pos.x-px, pdz=p.pos.z-pz;
+      const distToPlayer=Math.sqrt(pdx*pdx+pdz*pdz);
+      spawnExplosion(p.pos.clone(),2.4,0xFF6600);
+      if(distToPlayer<9){
+        const impulse=(1-(distToPlayer/9))*22;
+        vy=Math.max(vy,impulse);
+        onGround=false;
+        triggerScreenShake(0.6);
+        showNotif('ROCKET JUMP!');
+      }
+      hit=true;
+    }
+
+    if(!hit) hit=checkSoldierHits(p.pos,p.dmg);
+    // Building wall impact
+    if(!hit){
+      for(const b of buildings){
+        if(b.isDestroyed) continue;
+        const hx=b.w/2,hz=b.d/2;
+        if(Math.abs(p.pos.x-b.pos.x)<hx&&Math.abs(p.pos.z-b.pos.z)<hz&&p.pos.y>=0&&p.pos.y<b.h){
+          const isRpg=p.weapon==='launcher';
+          spawnExplosion(p.pos.clone(),isRpg?2.2:0.35,isRpg?0xFF6600:0xFFEEAA);
+          if(isRpg) triggerScreenShake(0.3);
+          hit=true; break;
+        }
+      }
+    }
+    // Floor impact
+    if(!hit&&p.pos.y<=0.15){
+      const isRpg=p.weapon==='launcher';
+      spawnExplosion(p.pos.clone(),isRpg?2.8:0.28,isRpg?0xFF6600:0xDDDDDD);
+      if(isRpg) triggerScreenShake(0.4);
+      hit=true;
+    }
     // Battle mode: check hits on remote players
     if(!hit&&battleActive&&mpRoom){
       mpRemotePlayers.forEach(rp=>{
@@ -194,6 +243,21 @@ function updateMissiles(dt){
         score+=50; waveScore+=50;
         showNotif('CLOSE CALL! +50');
       }
+    }
+
+    // Building collision
+    if(!mpIsGuest){
+      let bldHit=false;
+      for(const b of buildings){
+        if(b.isDestroyed) continue;
+        const hw=b.w/2+m.radius, hd=b.d/2+m.radius;
+        if(Math.abs(m.pos.x-b.pos.x)<hw&&Math.abs(m.pos.z-b.pos.z)<hd&&m.pos.y<b.h+m.radius&&m.pos.y>0){
+          destroyMissile(m,false);
+          missiles.splice(i,1);
+          bldHit=true; break;
+        }
+      }
+      if(bldHit) continue;
     }
 
     // Ground collision — only host/solo runs destruction
@@ -412,14 +476,14 @@ function updateSoldierBullets(dt){
   }
 }
 
-function checkSoldierHits(projPos){
+function checkSoldierHits(projPos,projDmg){
   for(let i=soldiers.length-1;i>=0;i--){
     const s=soldiers[i];
     const sc=ENEMY_TYPES[s.type].baseScale;
     const hitR=sc*1.1;
     const dx=projPos.x-s.pos.x,dy=projPos.y-sc*.8,dz=projPos.z-s.pos.z;
     if(Math.sqrt(dx*dx+dy*dy+dz*dz)<hitR){
-      s.health-=Math.max(1,Math.round(dmgMult));
+      s.health-=Math.max(1,Math.round(((projDmg||10)/10)*dmgMult));
       if(s.health<=0){
         scene.remove(s.group);
         s.barEl.remove();

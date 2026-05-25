@@ -287,7 +287,7 @@ function fireProjectile(){
     const tLine=new THREE.Line(tGeo,tMat);
     scene.add(tLine);
     projectiles.push({mesh,trailLine:tLine,trailPts:tPts,pos:startPos.clone(),
-      vel:spreadDir.clone().multiplyScalar(wep.projSpeed),life:5,projRadius:wep.projRadius,dmg:wep.dmg||10});
+      vel:spreadDir.clone().multiplyScalar(wep.projSpeed),life:5,projRadius:wep.projRadius,dmg:wep.dmg||10,weapon:currentWeapon});
   }
   spawnMuzzleFlash(startPos);
 }

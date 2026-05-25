@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 let _lobR=null,_lobScene=null,_lobCam=null,_lobAnimId=null;
 let _lobChars=[];
+let _lobEnvObjs=[];
 let _lobT=0;
 const _partyProfiles={};
 
@@ -60,6 +61,7 @@ function _setLobStageMap(locId){
   if(_lobScene.fog) _lobScene.fog.color.set(c);
   _lobScene.children.filter(o=>o.name==='lobGround')
     .forEach(o=>o.material.color.set(gc[locId]||gc.beirut));
+  _buildLobbyEnv(locId);
 }
 
 function _defaultCusto(){
@@ -177,6 +179,102 @@ function saveCustomizationToFirebase(){
   _fbDb.collection('users').doc(_fbUser.uid).set(
     {customization:saveData.customization},{merge:true}
   ).catch(()=>{});
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  LOBBY MAP ENVIRONMENT
+// ─────────────────────────────────────────────────────────────────
+function _clearLobEnv(){
+  _lobEnvObjs.forEach(o=>{ if(_lobScene) _lobScene.remove(o); });
+  _lobEnvObjs=[];
+}
+
+function _buildLobbyEnv(locId){
+  _clearLobEnv();
+  if(locId==='sweden') _buildSwedenLobEnv();
+  else if(locId==='dubai') _buildDubaiLobEnv();
+  else _buildBeirutLobEnv();
+}
+
+function _buildBeirutLobEnv(){
+  const winMat=new THREE.MeshLambertMaterial({color:0xFFCC44,emissive:new THREE.Color(0xFFAA00),emissiveIntensity:.45});
+  const bldDefs=[
+    [-7, -5,  2.0, 3.6, 1.8, 0x3A3228],
+    [-4.5,-4.5,1.8, 2.4, 1.6, 0x464038],
+    [-2,  -5.5,1.4, 5.0, 1.4, 0x504840],
+    [1.5, -4.2,2.0, 3.2, 1.6, 0x403830],
+    [3.8, -5,  2.4, 4.2, 1.8, 0x383028],
+    [6.5, -4.5,1.8, 2.8, 1.6, 0x3C3428],
+  ];
+  bldDefs.forEach(([x,z,w,h,d,col])=>{
+    const mat=new THREE.MeshLambertMaterial({color:col});
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(x,h/2,z);
+    _lobScene.add(mesh); _lobEnvObjs.push(mesh);
+    const floors=Math.floor(h/1.5);
+    for(let f=1;f<floors;f++){
+      const ww=new THREE.Mesh(new THREE.BoxGeometry(w*.65,.18,.06),winMat);
+      ww.position.set(x,f*1.5+.4,z+d/2+.04);
+      _lobScene.add(ww); _lobEnvObjs.push(ww);
+    }
+  });
+  const pl=new THREE.PointLight(0xFF9944,.7,20);
+  pl.position.set(0,4,-4);
+  _lobScene.add(pl); _lobEnvObjs.push(pl);
+}
+
+function _buildSwedenLobEnv(){
+  const trunkMat=new THREE.MeshLambertMaterial({color:0x5A3A1A});
+  const leafMat=new THREE.MeshLambertMaterial({color:0x2A6B3A});
+  const snowMat=new THREE.MeshLambertMaterial({color:0xECF2F8});
+  const treeXZ=[[-7,-4.5],[-5,-5],[-3,-4.2],[-1,-5.5],[1.5,-4],[4,-5.2],[6.5,-4.5]];
+  treeXZ.forEach(([x,z])=>{
+    const g=new THREE.Group();
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.07,.12,1.1,5),trunkMat);
+    tr.position.y=.55; g.add(tr);
+    [[.32,0],[.22,1],[.14,2]].forEach(([r,t])=>{
+      const cone=new THREE.Mesh(new THREE.ConeGeometry(r,r*1.4,6),leafMat);
+      cone.position.y=1.1+t*r; g.add(cone);
+    });
+    const sc=new THREE.Mesh(new THREE.ConeGeometry(.1,.45,6),snowMat);
+    sc.position.y=1.1+2*.14+.28; g.add(sc);
+    g.position.set(x,0,z);
+    _lobScene.add(g); _lobEnvObjs.push(g);
+  });
+  const snowFloor=new THREE.Mesh(new THREE.PlaneGeometry(26,11),snowMat);
+  snowFloor.rotation.x=-Math.PI/2; snowFloor.position.set(0,.005,-1.5);
+  _lobScene.add(snowFloor); _lobEnvObjs.push(snowFloor);
+  const pl=new THREE.PointLight(0x8899CC,.55,22);
+  pl.position.set(0,5,-4);
+  _lobScene.add(pl); _lobEnvObjs.push(pl);
+}
+
+function _buildDubaiLobEnv(){
+  const towerDefs=[
+    [-7,  -6,  1.4, 8,  0x88AACC],
+    [-4.2,-5.5, 1.2, 13, 0x99BBDD],
+    [0,   -7,  1.6, 18, 0xAABBCC],
+    [3.5, -5.5, 1.2, 11, 0x99AACC],
+    [6.5, -6,  1.4, 8,  0x8899BB],
+  ];
+  towerDefs.forEach(([x,z,w,h,col])=>{
+    const mat=new THREE.MeshLambertMaterial({color:col,emissive:new THREE.Color(0x001133),emissiveIntensity:.18});
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,w),mat);
+    mesh.position.set(x,h/2,z);
+    _lobScene.add(mesh); _lobEnvObjs.push(mesh);
+    const sp=new THREE.Mesh(new THREE.ConeGeometry(w*.16,h*.22,4),mat);
+    sp.position.set(x,h+h*.11,z);
+    _lobScene.add(sp); _lobEnvObjs.push(sp);
+  });
+  const sandMat=new THREE.MeshLambertMaterial({color:0xC8A86A});
+  [[-5,-3.2],[3,-3.6],[-1,-2.6],[5.5,-3]].forEach(([x,z])=>{
+    const d=new THREE.Mesh(new THREE.ConeGeometry(1.4,.38,8),sandMat);
+    d.position.set(x,.19,z);
+    _lobScene.add(d); _lobEnvObjs.push(d);
+  });
+  const pl=new THREE.PointLight(0xFFBB66,.9,24);
+  pl.position.set(2,6,-4);
+  _lobScene.add(pl); _lobEnvObjs.push(pl);
 }
 
 // ─────────────────────────────────────────────────────────────────

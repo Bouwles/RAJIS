@@ -108,7 +108,6 @@
 <div id="mainMenu" class="screen">
   <!-- Hidden legacy buttons (referenced by JS event listeners) -->
   <button id="btnPlay"        style="display:none">New Mission</button>
-  <button id="btnContinue"    style="display:none">Continue</button>
   <button id="btnMultiplayer" style="display:none">Multiplayer</button>
   <button id="btnShop"        style="display:none">Shop</button>
   <button id="btnStats"       style="display:none">Stats</button>
@@ -125,10 +124,12 @@
       </div>
     </div>
 
-    <!-- CENTER: Play panel -->
+    <!-- CENTER: Character stage + play panel -->
     <div class="lobby-center">
-      <div class="game-title" id="gameTitle">Richard Abou Jamra<span>Interception Simulation</span></div>
-      <div class="game-subtitle">Made by Paul Nercessian</div>
+      <div class="lobby-stage-wrap">
+        <canvas id="lobbyStageCanvas"></canvas>
+        <div id="lobbyStageLabels" class="lobby-stage-labels"></div>
+      </div>
       <div id="lobbyPlayPanel" class="lobby-play-panel"></div>
     </div>
 
@@ -566,6 +567,7 @@
 <script src="js/enemies.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/social.js"></script>
+<script src="js/lobbyScene.js"></script>
 <script src="js/main.js"></script>
 <script src="js/multiplayer.js"></script>
 

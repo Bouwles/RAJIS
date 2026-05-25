@@ -610,6 +610,8 @@ function rebuildCharPreview(){
   if(previewChar) previewScene.remove(previewChar);
   previewChar=makeCharModel(saveData.customization);
   previewScene.add(previewChar);
+  if(typeof saveCustomizationToFirebase==='function') saveCustomizationToFirebase();
+  if(typeof updateLobbyScene==='function') updateLobbyScene();
 }
 
 // ═══════════════════════════════════════════════════════════════

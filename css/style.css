@@ -846,11 +846,46 @@ body::after{content:'';position:fixed;inset:0;
 
 /* Center panel */
 .lobby-center{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:20px 28px;
+  flex:1;display:flex;flex-direction:column;align-items:stretch;
+  justify-content:flex-start;padding:0;
   background:var(--bg);position:relative;overflow:hidden;}
-.lobby-center .game-title{margin-bottom:.15em;text-align:center;}
-.lobby-center .game-subtitle{margin-bottom:1.8em;text-align:center;}
+/* 3D character stage */
+.lobby-stage-wrap{
+  position:relative;width:100%;height:290px;flex-shrink:0;
+  background:#0A0C10;overflow:hidden;border-bottom:1px solid var(--border);}
+#lobbyStageCanvas{display:block;width:100%;height:100%;}
+.lobby-stage-labels{
+  position:absolute;bottom:0;left:0;right:0;height:78px;
+  display:flex;align-items:flex-start;justify-content:space-evenly;
+  padding:6px 12px 0;pointer-events:none;
+  background:linear-gradient(0deg,rgba(8,10,14,.88)0%,transparent 100%);}
+.lob-char-lbl{
+  display:flex;flex-direction:column;align-items:center;
+  font-family:var(--font-ui);text-align:center;flex:1;min-width:0;padding:0 4px;}
+.lcl-name{
+  font-size:.61em;font-weight:800;letter-spacing:.1em;color:var(--text);
+  text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;}
+.lcl-crown{color:var(--amber);margin-right:2px;}
+.lcl-lv{font-size:.52em;color:var(--text3);letter-spacing:.1em;margin-top:1px;}
+.lcl-rdy{font-size:.53em;letter-spacing:.13em;text-transform:uppercase;margin-top:3px;font-weight:700;}
+.lcl-rdy.is-rdy{color:#7ABB88;}.lcl-rdy.no-rdy{color:var(--text3);}
+.lcl-spin{color:var(--text3);}
+/* Deploy overlay */
+#deployOverlay{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(5,8,12,.96);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .38s ease;}
+#deployOverlay.visible{opacity:1;}
+.deploy-inner{text-align:center;}
+.deploy-title{
+  font-family:var(--font-ui);font-size:2em;font-weight:900;
+  letter-spacing:.26em;color:var(--text);text-transform:uppercase;margin-bottom:.4em;}
+.deploy-sub{font-size:.78em;letter-spacing:.2em;color:var(--amber);text-transform:uppercase;margin-bottom:.2em;}
+.deploy-squad{font-size:.68em;letter-spacing:.18em;color:var(--text3);text-transform:uppercase;margin-bottom:1.2em;}
+.deploy-loader{width:260px;height:2px;background:rgba(53,59,71,.5);margin:18px auto 0;overflow:hidden;}
+.deploy-bar{height:100%;background:var(--red);animation:depBar 1.6s ease-out forwards;}
+@keyframes depBar{from{width:0}to{width:100%}}
 
 /* Play panel inside center */
 .lobby-play-panel{width:100%;max-width:480px;}

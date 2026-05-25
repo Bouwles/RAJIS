@@ -315,7 +315,9 @@ function _listenParty(partyId){
       renderLobby();
       // Non-host gets game-start signal
       if(d.state==='deploying'&&d.hostUid!==_fbUser?.uid){
-        startGame(d.selectedMap||'beirut',1);
+        const loc=d.selectedMap||'beirut';
+        const sz=(d.members||[]).length;
+        showDeployOverlay(loc,d.mode||'coop',sz,()=>startGame(loc,1));
       }
     },e=>{ socialState.party=null; });
   _socialUnsubs.push(unsub);
@@ -341,6 +343,7 @@ function startSocialListeners(){
   _listenFriendRequests();
   _listenPartyInvites();
   _startPresenceHeartbeat();
+  if(typeof initLobbyScene==='function') initLobbyScene();
   renderLobby();
   updateNavUser();
 }
@@ -409,6 +412,7 @@ function renderLobby(){
   _renderPartySlots();
   _renderPlayPanel();
   _renderSidebarFriends();
+  syncPartyProfiles();
 }
 
 function _renderPartySlots(){
@@ -510,18 +514,20 @@ function deployFromLobby(){
     fbDeployParty();
   } else {
     const loc=saveData.locId||'beirut';
-    saveData=Object.assign(defaultSave(),{locId:loc,
-      currency:saveData.currency, unlocks:saveData.unlocks,
-      equippedWeapons:saveData.equippedWeapons,
-      upgrades:saveData.upgrades, gadgets:saveData.gadgets,
-      hasCyberBullet:saveData.hasCyberBullet, hasRajpnFist:saveData.hasRajpnFist,
-      bpXP:saveData.bpXP, bpLevel:saveData.bpLevel,
-      customization:saveData.customization,
-      waveRecord:saveData.waveRecord, totalScore:saveData.totalScore,
-      totalIntercepted:saveData.totalIntercepted, totalShotsFired:saveData.totalShotsFired,
-      totalWaves:saveData.totalWaves, totalBossKills:saveData.totalBossKills});
-    saveSave();
-    startGame(loc,1);
+    showDeployOverlay(loc,'solo',1,()=>{
+      saveData=Object.assign(defaultSave(),{locId:loc,
+        currency:saveData.currency, unlocks:saveData.unlocks,
+        equippedWeapons:saveData.equippedWeapons,
+        upgrades:saveData.upgrades, gadgets:saveData.gadgets,
+        hasCyberBullet:saveData.hasCyberBullet, hasRajpnFist:saveData.hasRajpnFist,
+        bpXP:saveData.bpXP, bpLevel:saveData.bpLevel,
+        customization:saveData.customization,
+        waveRecord:saveData.waveRecord, totalScore:saveData.totalScore,
+        totalIntercepted:saveData.totalIntercepted, totalShotsFired:saveData.totalShotsFired,
+        totalWaves:saveData.totalWaves, totalBossKills:saveData.totalBossKills});
+      saveSave();
+      startGame(loc,1);
+    });
   }
 }
 

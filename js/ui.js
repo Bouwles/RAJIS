@@ -112,17 +112,22 @@ function showScreen(name){
   const el=document.getElementById(name);
   if(el) el.classList.add('active');
   currentScreen=name;
-  // Top nav: visible on hub screens
+  // Shared RL nav: visible on lobby + all hub screens
   const hubScreens=['shopScreen','statsScreen','customization','weaponsScreen','friendsScreen','settingsScreen'];
-  const nav=document.getElementById('topNav');
-  if(nav){
-    nav.style.display=hubScreens.includes(name)?'flex':'none';
-    // Highlight correct tab (customization maps to the locker tab)
-    const navKey=name==='customization'?'lockerTab':name;
-    nav.querySelectorAll('.nav-tab').forEach(t=>{
-      t.classList.toggle('active',t.dataset.screen===name||(name==='customization'&&t.dataset.screen==='customization'));
+  const rlNav=document.getElementById('rlNav');
+  if(rlNav){
+    const showNav=name==='mainMenu'||hubScreens.includes(name);
+    rlNav.style.display=showNav?'flex':'none';
+    rlNav.querySelectorAll('.rl-tab').forEach(t=>{
+      const ts=t.dataset.screen;
+      t.classList.toggle('rl-tab-active',
+        ts===name||(name==='customization'&&ts==='customization')||
+        (name==='mainMenu'&&ts==='mainMenu'));
     });
   }
+  // Legacy topNav always hidden now
+  const oldNav=document.getElementById('topNav');
+  if(oldNav) oldNav.style.display='none';
   const sf=document.getElementById('btnSettingsFloat');
   if(sf) sf.style.display=(name==='hud'||name==='accountScreen'||name==='loadingScreen'||hubScreens.includes(name))?'none':'flex';
   if(name==='locationSelect') startMapAnimation();

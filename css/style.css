@@ -1075,10 +1075,18 @@ body::after{content:'';position:fixed;inset:0;
    ================================================================ */
 
 /* Screen override — full flex column, not centered */
+/* ── Shared lobby/hub nav — fixed top bar ───────────────────── */
+#rlNav{position:fixed;top:0;left:0;right:0;z-index:20;}
+/* Hub screens sit below the fixed nav */
+#shopScreen.active,#statsScreen.active,#customization.active,
+#weaponsScreen.active,#friendsScreen.active,#settingsScreen.active{
+  padding-top:52px!important;}
+
 #mainMenu.screen.active{
   display:flex!important;flex-direction:column;
   align-items:stretch;justify-content:flex-start;
-  background:#080B14;overflow:hidden;}
+  background:#080B14;overflow:hidden;
+  padding-top:52px;}
 
 /* Subtle tri-grid bg on the center panel */
 #mainMenu .rl-center::before{
@@ -1215,7 +1223,7 @@ body::after{content:'';position:fixed;inset:0;
   border-left:1px solid rgba(255,255,255,.05);
   display:flex;flex-direction:column;
   padding:14px 13px;gap:4px;overflow-y:auto;}
-.rl-mode-panel{}
+.rl-mode-panel{margin-top:auto;}
 .rl-section-hd{
   font-family:var(--font-ui);font-size:.53em;font-weight:800;
   letter-spacing:.26em;color:var(--text3);text-transform:uppercase;

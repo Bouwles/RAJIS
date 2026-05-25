@@ -104,6 +104,25 @@
   </div>
 </div>
 
+<!-- Shared lobby nav — fixed, shown for lobby + all hub screens -->
+<nav id="rlNav" class="rl-nav" style="display:none">
+  <div class="rl-logo">RAJIS<span>RICHARD ABOU JAMRA INTERCEPT SIMULATION</span></div>
+  <div class="rl-tabs">
+    <button class="rl-tab" data-screen="mainMenu" onclick="showScreen('mainMenu');renderLobby()">⌂ LOBBY</button>
+    <button class="rl-tab" data-screen="mainMenu" onclick="showScreen('mainMenu');renderLobby()">BATTLE PASS</button>
+    <button class="rl-tab" data-screen="friendsScreen" onclick="renderFriendsScreen();showScreen('friendsScreen')">FRIENDS <span id="rlFriendBadge" class="nav-badge" style="display:none"></span></button>
+    <button class="rl-tab" data-screen="customization" onclick="showLockerScreen()">LOCKER</button>
+    <button class="rl-tab" data-screen="weaponsScreen" onclick="renderWeaponsScreen();showScreen('weaponsScreen')">WEAPONS</button>
+    <button class="rl-tab" data-screen="shopScreen" onclick="buildShop();showScreen('shopScreen')">ITEM SHOP</button>
+    <button class="rl-tab" data-screen="statsScreen" onclick="buildStatsScreen();showScreen('statsScreen')">PROFILE</button>
+    <button class="rl-tab" data-screen="settingsScreen" onclick="showScreen('settingsScreen')">⚙ SETTINGS</button>
+  </div>
+  <div class="rl-topright">
+    <span id="rlCredits" class="rl-currency">💰 0</span>
+    <span id="rlCallsign" class="rl-callsign-badge">—</span>
+  </div>
+</nav>
+
 <!-- MAIN MENU — Battle Royale Lobby -->
 <div id="mainMenu" class="screen">
   <!-- Hidden legacy buttons (referenced by JS) -->
@@ -112,25 +131,6 @@
   <button id="btnShop"        style="display:none">Shop</button>
   <button id="btnStats"       style="display:none">Stats</button>
   <button id="btnCredits"     style="display:none">Info</button>
-
-  <!-- Embedded lobby nav -->
-  <nav class="rl-nav">
-    <div class="rl-logo">ABUJAMRA<span>INTERCEPTION</span></div>
-    <div class="rl-tabs">
-      <button class="rl-tab rl-tab-active">⌂ LOBBY</button>
-      <button class="rl-tab" onclick="showScreen('mainMenu')">BATTLE PASS</button>
-      <button class="rl-tab" onclick="renderFriendsScreen();showScreen('friendsScreen')">FRIENDS</button>
-      <button class="rl-tab" onclick="showLockerScreen()">LOCKER</button>
-      <button class="rl-tab" onclick="renderWeaponsScreen();showScreen('weaponsScreen')">WEAPONS</button>
-      <button class="rl-tab" onclick="buildShop();showScreen('shopScreen')">ITEM SHOP</button>
-      <button class="rl-tab" onclick="buildStatsScreen();showScreen('statsScreen')">PROFILE</button>
-      <button class="rl-tab" onclick="showScreen('settingsScreen')">⚙ SETTINGS</button>
-    </div>
-    <div class="rl-topright">
-      <span id="rlCredits" class="rl-currency">💰 0</span>
-      <span id="rlCallsign" class="rl-callsign-badge">—</span>
-    </div>
-  </nav>
 
   <!-- Main three-column area -->
   <div class="rl-main">

@@ -757,11 +757,24 @@ function _renderSeasonPanel(){
   const tier=saveData.bpLevel||0;
   const xpNeeded=Math.floor(750+lv*180+Math.pow(lv,1.35)*35);
   const xpPct=Math.min(100,Math.round(xp/Math.max(1,xpNeeded)*100));
+  // Daily baseline reset: track progress since last login day
+  const today=new Date().toISOString().slice(0,10);
+  if(saveData.challengeBaseDate!==today){
+    saveData.challengeBaseDate=today;
+    saveData.challengeBase={
+      totalIntercepted:saveData.totalIntercepted||0,
+      totalWaves:saveData.totalWaves||0,
+      totalBossKills:saveData.totalBossKills||0,
+      totalShotsFired:saveData.totalShotsFired||0
+    };
+    if(typeof scheduleSave==='function') scheduleSave();
+  }
+  const base=saveData.challengeBase||{totalIntercepted:0,totalWaves:0,totalBossKills:0,totalShotsFired:0};
   const challenges=[
-    {name:'INTERCEPT 25 MISSILES',prog:Math.min(saveData.totalIntercepted||0,25),total:25,xp:500},
-    {name:'COMPLETE A MISSION',prog:Math.min(saveData.totalWaves||0,1),total:1,xp:500},
-    {name:'DESTROY 10 ENEMIES',prog:Math.min(saveData.totalBossKills||0,10),total:10,xp:500},
-    {name:'FIRE 200 SHOTS',prog:Math.min(saveData.totalShotsFired||0,200),total:200,xp:300},
+    {name:'INTERCEPT 25 MISSILES',prog:Math.min(Math.max(0,(saveData.totalIntercepted||0)-base.totalIntercepted),25),total:25,xp:500},
+    {name:'COMPLETE 3 MISSIONS',prog:Math.min(Math.max(0,(saveData.totalWaves||0)-base.totalWaves),3),total:3,xp:500},
+    {name:'DESTROY 10 ENEMIES',prog:Math.min(Math.max(0,(saveData.totalBossKills||0)-base.totalBossKills),10),total:10,xp:500},
+    {name:'FIRE 200 SHOTS',prog:Math.min(Math.max(0,(saveData.totalShotsFired||0)-base.totalShotsFired),200),total:200,xp:300},
   ];
   el.innerHTML=`
     <div class="rll-season">SEASON 1</div>

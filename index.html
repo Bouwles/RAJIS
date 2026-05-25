@@ -109,9 +109,9 @@
   <div class="rl-logo">RAJIS<span>RICHARD ABOU JAMRA INTERCEPT SIMULATION</span></div>
   <div class="rl-tabs">
     <button class="rl-tab" data-screen="mainMenu" onclick="showScreen('mainMenu');renderLobby()">⌂ LOBBY</button>
-    <button class="rl-tab" data-screen="mainMenu" onclick="showScreen('mainMenu');renderLobby()">BATTLE PASS</button>
+    <button class="rl-tab" data-screen="bpScreen" onclick="buildBPScreen();showScreen('bpScreen')">BATTLE PASS</button>
     <button class="rl-tab" data-screen="friendsScreen" onclick="renderFriendsScreen();showScreen('friendsScreen')">FRIENDS <span id="rlFriendBadge" class="nav-badge" style="display:none"></span></button>
-    <button class="rl-tab" data-screen="customization" onclick="showLockerScreen()">LOCKER</button>
+    <button class="rl-tab" data-screen="itemShopScreen" onclick="buildItemShop();showScreen('itemShopScreen')">LOCKER</button>
     <button class="rl-tab" data-screen="weaponsScreen" onclick="renderWeaponsScreen();showScreen('weaponsScreen')">WEAPONS</button>
     <button class="rl-tab" data-screen="shopScreen" onclick="buildShop();showScreen('shopScreen')">ITEM SHOP</button>
     <button class="rl-tab" data-screen="statsScreen" onclick="buildStatsScreen();showScreen('statsScreen')">PROFILE</button>
@@ -159,18 +159,19 @@
 
   <!-- Bottom status bar -->
   <div class="rl-statusbar">
-    <div class="rl-sb-left">
-      <span class="rl-chat-hint">PRESS ENTER TO CHAT</span>
-      <span class="rl-online-dot">● ONLINE</span>
+    <div class="rl-sb-chat">
+      <div id="rlChatMessages" class="rl-chat-messages"></div>
+      <input id="rlChatInput" class="rl-chat-input" placeholder="Press ENTER to chat…" maxlength="120"
+        onkeydown="if(event.key==='Enter'&&this.value.trim()){sendChatMsg(this.value);this.value='';this.blur();}if(event.key==='Escape')this.blur();"
+        onfocus="this.placeholder='Type message and press Enter…'"
+        onblur="this.placeholder='Press ENTER to chat…'"/>
     </div>
     <div class="rl-sb-mid">
       <span id="saveBadge" class="save-badge"></span>
     </div>
     <div class="rl-sb-right">
       <span id="menuUserBadge" class="rl-user-badge"></span>
-      <button class="rl-sb-icon" onclick="renderFriendsScreen();showScreen('friendsScreen')">
-        👥<span id="rlFriendBadge" class="nav-badge" style="display:none"></span>
-      </button>
+      <button class="rl-sb-icon" onclick="renderFriendsScreen();showScreen('friendsScreen')">👥</button>
       <button class="rl-sb-icon" onclick="showScreen('settingsScreen')">⚙</button>
     </div>
   </div>
@@ -593,6 +594,35 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
+<!-- BATTLE PASS SCREEN -->
+<div id="bpScreen" class="screen">
+  <div class="bp-wrap">
+    <div class="screen-title" style="margin-bottom:10px;">Battle Pass — Season 1</div>
+    <div class="bp-header">
+      <div id="bpCurrentTier" class="bp-big-tier">TIER 0</div>
+      <div class="bp-xp-track"><div class="bp-xp-fill" id="bpXPBar" style="width:0%"></div></div>
+      <div id="bpXPText" class="bp-xp-text">0 XP</div>
+    </div>
+    <div id="bpTierList" class="bp-tier-list"></div>
+    <button class="back-btn" style="margin-top:14px;" onclick="showScreen('mainMenu');renderLobby()">← Back to Lobby</button>
+  </div>
+</div>
+
+<!-- DAILY ITEM SHOP SCREEN -->
+<div id="itemShopScreen" class="screen">
+  <div class="is-wrap">
+    <div class="is-top-row">
+      <div class="screen-title" style="margin:0;">Item Shop</div>
+      <div class="is-meta">
+        <span id="isRefreshDate" class="is-refresh"></span>
+        <span id="isCredits" class="is-credits-badge">💰 0</span>
+      </div>
+    </div>
+    <div id="itemShopGrid" class="is-grid"></div>
+    <button class="back-btn" style="margin-top:16px;" onclick="showScreen('mainMenu');renderLobby()">← Back to Lobby</button>
+  </div>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/save.js"></script>
 <script src="js/audio.js"></script>
@@ -603,6 +633,7 @@
 <script src="js/ui.js"></script>
 <script src="js/social.js"></script>
 <script src="js/lobbyScene.js"></script>
+<script src="js/skins.js"></script>
 <script src="js/main.js"></script>
 <script src="js/multiplayer.js"></script>
 

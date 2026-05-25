@@ -80,8 +80,9 @@ function endWave(){
   saveSave();
   updateSaveUI();
   showScreen('waveComplete');
-  // Queue card pick only in solo/coop (not battle mode)
   if(!battleActive) _pendingCardPick=true;
+  // Auto-advance after countdown
+  _startWaveCompleteCountdown();
 }
 
 function triggerGameOver(){

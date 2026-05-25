@@ -80,8 +80,9 @@ function endWave(){
   saveSave();
   updateSaveUI();
   showScreen('waveComplete');
-  // Queue card pick only in solo/coop (not battle mode)
   if(!battleActive) _pendingCardPick=true;
+  // Auto-advance after countdown
+  _startWaveCompleteCountdown();
 }
 
 function triggerGameOver(){
@@ -438,25 +439,110 @@ function fireCyberBullet(){
   }
   if(!target){showNotif('No missile in range!');return;}
   cyberBulletCD=15;
-  // Build car mesh
+  // Build Camaro SS-inspired Cyber Bullet muscle car
   const carG=new THREE.Group();
-  const bodyMat=new THREE.MeshLambertMaterial({color:0xFF2200});
-  const body=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.8,4.8),bodyMat);
-  carG.add(body);
-  const roof=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.6,2.4),new THREE.MeshLambertMaterial({color:0xCC1800}));
-  roof.position.set(0,0.7,0); carG.add(roof);
-  // Wheels
-  const wMat=new THREE.MeshLambertMaterial({color:0x111111});
-  [[-1.2,-.4,1.6],[1.2,-.4,1.6],[-1.2,-.4,-1.6],[1.2,-.4,-1.6]].forEach(([x,y,z])=>{
-    const w=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.3,8),wMat);
-    w.rotation.z=Math.PI/2; w.position.set(x,y,z); carG.add(w);
+  const blk=new THREE.MeshLambertMaterial({color:0x080A0A});
+  const drk=new THREE.MeshLambertMaterial({color:0x050505});
+  const chr=new THREE.MeshLambertMaterial({color:0x707070});
+  const gls=new THREE.MeshLambertMaterial({color:0x1A2030,transparent:true,opacity:.65});
+  const whl=new THREE.MeshLambertMaterial({color:0x0B0B0B});
+  const rim=new THREE.MeshLambertMaterial({color:0x191919});
+  const hl=new THREE.MeshLambertMaterial({color:0xEEEECC,emissive:0xFFFF88,emissiveIntensity:.7});
+  const tl=new THREE.MeshLambertMaterial({color:0xCC1100,emissive:0xFF2200,emissiveIntensity:.65});
+  // Lower sill (widest)
+  const sill=new THREE.Mesh(new THREE.BoxGeometry(2.62,0.3,5.0),blk);
+  sill.position.set(0,.15,-.1);carG.add(sill);
+  // Main body
+  const bd=new THREE.Mesh(new THREE.BoxGeometry(2.5,.52,4.9),blk);
+  bd.position.set(0,.56,-.1);carG.add(bd);
+  // Long hood
+  const hood=new THREE.Mesh(new THREE.BoxGeometry(2.36,.1,2.0),blk);
+  hood.position.set(0,.85,1.15);carG.add(hood);
+  const ridge=new THREE.Mesh(new THREE.BoxGeometry(.26,.055,1.78),drk);
+  ridge.position.set(0,.92,1.1);carG.add(ridge);
+  // Front fender flares
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.BoxGeometry(.13,.42,1.38),blk);
+    f.position.set(s*1.33,.56,1.1);carG.add(f);
   });
-  // Chrome trim
-  const trim=new THREE.Mesh(new THREE.BoxGeometry(2.42,0.1,4.82),new THREE.MeshLambertMaterial({color:0xCCCCCC,emissive:0x888888,emissiveIntensity:.4}));
-  trim.position.y=-.4; carG.add(trim);
-  // Flame thruster
-  const flame=new THREE.Mesh(new THREE.ConeGeometry(.5,2,8),new THREE.MeshLambertMaterial({color:0xFF8800,emissive:0xFF4400,emissiveIntensity:1,transparent:true,opacity:.85}));
-  flame.rotation.x=Math.PI/2; flame.position.z=3; carG.add(flame);
+  // Rear fender haunches (wider)
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.BoxGeometry(.17,.44,1.28),blk);
+    f.position.set(s*1.35,.56,-1.38);carG.add(f);
+  });
+  // Compact cabin / coupe roof
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(1.9,.58,2.2),blk);
+  cab.position.set(0,1.17,-.2);carG.add(cab);
+  // Windshield
+  const ws=new THREE.Mesh(new THREE.BoxGeometry(1.8,.5,.08),gls);
+  ws.rotation.x=.5;ws.position.set(0,1.36,.88);carG.add(ws);
+  // Side windows
+  [-1,1].forEach(s=>{
+    const sw=new THREE.Mesh(new THREE.BoxGeometry(.06,.38,.86),gls);
+    sw.position.set(s*.98,1.24,.28);carG.add(sw);
+  });
+  // Rear window
+  const rw=new THREE.Mesh(new THREE.BoxGeometry(1.76,.44,.08),gls);
+  rw.rotation.x=-.52;rw.position.set(0,1.28,-1.27);carG.add(rw);
+  // Thin angry headlights + DRL
+  [-1,1].forEach(s=>{
+    const h=new THREE.Mesh(new THREE.BoxGeometry(.56,.1,.09),hl);
+    h.position.set(s*.83,.84,2.52);carG.add(h);
+    const d=new THREE.Mesh(new THREE.BoxGeometry(.5,.038,.07),hl);
+    d.position.set(s*.83,.74,2.53);carG.add(d);
+  });
+  // Upper grille slot
+  const ug=new THREE.Mesh(new THREE.BoxGeometry(2.02,.11,.11),drk);
+  ug.position.set(0,.8,2.53);carG.add(ug);
+  // Lower wide grille
+  const lg=new THREE.Mesh(new THREE.BoxGeometry(2.18,.26,.15),drk);
+  lg.position.set(0,.38,2.54);carG.add(lg);
+  for(let i=0;i<3;i++){
+    const sl=new THREE.Mesh(new THREE.BoxGeometry(2.16,.024,.05),drk);
+    sl.position.set(0,.28+i*.074,2.56);carG.add(sl);
+  }
+  // Front splitter
+  const sp=new THREE.Mesh(new THREE.BoxGeometry(2.44,.05,.22),drk);
+  sp.position.set(0,.04,2.56);carG.add(sp);
+  const nc=new THREE.Mesh(new THREE.BoxGeometry(2.44,.03,.08),chr);
+  nc.position.set(0,.91,2.53);carG.add(nc);
+  // Side skirts
+  [-1,1].forEach(s=>{
+    const sk=new THREE.Mesh(new THREE.BoxGeometry(.07,.13,4.1),drk);
+    sk.position.set(s*1.3,.1,-.1);carG.add(sk);
+  });
+  // Rear taillights strip + corner
+  const tlb=new THREE.Mesh(new THREE.BoxGeometry(2.18,.055,.07),tl);
+  tlb.position.set(0,.74,-2.57);carG.add(tlb);
+  [-1,1].forEach(s=>{
+    const tc=new THREE.Mesh(new THREE.BoxGeometry(.6,.1,.08),tl);
+    tc.position.set(s*.78,.76,-2.57);carG.add(tc);
+  });
+  // Rear fascia
+  const rf=new THREE.Mesh(new THREE.BoxGeometry(2.42,.58,.11),blk);
+  rf.position.set(0,.52,-2.57);carG.add(rf);
+  // Spoiler lip
+  const spo=new THREE.Mesh(new THREE.BoxGeometry(2.2,.09,.26),drk);
+  spo.position.set(0,1.12,-2.47);carG.add(spo);
+  // Diffuser + exhausts
+  const dif=new THREE.Mesh(new THREE.BoxGeometry(2.08,.13,.18),drk);
+  dif.position.set(0,.09,-2.59);carG.add(dif);
+  [-.46,.46].forEach(x=>{
+    const ex=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.16,8),chr);
+    ex.rotation.x=Math.PI/2;ex.position.set(x,.12,-2.66);carG.add(ex);
+  });
+  // Wheels x4
+  [[-1.28,.3,1.6],[1.28,.3,1.6],[-1.28,.3,-1.6],[1.28,.3,-1.6]].forEach(([x,y,z])=>{
+    const ti=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.26,12),whl);
+    ti.rotation.z=Math.PI/2;ti.position.set(x,y,z);carG.add(ti);
+    const ri=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.22,10),rim);
+    ri.rotation.z=Math.PI/2;ri.position.set(x,y,z);carG.add(ri);
+    const cp=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.24,8),drk);
+    cp.rotation.z=Math.PI/2;cp.position.set(x,y,z);carG.add(cp);
+  });
+  // Flame thruster (rear)
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.44,1.8,8),new THREE.MeshLambertMaterial({color:0xFF8800,emissive:0xFF5500,emissiveIntensity:1,transparent:true,opacity:.8}));
+  flame.rotation.x=Math.PI/2;flame.position.z=3.2;carG.add(flame);
 
   // Start position: far edge of map behind player
   const angle=yaw+Math.PI+(Math.random()-.5)*.5;
@@ -557,13 +643,18 @@ function fireRajpnFist(){
   }
   if(!target){showNotif('No missile to target!');return;}
   rajpnFistCD=RAJPN_CD;
-  const rtX=Math.cos(yaw), rtZ=-Math.sin(yaw);
-  const ARM=30;
+  // Compute perpendicular to player→missile — fists always clap from both sides of target
+  const toMx=target.pos.x-px, toMz=target.pos.z-pz;
+  const toML=Math.sqrt(toMx*toMx+toMz*toMz)||1;
+  const perpX=toMz/toML, perpZ=-toMx/toML;
+  const ARM=34;
+  const ty=target.pos.y;
   const lFist=_makeFistGroup(true);
   const rFist=_makeFistGroup(false);
-  lFist.position.set(px-rtX*ARM, py+1, pz-rtZ*ARM);
-  rFist.position.set(px+rtX*ARM, py+1, pz+rtZ*ARM);
-  lFist.rotation.y=yaw; rFist.rotation.y=yaw;
+  lFist.position.set(target.pos.x+perpX*ARM, ty+2, target.pos.z+perpZ*ARM);
+  rFist.position.set(target.pos.x-perpX*ARM, ty+2, target.pos.z-perpZ*ARM);
+  const fa=Math.atan2(-perpX,-perpZ);
+  lFist.rotation.y=fa; rFist.rotation.y=fa+Math.PI;
   scene.add(lFist); scene.add(rFist);
   _rajpnState={
     lFist,rFist,t:0,done:false,target,

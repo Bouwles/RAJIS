@@ -105,6 +105,11 @@ function setupEvents(){
   let eggBuf='';
   document.addEventListener('keydown',e=>{
     if(currentScreen==='mainMenu'){
+      // Chat: Enter focuses/sends
+      if(e.key==='Enter'){
+        const ci=document.getElementById('rlChatInput');
+        if(ci&&document.activeElement!==ci){ e.preventDefault(); ci.focus(); return; }
+      }
       eggBuf+=e.key.toLowerCase();
       if(eggBuf.length>14) eggBuf=eggBuf.slice(-14);
       if(eggBuf.includes('richard')){
@@ -202,16 +207,7 @@ function setupEvents(){
     if(confirm('Return to main menu? Current progress will be lost.')) returnToMenu();
   });
 
-  document.getElementById('btnNextWave').addEventListener('click',()=>{
-    if(_pendingCardPick){ _pendingCardPick=false; showCardPick(); }
-    else {
-      showScreen('hud');
-      if(isLocked) document.exitPointerLock();
-      document.getElementById('clickNotice').style.display='flex';
-      scoped=false;scopeT=0;
-      setTimeout(()=>startWave(),800);
-    }
-  });
+  document.getElementById('btnNextWave').addEventListener('click',()=>_autoNextWave());
   document.getElementById('btnRetry').addEventListener('click',()=>{
     if(selectedLoc) startGame(selectedLoc,1);
   });
@@ -295,6 +291,33 @@ window.addEventListener('load',init);
 //  CARD SYSTEM
 // ═══════════════════════════════════════════════════════════════
 let _pendingCardPick=false;
+let _wcCountdownId=null;
+
+function _autoNextWave(){
+  if(_wcCountdownId){ clearInterval(_wcCountdownId); _wcCountdownId=null; }
+  const btn=document.getElementById('btnNextWave');
+  if(btn) btn.textContent='Next Wave →';
+  if(_pendingCardPick){ _pendingCardPick=false; showCardPick(); }
+  else{
+    showScreen('hud');
+    if(isLocked) document.exitPointerLock();
+    document.getElementById('clickNotice').style.display='flex';
+    scoped=false; scopeT=0;
+    setTimeout(()=>startWave(),800);
+  }
+}
+
+function _startWaveCompleteCountdown(){
+  if(_wcCountdownId) clearInterval(_wcCountdownId);
+  let secs=5;
+  const btn=document.getElementById('btnNextWave');
+  if(btn) btn.textContent=`Next Wave → (${secs})`;
+  _wcCountdownId=setInterval(()=>{
+    secs--;
+    if(btn) btn.textContent=secs>0?`Next Wave → (${secs})`:'Next Wave →';
+    if(secs<=0){ clearInterval(_wcCountdownId); _wcCountdownId=null; _autoNextWave(); }
+  },1000);
+}
 let activeCards=[];
 
 const RARITY_COLORS={C:'#888',U:'#4A90D9',R:'#B066E8',E:'#F0C040',L:'#FF5544',M:'#FF44FF'};
@@ -420,7 +443,7 @@ function pickCard(card){
   showScreen('hud');
   document.getElementById('clickNotice').style.display='flex';
   scoped=false; scopeT=0;
-  setTimeout(()=>startWave(),800);
+  setTimeout(()=>startWave(),500);
 }
 
 // ─── Statistics screen ──────────────────────────────────────────

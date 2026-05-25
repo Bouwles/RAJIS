@@ -344,6 +344,7 @@ function startSocialListeners(){
   _listenPartyInvites();
   _startPresenceHeartbeat();
   if(typeof initLobbyScene==='function') initLobbyScene();
+  initLobbyChat();
   renderLobby();
   updateNavUser();
 }
@@ -749,6 +750,38 @@ function equipWeapon(id){
 // ═══════════════════════════════════════════════════════════════
 //  SEASON / XP / CHALLENGES PANEL
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  LOBBY CHAT
+// ═══════════════════════════════════════════════════════════════
+let _chatUnsub=null;
+
+function initLobbyChat(){
+  if(!_fbDb||!_fbUser||_chatUnsub) return;
+  _chatUnsub=_fbDb.collection('globalChat')
+    .orderBy('ts','desc').limit(10)
+    .onSnapshot(snap=>{
+      const msgs=[];
+      snap.forEach(d=>msgs.unshift(d.data()));
+      const box=document.getElementById('rlChatMessages');
+      if(!box) return;
+      box.innerHTML=msgs.map(m=>
+        `<div class="rl-chat-msg"><span class="rl-cmn">${_esc(m.user||'?')}</span> ${_esc(m.text||'')}</div>`
+      ).join('');
+      box.scrollTop=box.scrollHeight;
+    },()=>{});
+}
+
+function sendChatMsg(text){
+  if(!text||!text.trim()) return;
+  if(!_fbDb||!_fbUser){ showNotif('Sign in to chat'); return; }
+  _fbDb.collection('globalChat').add({
+    uid:_fbUser.uid,
+    user:mpUser?.username||'RICHARD',
+    text:text.trim().slice(0,120),
+    ts:firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(()=>{});
+}
+
 function _renderSeasonPanel(){
   const el=document.getElementById('rlSeasonPanel');
   if(!el) return;

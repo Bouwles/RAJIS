@@ -575,10 +575,8 @@ function updateSaveUI(){
   const menu=document.getElementById('mainMenu');
   if(saveData.totalScore>0){
     badge.textContent=`Best Wave: ${saveData.waveRecord} | Score: ${saveData.totalScore} | Credits: ${saveData.currency}`;
-    menu.classList.add('has-save');
   } else {
     badge.textContent='No save found';
-    menu.classList.remove('has-save');
   }
   const ub=document.getElementById('menuUserBadge');
   if(ub&&mpUser?.username) ub.textContent=mpUser.username;

@@ -253,7 +253,7 @@ body::after{content:'';position:fixed;inset:0;
 .map-detail-row span:last-child{color:var(--text2);font-family:var(--font-mono);font-size:.88em;}
 #mapLocDetails{padding-bottom:12px;}
 #btnDeploy2{margin:13px 13px 0!important;width:calc(100% - 26px)!important;}
-#locationSelect .back-btn{position:absolute;bottom:18px;left:18px;z-index:10;}
+#locationSelect .back-btn{position:absolute;top:14px;left:14px;z-index:50;}
 
 /* ── CUSTOMIZATION ── */
 #customization{flex-direction:column;background:var(--bg);}

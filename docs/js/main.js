@@ -177,13 +177,6 @@ function setupEvents(){
     document.getElementById('mapLocDesc').textContent='Click a marker on the map to deploy.';
     showScreen('locationSelect');
   });
-  document.getElementById('btnContinue').addEventListener('click',()=>{
-    if(saveData.waveRecord>0||saveData.totalScore>0){
-      startGame(saveData.locId||'beirut',1);
-    } else {
-      showNotif('No save found — start a new game!');
-    }
-  });
   document.getElementById('btnDeploy2').addEventListener('click',()=>{
     if(!selectedLoc) return;
     buildCustomizationUI();rebuildCharPreview();showScreen('customization');

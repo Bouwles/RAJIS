@@ -229,6 +229,9 @@ function returnToMenu(){
   document.getElementById('scopeOverlay').style.display='none';
   document.getElementById('weaponBar').style.display='none';
   document.getElementById('minimap').style.display='none';
+  ['gadgetHud','cyberBulletHud','rajpnFistHud'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
   updateSaveUI();
   if(typeof setPresence==='function') setPresence('lobby');
   showScreen('mainMenu');

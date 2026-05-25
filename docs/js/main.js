@@ -87,10 +87,11 @@ function setupEvents(){
     if(isLocked){
       document.getElementById('clickNotice').style.display='none';
       document.getElementById('btnSettingsFloat').style.display='none';
-    } else if(gameActive&&!gamePaused){
+    } else if(gameActive&&!gamePaused&&!_suppressPauseLock){
       // Browser swallows Escape keydown while in pointer lock — pause here instead
       pauseGame();
     }
+    _suppressPauseLock=false;
   });
 
   // Mouse look
@@ -198,11 +199,6 @@ function setupEvents(){
   });
 
   document.getElementById('btnResume').addEventListener('click',resumeGame);
-  document.getElementById('btnPauseCustom').addEventListener('click',()=>{
-    gamePaused=true;
-    buildCustomizationUI();rebuildCharPreview();
-    showScreen('customization');
-  });
   document.getElementById('btnPauseMainMenu').addEventListener('click',()=>{
     if(confirm('Return to main menu? Current progress will be lost.')) returnToMenu();
   });

@@ -2,6 +2,8 @@
 // ═══════════════════════════════════════════════════════════════
 //  WAVE SYSTEM
 // ═══════════════════════════════════════════════════════════════
+let _suppressPauseLock=false;
+
 function startWave(){
   waveActive=true;
   killStreak=0; killStreakTimer=0;
@@ -47,6 +49,7 @@ function updateWave(dt){
 function endWave(){
   waveActive=false;
   sfxWaveComplete();
+  _suppressPauseLock=true;
   if(document.pointerLockElement) document.exitPointerLock();
   isLocked=false;
 
@@ -417,7 +420,7 @@ function updateHook(dt){
 }
 
 function releaseHook(){
-  if(hookPulling) vy=Math.min(vy,4);
+  if(hookPulling){ vy=Math.min(vy,4); vx=0; vz=0; }
   if(hookMesh){ scene.remove(hookMesh); hookMesh=null; }
   if(hookLine){ scene.remove(hookLine); hookLine=null; }
   hookActive=false; hookPulling=false; hookPos=null; hookVel=null; hookTarget=null;

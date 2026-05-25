@@ -16,6 +16,25 @@
 <body>
 
 <canvas id="gameCanvas"></canvas>
+
+<!-- TOP NAV (shown on hub screens) -->
+<nav id="topNav" class="top-nav" style="display:none">
+  <div class="tnav-brand">RAJIS</div>
+  <div class="tnav-tabs">
+    <button class="nav-tab" data-screen="mainMenu" onclick="showScreen('mainMenu');renderLobby()">⌂ Lobby</button>
+    <button class="nav-tab" data-screen="locationSelect" onclick="mapSelected=null;document.getElementById('mapLocDetails').style.display='none';document.getElementById('mapLocName').textContent='Select a theater';document.getElementById('mapLocDesc').textContent='Click a marker on the map to deploy.';showScreen('locationSelect')">▶ Play</button>
+    <button class="nav-tab" data-screen="customization" onclick="showLockerScreen()">◈ Locker</button>
+    <button class="nav-tab" data-screen="weaponsScreen" onclick="renderWeaponsScreen();showScreen('weaponsScreen')">⚔ Weapons</button>
+    <button class="nav-tab" data-screen="shopScreen" onclick="buildShop();showScreen('shopScreen')">💰 Shop</button>
+    <button class="nav-tab" data-screen="statsScreen" onclick="buildStatsScreen();showScreen('statsScreen')">📊 Stats</button>
+    <button class="nav-tab" data-screen="friendsScreen" onclick="renderFriendsScreen();showScreen('friendsScreen')">👥 Friends <span id="navFriendBadge" class="nav-badge" style="display:none"></span></button>
+    <button class="nav-tab" data-screen="settingsScreen" onclick="document.getElementById('settingsLogoutConfirm').style.display='none';showScreen('settingsScreen')">⚙</button>
+  </div>
+  <div class="tnav-user">
+    <span id="navUsername" class="tnav-callsign">—</span>
+    <span id="navCredits" class="tnav-credits">💰 0</span>
+  </div>
+</nav>
 <div id="loadScreen">
   <div style="font-size:.82em;color:var(--text3);letter-spacing:.28em;text-transform:uppercase;font-family:'Inter',sans-serif;font-weight:600;">Initializing Combat Systems</div>
   <div class="load-bar-bg"><div class="load-bar"></div></div>
@@ -85,33 +104,61 @@
   </div>
 </div>
 
-<!-- MAIN MENU -->
+<!-- MAIN MENU — Lobby Hub -->
 <div id="mainMenu" class="screen">
-  <div class="menu-left">
-    <div class="game-title" id="gameTitle">Richard Abou Jamra<span>Interception Simulation</span></div>
-    <div class="game-subtitle">Missile Defense &nbsp;·&nbsp; FPS Combat</div>
-    <button class="menu-btn btn-primary" id="btnPlay">New Mission</button>
-    <button class="menu-btn btn-secondary" id="btnContinue">Continue</button>
-    <button class="menu-btn btn-mp" id="btnMultiplayer">Multiplayer</button>
-    <button class="menu-btn btn-yellow" id="btnShop">Armory &amp; Shop</button>
-    <button class="menu-btn btn-secondary" id="btnStats" style="font-size:.84em;">Statistics &amp; Cards</button>
-    <button class="menu-btn btn-secondary" id="btnCredits" style="font-size:.84em;">Controls &amp; Info</button>
-    <div class="save-badge" id="saveBadge">No save found</div>
-    <div id="bpBadge" style="margin-top:8px;font-family:'Inter',sans-serif;font-size:.76em;letter-spacing:.1em;color:var(--amber);display:none">
-      BATTLE PASS <span id="bpLevelLabel">LV 0</span>
-      <div style="width:140px;height:3px;background:rgba(53,59,71,.6);margin:5px auto 0;overflow:hidden">
-        <div id="bpXpBar" style="height:100%;background:linear-gradient(90deg,var(--amber),#E08020);width:0%"></div>
+  <!-- Hidden legacy buttons (referenced by JS event listeners) -->
+  <button id="btnPlay"        style="display:none">New Mission</button>
+  <button id="btnContinue"    style="display:none">Continue</button>
+  <button id="btnMultiplayer" style="display:none">Multiplayer</button>
+  <button id="btnShop"        style="display:none">Shop</button>
+  <button id="btnStats"       style="display:none">Stats</button>
+  <button id="btnCredits"     style="display:none">Info</button>
+
+  <div class="lobby-layout">
+    <!-- LEFT: Party panel -->
+    <div class="lobby-left">
+      <div class="lobby-section-hd">YOUR PARTY</div>
+      <div id="lobbyPartySlots" class="party-slots"></div>
+      <div id="lobbyPartyActions"></div>
+      <div class="lobby-mp-row">
+        <button class="menu-btn btn-mp" style="width:100%;margin:10px 0 0;font-size:.8em;" onclick="showScreen('lobbyScreen')">🌐 Peer Multiplayer</button>
       </div>
     </div>
-    <div id="menuUserBadge"></div>
-    <div class="menu-version">Build 2025</div>
+
+    <!-- CENTER: Play panel -->
+    <div class="lobby-center">
+      <div class="game-title" id="gameTitle">Richard Abou Jamra<span>Interception Simulation</span></div>
+      <div class="game-subtitle">Made by Paul Nercessian</div>
+      <div id="lobbyPlayPanel" class="lobby-play-panel"></div>
+    </div>
+
+    <!-- RIGHT: Online friends + profile strip -->
+    <div class="lobby-right">
+      <div class="lobby-section-hd">ONLINE FRIENDS</div>
+      <div id="lobbySidebarFriends" class="sidebar-friends"></div>
+      <div class="lobby-right-footer">
+        <div class="save-badge" id="saveBadge">No save found</div>
+        <div id="bpBadge" style="margin-top:6px;font-size:.74em;letter-spacing:.1em;color:var(--amber);display:none">
+          BATTLE PASS <span id="bpLevelLabel">LV 0</span>
+          <div style="width:120px;height:3px;background:rgba(53,59,71,.6);margin:5px 0 0;overflow:hidden">
+            <div id="bpXpBar" style="height:100%;background:linear-gradient(90deg,var(--amber),#E08020);width:0%"></div>
+          </div>
+        </div>
+        <div id="menuUserBadge"></div>
+      </div>
+    </div>
   </div>
-  <div class="menu-right">
-    <div class="menu-bg-grid"></div>
-    <div class="menu-bg-vignette"></div>
-    <div class="menu-bg-accent"></div>
-    <div class="menu-bg-accent2"></div>
-    <div class="menu-bg-coords">33.8938° N, 35.5018° E</div>
+</div>
+
+<!-- USERNAME PICKER MODAL (shown after Google sign-in for new users) -->
+<div id="usernamePickerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;display:none;align-items:center;justify-content:center;">
+  <div class="mp-card" style="width:360px;">
+    <div class="mp-title" style="margin-bottom:4px;">Choose Your Callsign</div>
+    <div class="mp-sub" style="margin-bottom:14px;">This is your in-game name. You can change it later in Settings.</div>
+    <input class="mp-input" id="pickUsername" placeholder="Callsign (letters, numbers, _)" maxlength="20"
+      style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_]/g,'')"/>
+    <div class="mp-err" id="pickUsernameErr"></div>
+    <button class="menu-btn btn-primary" style="width:100%;margin:0;" onclick="doPickUsername()">Confirm Callsign →</button>
   </div>
 </div>
 
@@ -341,6 +388,7 @@
           <button class="menu-btn btn-secondary" id="btnLogoutCancel" style="width:140px;font-size:.88em;">Cancel</button>
         </div>
       </div>
+      <button class="menu-btn btn-secondary" id="btnChangeCallsign" style="width:100%;margin:0 0 8px;font-size:.88em;" onclick="showUsernamePickerForChange()">Change Callsign</button>
       <button class="menu-btn settings-logout-btn" id="btnLogout">Log Out</button>
     </div>
     <button class="menu-btn btn-secondary" id="btnSettingsBack" style="font-size:.85em;padding:10px 28px;margin-top:6px;">← Back</button>
@@ -413,7 +461,7 @@
       <button class="shop-tab-btn" data-tab="cosmetics" onclick="setShopTab('cosmetics')">🎨 Cosmetics</button>
     </div>
     <div class="shop-grid" id="shopGrid"></div>
-    <button class="back-btn" id="btnShopBack" style="margin-top:20px;">← Back</button>
+    <button class="back-btn" id="btnShopBack" style="margin-top:20px;" onclick="showScreen('mainMenu');renderLobby()">← Back</button>
   </div>
 </div>
 
@@ -458,6 +506,39 @@
   </div>
 </div>
 
+<!-- FRIENDS SCREEN -->
+<div id="friendsScreen" class="screen">
+  <div class="friends-layout">
+    <div class="screen-title" style="margin-bottom:16px;">Friends</div>
+    <div class="friends-search-row">
+      <input id="friendSearchInput" class="mp-input" placeholder="Search callsign…" maxlength="20"
+        style="flex:1;text-transform:uppercase;margin:0;"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_]/g,'')"
+        onkeydown="if(event.key==='Enter')doFriendSearch()"/>
+      <button class="menu-btn btn-primary" style="width:90px;margin:0;font-size:.8em;" onclick="doFriendSearch()">Search</button>
+    </div>
+    <div id="friendSearchResults" class="friends-results"></div>
+    <div class="friends-section">
+      <div class="friends-section-lbl">Incoming Requests <span id="friendReqCount" class="friends-count"></span></div>
+      <div id="friendRequestsList"></div>
+    </div>
+    <div class="friends-section">
+      <div class="friends-section-lbl">Friends</div>
+      <div id="friendsList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WEAPONS LOADOUT SCREEN -->
+<div id="weaponsScreen" class="screen">
+  <div style="text-align:center;width:100%;padding:20px 16px;">
+    <div class="screen-title" style="margin-bottom:4px;">Weapons Loadout</div>
+    <div class="screen-sub" style="margin-bottom:16px;">Choose exactly 2 weapons for your next deployment</div>
+    <div id="weaponsLoadout" class="weapons-loadout"></div>
+    <div id="weaponsGrid" class="weapons-grid"></div>
+  </div>
+</div>
+
 <!-- STATISTICS & ENCYCLOPEDIA -->
 <div id="statsScreen" class="screen">
   <div style="text-align:center;width:100%;padding:20px;">
@@ -484,6 +565,7 @@
 <script src="js/gameplay.js"></script>
 <script src="js/enemies.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/social.js"></script>
 <script src="js/main.js"></script>
 <script src="js/multiplayer.js"></script>
 

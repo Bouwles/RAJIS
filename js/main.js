@@ -141,15 +141,12 @@ function setupEvents(){
     if(e.code==='KeyG') useFlashbang();
     if(e.code==='KeyT') useAirstrike();
     if(e.code==='KeyB') useCover();
-    if(e.code==='Digit1') switchWeapon('pistol');
-    if(e.code==='Digit2') switchWeapon('launcher');
-    if(e.code==='Digit3') switchWeapon('shotgun');
-    if(e.code==='Digit4') switchWeapon('sniper');
-    if(e.code==='Digit5') switchWeapon('smg');
+    if(e.code==='Digit1') switchWeapon((saveData.equippedWeapons||['pistol','launcher'])[0]);
+    if(e.code==='Digit2') switchWeapon((saveData.equippedWeapons||['pistol','launcher'])[1]);
   });
   document.addEventListener('wheel',e=>{
     if(!isLocked||!gameActive||gamePaused) return;
-    const ids=Object.keys(WEAPONS).filter(id=>weaponInventory.has(id));
+    const ids=saveData.equippedWeapons||['pistol','launcher'];
     const cur=ids.indexOf(currentWeapon);
     const next=ids[(cur+(e.deltaY>0?1:-1)+ids.length)%ids.length];
     switchWeapon(next);
@@ -161,13 +158,13 @@ function setupEvents(){
     if(!isLocked||!gameActive||gamePaused) return;
     if(e.button===0){ mouseHeld=true; fireProjectile(); }
     if(e.button===2){
-      if(currentWeapon==='shotgun') fireHook();
+      if(currentWeapon==='shotgun'||currentWeapon==='hookbreaker') fireHook();
       else {scoped=true;sfxScope();}
     }
   });
   document.addEventListener('mouseup',e=>{
     if(e.button===0) mouseHeld=false;
-    if(e.button===2){if(currentWeapon!=='shotgun') scoped=false;}
+    if(e.button===2){if(currentWeapon!=='shotgun'&&currentWeapon!=='hookbreaker') scoped=false;}
   });
   document.addEventListener('contextmenu',e=>e.preventDefault());
 
@@ -291,6 +288,7 @@ function init(){
   setupModMenuButtons();
   updateSaveUI();
   updateWeaponBar();
+  if(_fbUser&&typeof startSocialListeners==='function') startSocialListeners();
   document.getElementById('weaponBar').style.display='none';
   setTimeout(()=>{
     document.getElementById('loadScreen').style.display='none';

@@ -13,6 +13,7 @@ function defaultSave(){
     gadgets:{flashbang:2, airstrike:0, cover:0},
     hasCyberBullet:false,
     hasRajpnFist:false,
+    equippedWeapons:['pistol','launcher'],
     bpXP:0, bpLevel:0,
     customization:{
       outfitColor:'#1A3A8A', armorStyle:'light',

@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────
+    function isAuth() { return request.auth != null; }
+    function isUser(uid) { return isAuth() && request.auth.uid == uid; }
+
+    // ── User profiles ─────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isAuth();
+      allow write: if isUser(uid);
+    }
+
+    // ── Username index ────────────────────────────────────────────
+    match /usernames/{username} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuth() && resource.data.uid == request.auth.uid;
+    }
+
+    // ── Presence ──────────────────────────────────────────────────
+    match /presence/{uid} {
+      allow read: if isAuth();
+      allow write: if isUser(uid);
+    }
+
+    // ── Friend requests ───────────────────────────────────────────
+    match /friendRequests/{reqId} {
+      allow read: if isAuth() &&
+        (resource.data.fromUid == request.auth.uid ||
+         resource.data.toUid   == request.auth.uid);
+      allow create: if isAuth() &&
+        request.resource.data.fromUid == request.auth.uid;
+      allow delete: if isAuth() &&
+        (resource.data.fromUid == request.auth.uid ||
+         resource.data.toUid   == request.auth.uid);
+    }
+
+    // ── Friends subcollections ────────────────────────────────────
+    match /friends/{uid}/list/{friendUid} {
+      allow read: if isAuth();
+      allow write: if isAuth();  // batch writes via accept flow
+    }
+
+    // ── Parties ───────────────────────────────────────────────────
+    match /parties/{partyId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth() &&
+        (resource.data.hostUid == request.auth.uid ||
+         resource.data.members.size() == 0);
+    }
+
+    // ── Party invites ─────────────────────────────────────────────
+    match /partyInvites/{inviteId} {
+      allow read: if isAuth() &&
+        (resource.data.fromUid == request.auth.uid ||
+         resource.data.toUid   == request.auth.uid);
+      allow create: if isAuth() &&
+        request.resource.data.fromUid == request.auth.uid;
+      allow delete: if isAuth() &&
+        (resource.data.fromUid == request.auth.uid ||
+         resource.data.toUid   == request.auth.uid);
+    }
+  }
+}

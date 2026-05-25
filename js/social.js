@@ -1,0 +1,704 @@
+// Firebase social layer: presence, friends, party, UI rendering
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+//  SOCIAL STATE
+// ═══════════════════════════════════════════════════════════════
+let socialState = {
+  friends: [],         // [{uid, username}]
+  friendRequests: [],  // [{id, fromUid, fromUsername}] incoming
+  sentRequests: [],    // [{id, toUid, toUsername}] outgoing
+  party: null,         // {id, hostUid, members:[{uid,username,ready}], selectedMap, mode, state}
+  partyInvites: [],    // [{id, partyId, fromUid, fromUsername}]
+  presence: {},        // {uid: status}
+};
+
+let _socialUnsubs = [];
+let _friendPresenceUnsubs = [];
+let _presenceInterval = null;
+
+// ═══════════════════════════════════════════════════════════════
+//  PRESENCE
+// ═══════════════════════════════════════════════════════════════
+async function setPresence(status){
+  if(!_fbUser||!_fbDb) return;
+  try{
+    await _fbDb.collection('presence').doc(_fbUser.uid).set({
+      status, uid:_fbUser.uid,
+      username: mpUser?.username||'',
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+  }catch(e){}
+}
+
+function _startPresenceHeartbeat(){
+  setPresence('lobby');
+  if(_presenceInterval) clearInterval(_presenceInterval);
+  _presenceInterval = setInterval(()=>{
+    const status = gameActive?'in_match':socialState.party?'in_party':'lobby';
+    setPresence(status);
+  }, 30000);
+  window.addEventListener('beforeunload', _setOffline);
+}
+
+function _stopPresenceHeartbeat(){
+  if(_presenceInterval){ clearInterval(_presenceInterval); _presenceInterval=null; }
+  window.removeEventListener('beforeunload', _setOffline);
+  setPresence('offline');
+}
+
+function _setOffline(){
+  if(!_fbUser||!_fbDb) return;
+  _fbDb.collection('presence').doc(_fbUser.uid)
+    .set({status:'offline'},{merge:true}).catch(()=>{});
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FRIENDS
+// ═══════════════════════════════════════════════════════════════
+async function fbSearchUser(query){
+  if(!_fbDb||!query||query.length<2) return [];
+  const q = query.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'').toLowerCase();
+  try{
+    const snap = await _fbDb.collection('usernames')
+      .orderBy(firebase.firestore.FieldPath.documentId())
+      .startAt(q).endAt(q+'').limit(10).get();
+    const results=[];
+    snap.forEach(doc=>{
+      if(doc.data().uid!==_fbUser.uid)
+        results.push({uid:doc.data().uid, username:doc.id.toUpperCase()});
+    });
+    return results;
+  }catch(e){ return []; }
+}
+
+async function fbSendFriendRequest(targetUid, targetUsername){
+  if(!_fbDb||!_fbUser) return;
+  const myUid=_fbUser.uid, myUsername=mpUser?.username||'';
+  if(socialState.friends.some(f=>f.uid===targetUid)){showNotif('Already friends!');return;}
+  if(socialState.sentRequests.some(r=>r.toUid===targetUid)){showNotif('Request already sent.');return;}
+  try{
+    await _fbDb.collection('friendRequests').doc().set({
+      fromUid:myUid, fromUsername:myUsername,
+      toUid:targetUid, toUsername:targetUsername,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showNotif('Friend request sent to '+targetUsername+'!');
+    renderFriendsScreen();
+  }catch(e){showNotif('Error sending request.');}
+}
+
+async function fbAcceptFriendRequest(reqId, fromUid, fromUsername){
+  if(!_fbDb||!_fbUser) return;
+  const myUid=_fbUser.uid, myUsername=mpUser?.username||'';
+  try{
+    const batch=_fbDb.batch();
+    batch.set(_fbDb.collection('friends').doc(myUid).collection('list').doc(fromUid),
+      {username:fromUsername, addedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    batch.set(_fbDb.collection('friends').doc(fromUid).collection('list').doc(myUid),
+      {username:myUsername, addedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    batch.delete(_fbDb.collection('friendRequests').doc(reqId));
+    await batch.commit();
+    showNotif('You and '+fromUsername+' are now friends!');
+  }catch(e){showNotif('Error accepting request.');}
+}
+
+async function fbDeclineFriendRequest(reqId){
+  if(!_fbDb) return;
+  try{ await _fbDb.collection('friendRequests').doc(reqId).delete(); }catch(e){}
+}
+
+async function fbRemoveFriend(friendUid){
+  if(!_fbDb||!_fbUser) return;
+  const myUid=_fbUser.uid;
+  try{
+    const batch=_fbDb.batch();
+    batch.delete(_fbDb.collection('friends').doc(myUid).collection('list').doc(friendUid));
+    batch.delete(_fbDb.collection('friends').doc(friendUid).collection('list').doc(myUid));
+    await batch.commit();
+    showNotif('Friend removed.');
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PARTY
+// ═══════════════════════════════════════════════════════════════
+async function _createOrGetParty(){
+  if(!_fbDb||!_fbUser) return null;
+  if(socialState.party) return socialState.party.id;
+  const myUid=_fbUser.uid;
+  const partyRef=_fbDb.collection('parties').doc();
+  await partyRef.set({
+    hostUid:myUid,
+    members:[{uid:myUid, username:mpUser?.username||'?', ready:false}],
+    selectedMap: saveData.locId||'beirut',
+    mode:'coop', state:'lobby',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  _listenParty(partyRef.id);
+  return partyRef.id;
+}
+
+async function fbInviteToParty(friendUid, friendUsername){
+  if(!_fbDb||!_fbUser) return;
+  const partyId = await _createOrGetParty();
+  if(!partyId) return;
+  if(socialState.party&&socialState.party.members.some(m=>m.uid===friendUid)){
+    showNotif(friendUsername+' is already in your party.'); return;
+  }
+  try{
+    await _fbDb.collection('partyInvites').doc().set({
+      partyId, fromUid:_fbUser.uid,
+      fromUsername:mpUser?.username||'?',
+      toUid:friendUid,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showNotif('Invite sent to '+friendUsername+'!');
+  }catch(e){showNotif('Error sending invite.');}
+}
+
+async function fbAcceptPartyInvite(inviteId, partyId){
+  if(!_fbDb||!_fbUser) return;
+  const myUid=_fbUser.uid;
+  try{
+    const partyRef=_fbDb.collection('parties').doc(partyId);
+    const partySnap=await partyRef.get();
+    if(!partySnap.exists){showNotif('Party no longer exists.');return;}
+    const members=partySnap.data().members||[];
+    if(members.length>=4){showNotif('Party is full!');return;}
+    if(!members.some(m=>m.uid===myUid)){
+      members.push({uid:myUid, username:mpUser?.username||'?', ready:false});
+      await partyRef.update({members});
+    }
+    await _fbDb.collection('partyInvites').doc(inviteId).delete();
+    // Hide popup
+    const popup=document.getElementById('partyInvitePopup');
+    if(popup) popup.style.display='none';
+    socialState.partyInvites=socialState.partyInvites.filter(i=>i.id!==inviteId);
+    setPresence('in_party');
+    _listenParty(partyId);
+    showNotif('Joined party!');
+    showScreen('mainMenu');
+    renderLobby();
+  }catch(e){showNotif('Error joining party.');}
+}
+
+async function fbDeclinePartyInvite(inviteId){
+  if(!_fbDb) return;
+  try{ await _fbDb.collection('partyInvites').doc(inviteId).delete(); }catch(e){}
+  socialState.partyInvites=socialState.partyInvites.filter(i=>i.id!==inviteId);
+  const popup=document.getElementById('partyInvitePopup');
+  if(popup) popup.style.display='none';
+  if(socialState.partyInvites.length>0) _showPartyInvitePopup();
+}
+
+async function fbLeaveParty(){
+  if(!_fbDb||!_fbUser||!socialState.party) return;
+  const myUid=_fbUser.uid, partyId=socialState.party.id;
+  try{
+    const partyRef=_fbDb.collection('parties').doc(partyId);
+    const snap=await partyRef.get();
+    if(!snap.exists){socialState.party=null;renderLobby();return;}
+    const members=(snap.data().members||[]).filter(m=>m.uid!==myUid);
+    if(members.length===0){
+      await partyRef.delete();
+    } else {
+      await partyRef.update({members, hostUid:members[0].uid});
+    }
+    socialState.party=null;
+    setPresence('lobby');
+    renderLobby();
+  }catch(e){}
+}
+
+async function fbToggleReady(){
+  if(!_fbDb||!_fbUser||!socialState.party) return;
+  const myUid=_fbUser.uid;
+  const partyRef=_fbDb.collection('parties').doc(socialState.party.id);
+  const snap=await partyRef.get();
+  if(!snap.exists) return;
+  const members=snap.data().members.map(m=>
+    m.uid===myUid?{...m,ready:!m.ready}:m
+  );
+  await partyRef.update({members});
+}
+
+async function fbSetPartyMap(locId){
+  if(!_fbDb||!socialState.party) return;
+  await _fbDb.collection('parties').doc(socialState.party.id).update({selectedMap:locId});
+}
+
+async function fbSetPartyMode(mode){
+  if(!_fbDb||!socialState.party) return;
+  await _fbDb.collection('parties').doc(socialState.party.id).update({mode});
+}
+
+async function fbDeployParty(){
+  if(!_fbDb||!_fbUser||!socialState.party) return;
+  const party=socialState.party;
+  if(party.hostUid!==_fbUser.uid){showNotif('Only the host can deploy.');return;}
+  const nonHostReady=party.members.filter(m=>m.uid!==party.hostUid).every(m=>m.ready);
+  if(party.members.length>1&&!nonHostReady){showNotif('Not all members are ready!');return;}
+  await _fbDb.collection('parties').doc(party.id).update({state:'deploying'});
+  startGame(party.selectedMap||saveData.locId||'beirut',1);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LISTENERS
+// ═══════════════════════════════════════════════════════════════
+function _listenFriends(){
+  if(!_fbDb||!_fbUser) return;
+  const uid=_fbUser.uid;
+  const unsub=_fbDb.collection('friends').doc(uid).collection('list')
+    .onSnapshot(snap=>{
+      socialState.friends=[];
+      snap.forEach(doc=>socialState.friends.push({uid:doc.id, username:doc.data().username}));
+      _listenFriendPresence();
+      renderLobby();
+      if(currentScreen==='friendsScreen') renderFriendsScreen();
+    },e=>{});
+  _socialUnsubs.push(unsub);
+}
+
+function _listenFriendPresence(){
+  _friendPresenceUnsubs.forEach(u=>u());
+  _friendPresenceUnsubs=[];
+  socialState.friends.forEach(f=>{
+    const u=_fbDb.collection('presence').doc(f.uid)
+      .onSnapshot(snap=>{
+        socialState.presence[f.uid]=snap.exists?(snap.data().status||'offline'):'offline';
+        renderLobby();
+        if(currentScreen==='friendsScreen') renderFriendsScreen();
+      },e=>{});
+    _friendPresenceUnsubs.push(u);
+  });
+}
+
+function _listenFriendRequests(){
+  if(!_fbDb||!_fbUser) return;
+  const uid=_fbUser.uid;
+  // Incoming
+  const u1=_fbDb.collection('friendRequests').where('toUid','==',uid)
+    .onSnapshot(snap=>{
+      socialState.friendRequests=[];
+      snap.forEach(doc=>socialState.friendRequests.push({
+        id:doc.id, fromUid:doc.data().fromUid, fromUsername:doc.data().fromUsername
+      }));
+      updateFriendRequestBadge();
+      if(currentScreen==='friendsScreen') renderFriendsScreen();
+    },e=>{});
+  _socialUnsubs.push(u1);
+  // Outgoing
+  const u2=_fbDb.collection('friendRequests').where('fromUid','==',uid)
+    .onSnapshot(snap=>{
+      socialState.sentRequests=[];
+      snap.forEach(doc=>socialState.sentRequests.push({
+        id:doc.id, toUid:doc.data().toUid, toUsername:doc.data().toUsername
+      }));
+      if(currentScreen==='friendsScreen') renderFriendsScreen();
+    },e=>{});
+  _socialUnsubs.push(u2);
+}
+
+function _listenParty(partyId){
+  if(!_fbDb) return;
+  const unsub=_fbDb.collection('parties').doc(partyId)
+    .onSnapshot(snap=>{
+      if(!snap.exists){
+        socialState.party=null;
+        setPresence('lobby');
+        renderLobby();
+        return;
+      }
+      const d=snap.data();
+      socialState.party={id:partyId,...d};
+      renderLobby();
+      // Non-host gets game-start signal
+      if(d.state==='deploying'&&d.hostUid!==_fbUser?.uid){
+        startGame(d.selectedMap||'beirut',1);
+      }
+    },e=>{ socialState.party=null; });
+  _socialUnsubs.push(unsub);
+}
+
+function _listenPartyInvites(){
+  if(!_fbDb||!_fbUser) return;
+  const uid=_fbUser.uid;
+  const unsub=_fbDb.collection('partyInvites').where('toUid','==',uid)
+    .onSnapshot(snap=>{
+      socialState.partyInvites=[];
+      snap.forEach(doc=>socialState.partyInvites.push({id:doc.id,...doc.data()}));
+      if(socialState.partyInvites.length>0) _showPartyInvitePopup();
+      renderLobby();
+    },e=>{});
+  _socialUnsubs.push(unsub);
+}
+
+function startSocialListeners(){
+  if(!_fbUser||!_fbDb) return;
+  stopSocialListeners();
+  _listenFriends();
+  _listenFriendRequests();
+  _listenPartyInvites();
+  _startPresenceHeartbeat();
+  renderLobby();
+  updateNavUser();
+}
+
+function stopSocialListeners(){
+  _socialUnsubs.forEach(u=>u());
+  _socialUnsubs=[];
+  _friendPresenceUnsubs.forEach(u=>u());
+  _friendPresenceUnsubs=[];
+  _stopPresenceHeartbeat();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NAV USER
+// ═══════════════════════════════════════════════════════════════
+function updateNavUser(){
+  const nu=document.getElementById('navUsername');
+  const nc=document.getElementById('navCredits');
+  if(nu) nu.textContent=mpUser?.username||'—';
+  if(nc) nc.textContent='💰 '+(saveData.currency||0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FRIEND REQUEST BADGE
+// ═══════════════════════════════════════════════════════════════
+function updateFriendRequestBadge(){
+  const badge=document.getElementById('navFriendBadge');
+  if(!badge) return;
+  const count=socialState.friendRequests.length;
+  badge.textContent=count>0?count:'';
+  badge.style.display=count>0?'inline-flex':'none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PARTY INVITE POPUP
+// ═══════════════════════════════════════════════════════════════
+function _showPartyInvitePopup(){
+  const inv=socialState.partyInvites[0];
+  if(!inv) return;
+  let popup=document.getElementById('partyInvitePopup');
+  if(!popup){
+    popup=document.createElement('div');
+    popup.id='partyInvitePopup';
+    popup.className='party-invite-popup';
+    document.body.appendChild(popup);
+  }
+  popup.innerHTML=`
+    <div class="pip-title">Party Invite</div>
+    <div class="pip-from">${inv.fromUsername} invited you</div>
+    <div class="pip-actions">
+      <button class="menu-btn btn-primary" style="width:90px;font-size:.76em;margin:0 6px 0 0;"
+        onclick="fbAcceptPartyInvite('${inv.id}','${inv.partyId}')">Accept</button>
+      <button class="menu-btn btn-secondary" style="width:80px;font-size:.76em;margin:0;"
+        onclick="fbDeclinePartyInvite('${inv.id}')">Decline</button>
+    </div>`;
+  popup.style.display='block';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOBBY HUB RENDER
+// ═══════════════════════════════════════════════════════════════
+function renderLobby(){
+  updateNavUser();
+  updateFriendRequestBadge();
+  if(currentScreen!=='mainMenu') return;
+  _renderPartySlots();
+  _renderPlayPanel();
+  _renderSidebarFriends();
+}
+
+function _renderPartySlots(){
+  const el=document.getElementById('lobbyPartySlots');
+  if(!el) return;
+  const party=socialState.party;
+  const myUid=_fbUser?.uid;
+
+  if(!party){
+    el.innerHTML=`
+      <div class="party-slot self">
+        <div class="party-slot-av">${_initial(mpUser?.username)}</div>
+        <div class="party-slot-info">
+          <div class="party-slot-name">${mpUser?.username||'—'}</div>
+          <div class="party-slot-status s-online">Online</div>
+        </div>
+        <div class="party-slot-badges"><span class="ps-badge host">HOST</span></div>
+      </div>
+      ${[1,2,3].map(()=>`
+      <div class="party-slot empty" onclick="renderFriendsScreen();showScreen('friendsScreen')">
+        <div class="party-slot-plus">+</div>
+        <div class="party-slot-addlbl">Invite Friend</div>
+      </div>`).join('')}`;
+  } else {
+    const members=party.members||[];
+    const me=members.find(m=>m.uid===myUid)||{uid:myUid,username:mpUser?.username||'?',ready:false};
+    let html=_partySlotHTML(me,party.hostUid,true);
+    members.filter(m=>m.uid!==myUid).forEach(m=>{html+=_partySlotHTML(m,party.hostUid,false);});
+    for(let i=members.length;i<4;i++)
+      html+=`<div class="party-slot empty" onclick="renderFriendsScreen();showScreen('friendsScreen')"><div class="party-slot-plus">+</div><div class="party-slot-addlbl">Invite Friend</div></div>`;
+    el.innerHTML=html;
+  }
+
+  const actEl=document.getElementById('lobbyPartyActions');
+  if(actEl){
+    actEl.innerHTML=party?`<button class="menu-btn btn-secondary" style="width:100%;font-size:.76em;margin:4px 0 0;" onclick="fbLeaveParty()">Leave Party</button>`:'';
+  }
+}
+
+function _initial(name){ return (name||'?').charAt(0).toUpperCase(); }
+
+function _partySlotHTML(member, hostUid, isSelf){
+  const status=isSelf?'online':(socialState.presence[member.uid]||'offline');
+  const statusClass='s-'+(status==='in_match'?'match':status==='in_party'?'party':status==='offline'?'offline':'online');
+  const statusLabel=status==='in_match'?'In Match':status==='in_party'?'In Party':status==='offline'?'Offline':'Online';
+  const isHost=member.uid===hostUid;
+  return `<div class="party-slot${isSelf?' self':''}">
+    <div class="party-slot-av">${_initial(member.username)}</div>
+    <div class="party-slot-info">
+      <div class="party-slot-name">${member.username}</div>
+      <div class="party-slot-status ${statusClass}">${statusLabel}</div>
+    </div>
+    <div class="party-slot-badges">
+      ${isHost?'<span class="ps-badge host">HOST</span>':''}
+      ${isSelf?`<span class="ps-badge ${member.ready?'ready':'notready'}" onclick="fbToggleReady()" style="cursor:pointer">${member.ready?'READY':'NOT READY'}</span>`:`<span class="ps-badge ${member.ready?'ready':'notready'}">${member.ready?'READY':'...'}</span>`}
+    </div>
+  </div>`;
+}
+
+function _renderPlayPanel(){
+  const el=document.getElementById('lobbyPlayPanel');
+  if(!el) return;
+  const party=socialState.party;
+  const isHost=!party||party.hostUid===_fbUser?.uid;
+  const selMap=(party?party.selectedMap:saveData.locId)||'beirut';
+  const mode=party?(party.mode||'coop'):'solo';
+  const maps=[
+    {id:'beirut',label:'BEIRUT',sub:'Urban / Coastal'},
+    {id:'sweden',label:'SWEDEN',sub:'Arctic / Snow'},
+    {id:'dubai', label:'DUBAI', sub:'Desert / Arid'},
+  ];
+  el.innerHTML=`
+    <div class="play-label">Select Map</div>
+    <div class="map-select-row">
+      ${maps.map(m=>`<button class="map-btn${selMap===m.id?' active':''}"
+        onclick="${isHost?`_setLobbyMap('${m.id}')`:''}" ${!isHost?'disabled':''}>
+        <div class="map-btn-name">${m.label}</div>
+        <div class="map-btn-sub">${m.sub}</div>
+      </button>`).join('')}
+    </div>
+    ${party?`<div class="play-label" style="margin-top:10px;">Mode</div>
+    <div class="mode-row">
+      <button class="mode-btn${mode==='coop'?' active':''}" onclick="${isHost?`fbSetPartyMode('coop');renderLobby()`:''}" ${!isHost?'disabled':''}>🤝 Coop</button>
+      <button class="mode-btn${mode==='solo'?' active':''}" onclick="${isHost?`fbSetPartyMode('solo');renderLobby()`:''}" ${!isHost?'disabled':''}>👤 Solo</button>
+    </div>`:''}
+    <div class="play-deploy-row">
+      ${isHost?`<button class="menu-btn btn-primary play-deploy-btn" onclick="deployFromLobby()">▶ DEPLOY${party&&(party.members||[]).length>1?' PARTY':''}</button>`:'<div class="play-waiting">Waiting for host…</div>'}
+    </div>`;
+}
+
+function _setLobbyMap(locId){
+  saveData.locId=locId; saveSave();
+  if(socialState.party) fbSetPartyMap(locId);
+  renderLobby();
+}
+
+function deployFromLobby(){
+  if(socialState.party){
+    fbDeployParty();
+  } else {
+    const loc=saveData.locId||'beirut';
+    saveData=Object.assign(defaultSave(),{locId:loc,
+      currency:saveData.currency, unlocks:saveData.unlocks,
+      equippedWeapons:saveData.equippedWeapons,
+      upgrades:saveData.upgrades, gadgets:saveData.gadgets,
+      hasCyberBullet:saveData.hasCyberBullet, hasRajpnFist:saveData.hasRajpnFist,
+      bpXP:saveData.bpXP, bpLevel:saveData.bpLevel,
+      customization:saveData.customization,
+      waveRecord:saveData.waveRecord, totalScore:saveData.totalScore,
+      totalIntercepted:saveData.totalIntercepted, totalShotsFired:saveData.totalShotsFired,
+      totalWaves:saveData.totalWaves, totalBossKills:saveData.totalBossKills});
+    saveSave();
+    startGame(loc,1);
+  }
+}
+
+function _renderSidebarFriends(){
+  const el=document.getElementById('lobbySidebarFriends');
+  if(!el) return;
+  const online=socialState.friends.filter(f=>{
+    const s=socialState.presence[f.uid];
+    return s&&s!=='offline';
+  });
+  if(online.length===0){
+    el.innerHTML=`<div class="sidebar-no-friends">No friends online.<br>
+      <a href="#" onclick="renderFriendsScreen();showScreen('friendsScreen');return false"
+        style="color:var(--blue-light);font-size:.82em;">Add friends →</a></div>`;
+    return;
+  }
+  el.innerHTML=online.map(f=>{
+    const status=socialState.presence[f.uid]||'online';
+    const lbl=status==='in_match'?'In Match':status==='in_party'?'In Party':'Online';
+    return `<div class="sidebar-friend">
+      <div class="sidebar-friend-av">${_initial(f.username)}</div>
+      <div class="sidebar-friend-info">
+        <div class="sidebar-friend-name">${f.username}</div>
+        <div class="sidebar-friend-status s-${status==='in_match'?'match':status==='in_party'?'party':'online'}">${lbl}</div>
+      </div>
+      ${socialState.party||status==='online'?`<button class="sidebar-invite-btn" onclick="fbInviteToParty('${f.uid}','${f.username}')">Invite</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FRIENDS SCREEN
+// ═══════════════════════════════════════════════════════════════
+function renderFriendsScreen(){
+  updateNavUser();
+  updateFriendRequestBadge();
+
+  const reqEl=document.getElementById('friendRequestsList');
+  if(reqEl){
+    reqEl.innerHTML=socialState.friendRequests.length===0
+      ?'<div class="friends-empty">No pending requests.</div>'
+      :socialState.friendRequests.map(r=>`
+        <div class="friend-row">
+          <div class="friend-av">${_initial(r.fromUsername)}</div>
+          <div class="friend-info">
+            <div class="friend-name">${r.fromUsername}</div>
+            <div class="friend-sub">Wants to be friends</div>
+          </div>
+          <div class="friend-btns">
+            <button class="friend-btn accept" onclick="fbAcceptFriendRequest('${r.id}','${r.fromUid}','${r.fromUsername}')">Accept</button>
+            <button class="friend-btn decline" onclick="fbDeclineFriendRequest('${r.id}')">Decline</button>
+          </div>
+        </div>`).join('');
+  }
+
+  const listEl=document.getElementById('friendsList');
+  if(listEl){
+    listEl.innerHTML=socialState.friends.length===0
+      ?'<div class="friends-empty">No friends yet. Search above!</div>'
+      :socialState.friends.map(f=>{
+        const status=socialState.presence[f.uid]||'offline';
+        const lbl={in_match:'In Match',in_party:'In Party',lobby:'Online',online:'Online',offline:'Offline'}[status]||status;
+        return `<div class="friend-row">
+          <div class="friend-av">${_initial(f.username)}</div>
+          <div class="friend-info">
+            <div class="friend-name">${f.username}</div>
+            <div class="friend-sub s-${status==='in_match'?'match':status==='in_party'?'party':status==='offline'?'offline':'online'}">${lbl}</div>
+          </div>
+          <div class="friend-btns">
+            ${status!=='offline'?`<button class="friend-btn invite" onclick="fbInviteToParty('${f.uid}','${f.username}')">Invite</button>`:''}
+            <button class="friend-btn remove" onclick="if(confirm('Remove ${f.username}?'))fbRemoveFriend('${f.uid}')">Remove</button>
+          </div>
+        </div>`;
+      }).join('');
+  }
+}
+
+async function doFriendSearch(){
+  const input=document.getElementById('friendSearchInput');
+  const resultsEl=document.getElementById('friendSearchResults');
+  if(!input||!resultsEl) return;
+  const q=input.value.trim();
+  if(q.length<2){resultsEl.innerHTML='<div class="friends-empty">Enter at least 2 characters.</div>';return;}
+  resultsEl.innerHTML='<div class="friends-empty">Searching…</div>';
+  const results=await fbSearchUser(q);
+  if(results.length===0){resultsEl.innerHTML='<div class="friends-empty">No users found.</div>';return;}
+  resultsEl.innerHTML=results.map(r=>{
+    const isFriend=socialState.friends.some(f=>f.uid===r.uid);
+    const sent=socialState.sentRequests.some(s=>s.toUid===r.uid);
+    return `<div class="friend-row">
+      <div class="friend-av">${_initial(r.username)}</div>
+      <div class="friend-info">
+        <div class="friend-name">${r.username}</div>
+        <div class="friend-sub">${isFriend?'Already friends':sent?'Request sent':'Player'}</div>
+      </div>
+      <div class="friend-btns">
+        ${!isFriend&&!sent?`<button class="friend-btn add" onclick="fbSendFriendRequest('${r.uid}','${r.username}')">Add</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOCKER SCREEN (reuses #customization)
+// ═══════════════════════════════════════════════════════════════
+function showLockerScreen(){
+  buildCustomizationUI();
+  rebuildCharPreview();
+  const backBtn=document.getElementById('btnCustomBack');
+  if(backBtn) backBtn.onclick=()=>showScreen('mainMenu');
+  const deployBtn=document.getElementById('btnDeploy');
+  if(deployBtn){
+    deployBtn.textContent='Save & Back';
+    deployBtn.onclick=()=>{saveSave();showScreen('mainMenu');};
+  }
+  showScreen('customization');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  WEAPONS SCREEN
+// ═══════════════════════════════════════════════════════════════
+function renderWeaponsScreen(){
+  updateNavUser();
+  const el=document.getElementById('weaponsGrid');
+  if(!el) return;
+  const equip=saveData.equippedWeapons||['pistol','launcher'];
+
+  el.innerHTML=Object.values(WEAPONS).map(w=>{
+    const isBaseOwned=w.id==='pistol'||w.id==='launcher';
+    const isUnlocked=isBaseOwned||saveData.unlocks.includes(w.id)||saveData.unlocks.includes(w.shopId);
+    const slot0=equip[0]===w.id, slot1=equip[1]===w.id;
+    return `<div class="weapon-card${!isUnlocked?' locked':''}${slot0||slot1?' equipped':''}"
+      onclick="${isUnlocked?`equipWeapon('${w.id}')`:`showNotif('Buy in Armory & Shop first!')`}">
+      <div class="weapon-card-icon">${w.icon}</div>
+      <div class="weapon-card-name">${w.name}</div>
+      <div class="weapon-card-stats">
+        <div>DMG ${w.dmg||'—'}</div>
+        <div>AMMO ${w.maxAmmo}</div>
+      </div>
+      ${slot0?'<div class="wc-slot s1">[1]</div>':''}
+      ${slot1?'<div class="wc-slot s2">[2]</div>':''}
+      ${!isUnlocked?'<div class="wc-lock">🔒 Shop</div>':''}
+    </div>`;
+  }).join('');
+
+  const loadEl=document.getElementById('weaponsLoadout');
+  if(loadEl){
+    const w1=WEAPONS[equip[0]]||WEAPONS.pistol;
+    const w2=WEAPONS[equip[1]]||WEAPONS.launcher;
+    loadEl.innerHTML=`
+      <div class="loadout-slot">
+        <div class="loadout-lbl">SLOT 1 — KEY [1]</div>
+        <div class="loadout-name">${w1.icon} ${w1.name}</div>
+      </div>
+      <div class="loadout-sep">+</div>
+      <div class="loadout-slot">
+        <div class="loadout-lbl">SLOT 2 — KEY [2]</div>
+        <div class="loadout-name">${w2.icon} ${w2.name}</div>
+      </div>`;
+  }
+}
+
+function equipWeapon(id){
+  if(!WEAPONS[id]) return;
+  const equip=[...(saveData.equippedWeapons||['pistol','launcher'])];
+  if(equip[0]===id||equip[1]===id){
+    // Already equipped — swap out
+    if(equip[0]===id) equip[0]=equip[1]!=='pistol'?'pistol':(equip[1]!=='launcher'?'launcher':'pistol');
+    else              equip[1]=equip[0]!=='pistol'?'pistol':(equip[0]!=='launcher'?'launcher':'pistol');
+    showNotif(WEAPONS[id].name+' removed from loadout.');
+  } else {
+    // Put in slot 2 (slot 1 is considered primary)
+    equip[1]=id;
+    showNotif(WEAPONS[id].name+' → Slot 2');
+  }
+  if(equip[0]===equip[1]) equip[1]=equip[0]==='pistol'?'launcher':'pistol';
+  saveData.equippedWeapons=equip;
+  saveSave();
+  renderWeaponsScreen();
+}

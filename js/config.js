@@ -58,6 +58,8 @@ async function fbLogin(username, password){
   return {user: cred.user, username: data?.username||username, saveData: sd};
 }
 
+let _pendingGoogleUser = null;
+
 async function fbGoogleSignIn(){
   if(!_fbAuth||!_fbDb){
     document.getElementById('loginErr').textContent='Firebase not configured.'; return;
@@ -69,27 +71,22 @@ async function fbGoogleSignIn(){
     const cred = await _fbAuth.signInWithPopup(provider);
     const user = cred.user;
     _fbUser = user;
-    // Check if user doc exists
     const docRef = _fbDb.collection('users').doc(user.uid);
     const snap = await docRef.get();
-    let username, sd;
     if(snap.exists && snap.data()?.username){
-      username = snap.data().username;
-      sd = Object.assign(defaultSave(), snap.data().saveData||{});
+      const username = snap.data().username;
+      const sd = Object.assign(defaultSave(), snap.data().saveData||{});
+      _acctFinishLogin({user, username, saveData: sd});
     } else {
-      // New Google user — derive username from display name
-      let base = (user.displayName||'PLAYER').toUpperCase().replace(/[^A-Z0-9_]/g,'').slice(0,14)||'PLAYER';
-      // Ensure unique by appending uid suffix if needed
-      const usnap = await _fbDb.collection('usernames').doc(base.toLowerCase()).get();
-      if(usnap.exists && usnap.data().uid !== user.uid){
-        base = base.slice(0,10) + user.uid.slice(0,4).toUpperCase();
-      }
-      username = base;
-      sd = defaultSave(); sd.username = username;
-      await docRef.set({username, saveData: sd});
-      await _fbDb.collection('usernames').doc(username.toLowerCase()).set({uid: user.uid});
+      // New Google user — show username picker
+      _pendingGoogleUser = user;
+      const suggested = (user.displayName||'PLAYER').toUpperCase().replace(/[^A-Z0-9_]/g,'').slice(0,20)||'PLAYER';
+      document.getElementById('pickUsername').value = suggested;
+      document.getElementById('pickUsernameErr').textContent = '';
+      document.getElementById('acctStatus').textContent='';
+      _acctSetBusy(false);
+      document.getElementById('usernamePickerModal').style.display='flex';
     }
-    _acctFinishLogin({user, username, saveData: sd});
   }catch(e){
     const msg = e.code==='auth/popup-closed-by-user'?'Sign-in cancelled.':(e.message||'Google sign-in failed.');
     document.getElementById('loginErr').textContent = msg;
@@ -98,12 +95,49 @@ async function fbGoogleSignIn(){
   }
 }
 
+async function doPickUsername(){
+  const errEl = document.getElementById('pickUsernameErr');
+  const raw = document.getElementById('pickUsername').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'');
+  if(raw.length < 3){ errEl.textContent='Min 3 characters.'; return; }
+  if(!_pendingGoogleUser && !_fbUser){ errEl.textContent='Session lost — please sign in again.'; return; }
+  const user = _pendingGoogleUser || _fbUser;
+  const btn = document.querySelector('#usernamePickerModal .menu-btn');
+  btn.disabled = true; errEl.textContent='Checking…';
+  try{
+    const snap = await _fbDb.collection('usernames').doc(raw.toLowerCase()).get();
+    if(snap.exists && snap.data().uid !== user.uid){
+      errEl.textContent='Username taken — choose another.'; btn.disabled=false; return;
+    }
+    const sd = defaultSave(); sd.username = raw;
+    const docRef = _fbDb.collection('users').doc(user.uid);
+    const existing = await docRef.get();
+    const mergedSd = existing.exists && existing.data()?.saveData
+      ? Object.assign(sd, existing.data().saveData, {username: raw})
+      : sd;
+    await docRef.set({username: raw, saveData: mergedSd});
+    await _fbDb.collection('usernames').doc(raw.toLowerCase()).set({uid: user.uid});
+    document.getElementById('usernamePickerModal').style.display='none';
+    _pendingGoogleUser = null;
+    _acctFinishLogin({user, username: raw, saveData: mergedSd});
+  }catch(e){ errEl.textContent = e.message||'Error saving username.'; btn.disabled=false; }
+}
+
+async function showUsernamePickerForChange(){
+  if(!_fbUser){ return; }
+  const errEl = document.getElementById('pickUsernameErr');
+  errEl.textContent='';
+  document.getElementById('pickUsername').value = mpUser?.username||'';
+  _pendingGoogleUser = null;
+  document.getElementById('usernamePickerModal').style.display='flex';
+}
+
 async function fbSave(sd){
   if(!_fbUser||!_fbDb) return;
   try{ await _fbDb.collection('users').doc(_fbUser.uid).set({saveData: sd},{merge:true}); }catch(e){}
 }
 
 function fbLogout(){
+  if(typeof stopSocialListeners==='function') stopSocialListeners();
   if(_fbAuth) _fbAuth.signOut();
   _fbUser = null; mpUser = null;
   localStorage.removeItem('raj_callsign');
@@ -139,6 +173,7 @@ function _acctFinishLogin(result){
   if(ub) ub.textContent = result.username;
   updateSaveUI();
   showScreen('mainMenu');
+  if(typeof startSocialListeners==='function') startSocialListeners();
 }
 
 async function doLogin(){
@@ -199,10 +234,11 @@ const SENSITIVITY  = 0.0022;
 const PROJ_RADIUS  = 0.55; // missile hit radius (not projectile)
 const WEAPONS = {
   pistol:  { id:'pistol',  name:'M9 PISTOL',     maxAmmo:15, fireCD:0.16, reloadTime:1.2, projSpeed:100, pellets:1, spread:0,    projRadius:0.28, projColor:0xFFCC44, icon:'🔫', shopId:'pistol',  shopCost:0,    dmg:10 },
-  launcher:{ id:'launcher',name:'RPG LAUNCHER',  maxAmmo:6,  fireCD:0.80, reloadTime:2.5, projSpeed:65,  pellets:1, spread:0,    projRadius:0.55, projColor:0xFF8844, icon:'🚀', shopId:'launcher',shopCost:0,    dmg:40 },
-  shotgun: { id:'shotgun', name:'SUPER SHOTGUN', maxAmmo:2,  fireCD:1.05, reloadTime:1.7, projSpeed:78,  pellets:8, spread:0.10, projRadius:0.26, projColor:0xFF5522, icon:'💥', shopId:'shotgun', shopCost:1200, hasHook:true, dmg:15 },
-  sniper:  { id:'sniper',  name:'SNIPER RIFLE',  maxAmmo:5,  fireCD:1.40, reloadTime:2.8, projSpeed:200, pellets:1, spread:0,    projRadius:0.30, projColor:0x88FFCC, icon:'🎯', shopId:'sniper',  shopCost:1800, hasScope:true, dmg:50 },
-  smg:     { id:'smg',     name:'P90 SMG',       maxAmmo:30, fireCD:0.08, reloadTime:1.4, projSpeed:95,  pellets:1, spread:0.04, projRadius:0.20, projColor:0xFFFF44, icon:'🔧', shopId:'smg',     shopCost:900,  dmg:7, autoFire:true  },
+  launcher:{ id:'launcher',name:'RPG LAUNCHER',  maxAmmo:6,  fireCD:0.80, reloadTime:2.5, projSpeed:65,  pellets:1, spread:0,    projRadius:0.55, projColor:0xFF8844, icon:'🚀', shopId:'launcher',shopCost:0,    dmg:50, splashRadius:10, splashDmgMult:0.5 },
+  shotgun:     { id:'shotgun',     name:'SUPER SHOTGUN',  maxAmmo:2,  fireCD:1.05, reloadTime:1.7, projSpeed:78,  pellets:8,  spread:0.10, projRadius:0.26, projColor:0xFF5522, icon:'💥', shopId:'shotgun',     shopCost:1200, hasHook:true,  dmg:18 },
+  sniper:      { id:'sniper',      name:'SNIPER RIFLE',   maxAmmo:5,  fireCD:1.40, reloadTime:2.8, projSpeed:200, pellets:1,  spread:0,    projRadius:0.30, projColor:0x88FFCC, icon:'🎯', shopId:'sniper',      shopCost:1800, hasScope:true, dmg:80 },
+  smg:         { id:'smg',         name:'P90 SMG',        maxAmmo:30, fireCD:0.08, reloadTime:1.4, projSpeed:95,  pellets:1,  spread:0.04, projRadius:0.20, projColor:0xFFFF44, icon:'🔧', shopId:'smg',         shopCost:900,  dmg:14, autoFire:true },
+  hookbreaker: { id:'hookbreaker', name:'HOOKBREAKER',    maxAmmo:2,  fireCD:1.10, reloadTime:1.9, projSpeed:76,  pellets:10, spread:0.12, projRadius:0.26, projColor:0xFF6633, icon:'🪝', shopId:'hookbreaker', shopCost:1600, hasHook:true,  dmg:22 },
 };
 const MISS_RADIUS  = 0.9;
 const BOSS_RADIUS  = 1.6;

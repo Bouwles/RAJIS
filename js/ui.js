@@ -109,10 +109,22 @@ function showWaveAnnounce(msg){
 // ═══════════════════════════════════════════════════════════════
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(name).classList.add('active');
+  const el=document.getElementById(name);
+  if(el) el.classList.add('active');
   currentScreen=name;
+  // Top nav: visible on hub screens
+  const hubScreens=['mainMenu','shopScreen','statsScreen','customization','weaponsScreen','friendsScreen','settingsScreen'];
+  const nav=document.getElementById('topNav');
+  if(nav){
+    nav.style.display=hubScreens.includes(name)?'flex':'none';
+    // Highlight correct tab (customization maps to the locker tab)
+    const navKey=name==='customization'?'lockerTab':name;
+    nav.querySelectorAll('.nav-tab').forEach(t=>{
+      t.classList.toggle('active',t.dataset.screen===name||(name==='customization'&&t.dataset.screen==='customization'));
+    });
+  }
   const sf=document.getElementById('btnSettingsFloat');
-  if(sf) sf.style.display=(name==='hud'||name==='accountScreen'||name==='loadingScreen')?'none':'flex';
+  if(sf) sf.style.display=(name==='hud'||name==='accountScreen'||name==='loadingScreen'||hubScreens.includes(name))?'none':'flex';
   if(name==='locationSelect') startMapAnimation();
   else stopMapAnimation();
 }
@@ -131,9 +143,9 @@ function startGame(locId, wave){
   px=0;py=PLAYER_H;pz=20;
   vx=0;vy=0;vz=0;
   yaw=0;pitch=0;
-  currentWeapon='launcher';
-  weaponInventory=new Set(['pistol','launcher']);
-  ['shotgun','sniper','smg'].forEach(w=>{if(saveData.unlocks.includes(w)) weaponInventory.add(w);});
+  const equip=saveData.equippedWeapons&&saveData.equippedWeapons.length>=2?saveData.equippedWeapons:['pistol','launcher'];
+  currentWeapon=equip[0]||'pistol';
+  weaponInventory=new Set(equip);
   weaponAmmo={};
   Object.keys(WEAPONS).forEach(k=>{ weaponAmmo[k]=WEAPONS[k].maxAmmo; });
   ammo=WEAPONS[currentWeapon].maxAmmo;isReloading=false;fireCD=0;scoped=false;scopeT=0;
@@ -212,7 +224,9 @@ function returnToMenu(){
   document.getElementById('weaponBar').style.display='none';
   document.getElementById('minimap').style.display='none';
   updateSaveUI();
+  if(typeof setPresence==='function') setPresence('lobby');
   showScreen('mainMenu');
+  if(typeof renderLobby==='function') renderLobby();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -223,13 +237,14 @@ const SHOP_ITEMS=[
   {id:'shotgun',       name:'Super Shotgun', icon:'SGN', cost:1200, type:'weapon',   value:'shotgun'},
   {id:'sniper',        name:'Sniper Rifle',  icon:'SNP', cost:1800, type:'weapon',   value:'sniper'},
   {id:'smg',           name:'P90 SMG',       icon:'SMG', cost:900,  type:'weapon',   value:'smg'},
+  {id:'hookbreaker',   name:'Hookbreaker',   icon:'🪝', cost:1600, type:'weapon',   value:'hookbreaker'},
   // Gadgets
   {id:'flashbang',     name:'Flashbang',     icon:'FBG', cost:600,  type:'gadget',   value:'flashbang'},
   {id:'airstrike',     name:'Airstrike',     icon:'AIR', cost:2200, type:'gadget',   value:'airstrike'},
   {id:'cover',         name:'Deploy Cover',  icon:'CVR', cost:1400, type:'gadget',   value:'cover'},
   // Ultimates
   {id:'cyber_bullet',  name:'Cyber Bullet',  icon:'🚗', cost:3000, type:'ultimate', value:'cyber_bullet'},
-  {id:'rajpn_fist',    name:'RAJPN Fist Bump',icon:'👊', cost:4500, type:'ultimate', value:'rajpn_fist'},
+  {id:'rajpn_fist',    name:'RAJPN Fist Bump',icon:'👊', cost:6000, type:'ultimate', value:'rajpn_fist'},
   // Upgrades (stackable x3)
   {id:'armor_plate_1', name:'Armor Plate',   icon:'ARM', cost:700,  type:'upgrade',  value:'armor_plate', stack:'armor_plate', max:3},
   {id:'speed_chip_1',  name:'Speed Chip',    icon:'SPD', cost:600,  type:'upgrade',  value:'speed_chip',  stack:'speed_chip',  max:3},
@@ -268,6 +283,7 @@ const SHOP_DESCS={
   shotgun:'Double barrel + grappling hook (RMB).',
   sniper:'High zoom, extreme range. RMB for scope.',
   smg:'Full-auto, 30-round drum mag. Fast TTK.',
+  hookbreaker:'Heavy double barrel + enhanced grapple hook. More pellets, more power.',
   flashbang:'Stuns soldiers in 18m for 3.5s.',
   airstrike:'Destroys missiles in 12m radius after 3s.',
   cover:'Deploys a barrier 4m ahead for 20s.',
@@ -292,7 +308,7 @@ const SHOP_DESCS={
   bp_tactical:'Tactical frame pack.',
 };
 const SHOP_TAB_MAP={
-  weapons:  ['shotgun','sniper','smg'],
+  weapons:  ['shotgun','sniper','smg','hookbreaker'],
   upgrades: ['armor_plate_1','speed_chip_1','hot_rounds_1'],
   gadgets:  ['flashbang','airstrike','cover'],
   ultimate: ['cyber_bullet','rajpn_fist'],
@@ -554,6 +570,7 @@ function buildCustomizationUI(){
 //  SAVE UI
 // ═══════════════════════════════════════════════════════════════
 function updateSaveUI(){
+  if(typeof updateNavUser==='function') updateNavUser();
   const badge=document.getElementById('saveBadge');
   const menu=document.getElementById('mainMenu');
   if(saveData.totalScore>0){

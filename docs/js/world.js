@@ -509,22 +509,22 @@ function makeCharModel(c){
     const boot=new THREE.Mesh(new THREE.BoxGeometry(.18,.24,.22),bootM);
     boot.position.set(s*.12,.12,0);g.add(boot);
   });
-  // Upper legs + knee pads
+  // Upper legs + knee pads (lowered so bottom meets boot top at y=0.24)
   const legM=new THREE.MeshLambertMaterial({color:armorC});
   [-1,1].forEach(s=>{
     const leg=new THREE.Mesh(new THREE.BoxGeometry(.17,.42,.19),legM);
-    leg.position.set(s*.12,.58,0);g.add(leg);
+    leg.position.set(s*.12,.46,0);g.add(leg);
     const kp=new THREE.Mesh(new THREE.BoxGeometry(.19,.09,.08),darkM);
-    kp.position.set(s*.12,.48,.1);g.add(kp);
+    kp.position.set(s*.12,.36,.1);g.add(kp);
   });
   // Belt
   const belt=new THREE.Mesh(new THREE.BoxGeometry(tW+.04,.06,.28),beltM);
-  belt.position.y=.84;g.add(belt);
+  belt.position.y=.72;g.add(belt);
 
   // Torso
   const torso=new THREE.Mesh(new THREE.BoxGeometry(tW,tH,.28),armorM);
-  torso.position.y=tH/2+.88;g.add(torso);
-  const torsoY=tH/2+.88;
+  torso.position.y=tH/2+.76;g.add(torso);
+  const torsoY=tH/2+.76;
 
   // Shoulder pads (heavy)
   if(c.armorStyle==='heavy'){

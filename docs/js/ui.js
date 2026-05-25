@@ -130,6 +130,7 @@ function showScreen(name){
   if(oldNav) oldNav.style.display='none';
   const sf=document.getElementById('btnSettingsFloat');
   if(sf) sf.style.display=(name==='hud'||name==='accountScreen'||name==='loadingScreen'||hubScreens.includes(name))?'none':'flex';
+  if(name==='mainMenu'&&typeof renderLobby==='function') renderLobby();
   if(name==='locationSelect') startMapAnimation();
   else stopMapAnimation();
 }

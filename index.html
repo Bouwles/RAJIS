@@ -111,9 +111,10 @@
     <button class="rl-tab" data-screen="mainMenu" onclick="showScreen('mainMenu');renderLobby()">⌂ LOBBY</button>
     <button class="rl-tab" data-screen="bpScreen" onclick="buildBPScreen();showScreen('bpScreen')">BATTLE PASS</button>
     <button class="rl-tab" data-screen="friendsScreen" onclick="renderFriendsScreen();showScreen('friendsScreen')">FRIENDS <span id="rlFriendBadge" class="nav-badge" style="display:none"></span></button>
-    <button class="rl-tab" data-screen="itemShopScreen" onclick="buildItemShop();showScreen('itemShopScreen')">LOCKER</button>
+    <button class="rl-tab" data-screen="lockerScreen" onclick="buildLockerScreen('skins');showScreen('lockerScreen')">LOCKER</button>
+    <button class="rl-tab" data-screen="itemShopScreen" onclick="buildItemShop();showScreen('itemShopScreen')">ITEM SHOP</button>
     <button class="rl-tab" data-screen="weaponsScreen" onclick="renderWeaponsScreen();showScreen('weaponsScreen')">WEAPONS</button>
-    <button class="rl-tab" data-screen="shopScreen" onclick="buildShop();showScreen('shopScreen')">ITEM SHOP</button>
+    <button class="rl-tab" data-screen="shopScreen" onclick="buildShop();showScreen('shopScreen')">ARMORY</button>
     <button class="rl-tab" data-screen="statsScreen" onclick="buildStatsScreen();showScreen('statsScreen')">PROFILE</button>
     <button class="rl-tab" data-screen="settingsScreen" onclick="showScreen('settingsScreen')">⚙ SETTINGS</button>
   </div>
@@ -488,14 +489,13 @@
 <!-- SHOP -->
 <div id="shopScreen" class="screen">
   <div style="text-align:center;width:100%;padding:20px 16px;">
-    <div class="screen-title">Armory &amp; Shop</div>
+    <div class="screen-title">Armory</div>
     <div class="credits-badge" id="shopCreds" style="margin:8px 0 14px;">💰 Credits: 0</div>
     <div class="shop-tab-row">
       <button class="shop-tab-btn active" data-tab="weapons" onclick="setShopTab('weapons')">⚔️ Weapons</button>
       <button class="shop-tab-btn" data-tab="upgrades" onclick="setShopTab('upgrades')">⚡ Upgrades</button>
       <button class="shop-tab-btn" data-tab="gadgets" onclick="setShopTab('gadgets')">🎒 Gadgets</button>
       <button class="shop-tab-btn" data-tab="ultimate" onclick="setShopTab('ultimate')">🚗 Ultimate</button>
-      <button class="shop-tab-btn" data-tab="cosmetics" onclick="setShopTab('cosmetics')">🎨 Cosmetics</button>
     </div>
     <div class="shop-grid" id="shopGrid"></div>
     <button class="back-btn" id="btnShopBack" style="margin-top:20px;" onclick="showScreen('mainMenu');renderLobby()">← Back</button>
@@ -593,6 +593,19 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+
+<!-- LOCKER SCREEN -->
+<div id="lockerScreen" class="screen">
+  <div class="lkr-wrap">
+    <div class="screen-title" style="margin-bottom:10px;">Locker</div>
+    <div class="lkr-tab-row">
+      <button class="lkr-tab lkr-tab-active" id="lkrTabSkins" onclick="buildLockerScreen('skins')">SKINS</button>
+      <button class="lkr-tab" id="lkrTabCamos" onclick="buildLockerScreen('camos')">CAMOS</button>
+    </div>
+    <div id="lockerGrid" class="lkr-grid"></div>
+    <button class="back-btn" style="margin-top:16px;" onclick="showScreen('mainMenu');renderLobby()">← Back to Lobby</button>
+  </div>
+</div>
 
 <!-- BATTLE PASS SCREEN -->
 <div id="bpScreen" class="screen">

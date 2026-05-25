@@ -17,6 +17,7 @@ function defaultSave(){
     bpXP:0, bpLevel:0, bpClaimedTiers:[],
     ownedSkins:['richard_default'], equippedSkin:'richard_default',
     ownedCamos:['camo_default'], equippedCamo:'camo_default',
+    totalSoldierKills:0, claimedChallenges:[],
     customization:{
       outfitColor:'#1A3A8A', armorStyle:'light',
       helmet:true, visorColor:'#44CCFF', backpack:'missile',

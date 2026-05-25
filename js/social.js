@@ -785,52 +785,75 @@ function sendChatMsg(text){
 function _renderSeasonPanel(){
   const el=document.getElementById('rlSeasonPanel');
   if(!el) return;
-  const lv=Math.max(1,saveData.level||1);
-  const xp=saveData.bpXP||0;
   const tier=saveData.bpLevel||0;
-  const xpNeeded=Math.floor(750+lv*180+Math.pow(lv,1.35)*35);
-  const xpPct=Math.min(100,Math.round(xp/Math.max(1,xpNeeded)*100));
-  // Daily baseline reset: track progress since last login day
+  const xp=saveData.bpXP||0;
+  const xpInTier=xp%500;
+  const xpPct=Math.round(xpInTier/500*100);
+
+  // Daily baseline reset
   const today=new Date().toISOString().slice(0,10);
   if(saveData.challengeBaseDate!==today){
     saveData.challengeBaseDate=today;
     saveData.challengeBase={
       totalIntercepted:saveData.totalIntercepted||0,
       totalWaves:saveData.totalWaves||0,
-      totalBossKills:saveData.totalBossKills||0,
+      totalSoldierKills:saveData.totalSoldierKills||0,
       totalShotsFired:saveData.totalShotsFired||0
     };
-    if(typeof scheduleSave==='function') scheduleSave();
+    saveData.claimedChallenges=[];
+    saveSave();
   }
-  const base=saveData.challengeBase||{totalIntercepted:0,totalWaves:0,totalBossKills:0,totalShotsFired:0};
+  const base=saveData.challengeBase||{totalIntercepted:0,totalWaves:0,totalSoldierKills:0,totalShotsFired:0};
+  const claimed=saveData.claimedChallenges||[];
   const challenges=[
-    {name:'INTERCEPT 25 MISSILES',prog:Math.min(Math.max(0,(saveData.totalIntercepted||0)-base.totalIntercepted),25),total:25,xp:500},
-    {name:'COMPLETE 3 MISSIONS',prog:Math.min(Math.max(0,(saveData.totalWaves||0)-base.totalWaves),3),total:3,xp:500},
-    {name:'DESTROY 10 ENEMIES',prog:Math.min(Math.max(0,(saveData.totalBossKills||0)-base.totalBossKills),10),total:10,xp:500},
-    {name:'FIRE 200 SHOTS',prog:Math.min(Math.max(0,(saveData.totalShotsFired||0)-base.totalShotsFired),200),total:200,xp:300},
+    {id:0,name:'INTERCEPT 25 MISSILES',prog:Math.min(Math.max(0,(saveData.totalIntercepted||0)-base.totalIntercepted),25),total:25,xp:500},
+    {id:1,name:'COMPLETE 3 MISSIONS',prog:Math.min(Math.max(0,(saveData.totalWaves||0)-base.totalWaves),3),total:3,xp:500},
+    {id:2,name:'ELIMINATE 10 ENEMIES',prog:Math.min(Math.max(0,(saveData.totalSoldierKills||0)-(base.totalSoldierKills||0)),10),total:10,xp:500},
+    {id:3,name:'FIRE 200 SHOTS',prog:Math.min(Math.max(0,(saveData.totalShotsFired||0)-base.totalShotsFired),200),total:200,xp:300},
   ];
+
+  // Award XP for newly completed challenges
+  let didSave=false;
+  challenges.forEach(c=>{
+    if(c.prog>=c.total&&!claimed.includes(c.id)){
+      claimed.push(c.id);
+      saveData.claimedChallenges=claimed;
+      saveData.bpXP=(saveData.bpXP||0)+c.xp;
+      const newLevel=Math.floor(saveData.bpXP/500);
+      if(newLevel>(saveData.bpLevel||0)){
+        saveData.bpLevel=newLevel;
+        if(typeof showNotif==='function') showNotif('★ BP TIER '+newLevel+' UNLOCKED!');
+      }
+      if(typeof showNotif==='function') showNotif(c.name+' COMPLETE! +'+c.xp+' XP');
+      didSave=true;
+    }
+  });
+  if(didSave) saveSave();
+
   el.innerHTML=`
     <div class="rll-season">SEASON 1</div>
     <div class="rll-level-row">
-      <div class="rll-lv-label">LEVEL</div>
-      <div class="rll-lv-num">${lv}</div>
+      <div class="rll-lv-label">BP TIER</div>
+      <div class="rll-lv-num">${tier}</div>
     </div>
     <div class="rll-xp-track"><div class="rll-xp-fill" style="width:${xpPct}%"></div></div>
-    <div class="rll-xp-text">${xp.toLocaleString()} / ${xpNeeded.toLocaleString()} XP</div>
-    <div class="rll-bp-row" onclick="showScreen('mainMenu')">
+    <div class="rll-xp-text">${xpInTier} / 500 XP to next tier</div>
+    <div class="rll-bp-row" onclick="buildBPScreen();showScreen('bpScreen')">
       BATTLE PASS <span class="rll-bp-tier">TIER ${tier}</span>
     </div>
     <div class="rll-divider"></div>
     <div class="rll-section-hd">DAILY CHALLENGES</div>
-    ${challenges.map(c=>`
-    <div class="rll-challenge">
-      <div class="rll-ch-header">
-        <div class="rll-ch-name">${c.name}</div>
-        <div class="rll-ch-xp">+${c.xp} XP</div>
-      </div>
-      <div class="rll-ch-track">
-        <div class="rll-ch-fill" style="width:${Math.round(c.prog/c.total*100)}%"></div>
-      </div>
-      <div class="rll-ch-prog">${c.prog} / ${c.total}</div>
-    </div>`).join('')}`;
+    ${challenges.map(c=>{
+      const isClaimed=claimed.includes(c.id);
+      return`<div class="rll-challenge${isClaimed?' rll-ch-done':''}">
+        <div class="rll-ch-header">
+          <div class="rll-ch-name">${c.name}</div>
+          <div class="rll-ch-xp">${isClaimed?'✓ CLAIMED':'+'+c.xp+' XP'}</div>
+        </div>
+        <div class="rll-ch-track">
+          <div class="rll-ch-fill" style="width:${Math.round((isClaimed?c.total:c.prog)/c.total*100)}%"></div>
+        </div>
+        <div class="rll-ch-prog">${isClaimed?c.total:c.prog} / ${c.total}</div>
+      </div>`;
+    }).join('')}`;
 }

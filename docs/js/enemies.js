@@ -491,6 +491,7 @@ function checkSoldierHits(projPos,projDmg){
         spawnAmmoPack(s.pos);
         soldiers.splice(i,1);
         mpLocalStats.soldiers++;
+        saveData.totalSoldierKills=(saveData.totalSoldierKills||0)+1;
         score+=pts;waveScore+=pts;
         if(window._killCreditBonus) saveData.currency+=window._killCreditBonus;
         showNotif('Enemy Down +'+pts);

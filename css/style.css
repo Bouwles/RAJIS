@@ -1201,6 +1201,10 @@ body::after{content:'';position:fixed;inset:0;
   height:3px;background:rgba(35,45,65,.8);margin-bottom:3px;overflow:hidden;}
 .rll-ch-fill{height:100%;background:rgba(212,149,42,.65);}
 .rll-ch-prog{font-family:var(--font-mono);font-size:.51em;color:var(--text3);}
+.rll-ch-done{border-left-color:rgba(80,180,80,.5)!important;background:rgba(60,120,60,.08)!important;}
+.rll-ch-done .rll-ch-xp{color:#6DBF6D;}
+.rll-ch-done .rll-ch-fill{background:rgba(80,180,80,.7);}
+.rll-ch-done .rll-ch-prog{color:rgba(80,180,80,.7);}
 
 /* ── Center Stage ────────────────────────────────────────────── */
 .rl-center{

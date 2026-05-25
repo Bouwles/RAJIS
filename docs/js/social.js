@@ -360,21 +360,34 @@ function stopSocialListeners(){
 //  NAV USER
 // ═══════════════════════════════════════════════════════════════
 function updateNavUser(){
+  const name=mpUser?.username||'—';
+  const credits='💰 '+(saveData.currency||0);
+  // Top nav (other hub screens)
   const nu=document.getElementById('navUsername');
   const nc=document.getElementById('navCredits');
-  if(nu) nu.textContent=mpUser?.username||'—';
-  if(nc) nc.textContent='💰 '+(saveData.currency||0);
+  if(nu) nu.textContent=name;
+  if(nc) nc.textContent=credits;
+  // Lobby embedded nav
+  const ru=document.getElementById('rlCallsign');
+  const rc=document.getElementById('rlCredits');
+  if(ru) ru.textContent=name;
+  if(rc) rc.textContent=credits;
+  // Bottom bar
+  const ub=document.getElementById('menuUserBadge');
+  if(ub&&name!=='—') ub.textContent=name;
 }
 
 // ═══════════════════════════════════════════════════════════════
 //  FRIEND REQUEST BADGE
 // ═══════════════════════════════════════════════════════════════
 function updateFriendRequestBadge(){
-  const badge=document.getElementById('navFriendBadge');
-  if(!badge) return;
   const count=socialState.friendRequests.length;
-  badge.textContent=count>0?count:'';
-  badge.style.display=count>0?'inline-flex':'none';
+  ['navFriendBadge','rlFriendBadge'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(!b) return;
+    b.textContent=count>0?count:'';
+    b.style.display=count>0?'inline-flex':'none';
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -411,7 +424,7 @@ function renderLobby(){
   if(currentScreen!=='mainMenu') return;
   _renderPartySlots();
   _renderPlayPanel();
-  _renderSidebarFriends();
+  _renderSeasonPanel();
   syncPartyProfiles();
 }
 
@@ -448,7 +461,7 @@ function _renderPartySlots(){
 
   const actEl=document.getElementById('lobbyPartyActions');
   if(actEl){
-    actEl.innerHTML=party?`<button class="menu-btn btn-secondary" style="width:100%;font-size:.76em;margin:4px 0 0;" onclick="fbLeaveParty()">Leave Party</button>`:'';
+    actEl.innerHTML=party?`<button class="rl-sm-btn" style="margin-top:4px;" onclick="fbLeaveParty()">↩ LEAVE PARTY</button>`:'';
   }
 }
 
@@ -473,34 +486,58 @@ function _partySlotHTML(member, hostUid, isSelf){
 }
 
 function _renderPlayPanel(){
-  const el=document.getElementById('lobbyPlayPanel');
+  const el=document.getElementById('rlModePanel');
   if(!el) return;
   const party=socialState.party;
-  const isHost=!party||party.hostUid===_fbUser?.uid;
+  const myUid=_fbUser?.uid;
+  const isHost=!party||party.hostUid===myUid;
   const selMap=(party?party.selectedMap:saveData.locId)||'beirut';
   const mode=party?(party.mode||'coop'):'solo';
   const maps=[
-    {id:'beirut',label:'BEIRUT',sub:'Urban / Coastal'},
-    {id:'sweden',label:'SWEDEN',sub:'Arctic / Snow'},
-    {id:'dubai', label:'DUBAI', sub:'Desert / Arid'},
+    {id:'beirut',label:'BEIRUT',sub:'Urban'},
+    {id:'sweden',label:'SWEDEN',sub:'Arctic'},
+    {id:'dubai', label:'DUBAI', sub:'Desert'},
   ];
+  const allReady=!party||(party.members||[]).every(m=>m.ready);
+  const myMember=party?(party.members||[]).find(m=>m.uid===myUid):null;
+  const imReady=myMember?.ready||false;
+  let deployHtml='';
+  if(!party){
+    deployHtml=`<button class="rl-deploy-btn btn-ready" onclick="deployFromLobby()">▶ DEPLOY</button>`;
+  } else if(isHost){
+    if(allReady){
+      deployHtml=`<div class="rl-squad-status all-ready">SQUAD READY</div>
+        <button class="rl-deploy-btn btn-deploy" onclick="deployFromLobby()">▶ DEPLOY SQUAD</button>`;
+    } else {
+      deployHtml=`<div class="rl-squad-status">WAITING FOR SQUAD</div>
+        <button class="rl-deploy-btn" disabled>WAITING…</button>`;
+    }
+  } else {
+    deployHtml=imReady
+      ?`<div class="rl-waiting-lbl">READY ✓ — WAITING FOR LEADER</div>`
+      :`<button class="rl-deploy-btn btn-ready" onclick="fbToggleReady()">✓ READY UP</button>`;
+  }
   el.innerHTML=`
-    <div class="play-label">Select Map</div>
-    <div class="map-select-row">
-      ${maps.map(m=>`<button class="map-btn${selMap===m.id?' active':''}"
+    <div class="rl-section-hd">GAME MODE</div>
+    ${party?`<div class="rl-mode-btns">
+      <button class="rl-mode-toggle${mode==='coop'?' active':''}" onclick="${isHost?`fbSetPartyMode('coop');renderLobby()`:''}" ${!isHost?'disabled':''}>SQUAD</button>
+      <button class="rl-mode-toggle${mode==='solo'?' active':''}" onclick="${isHost?`fbSetPartyMode('solo');renderLobby()`:''}" ${!isHost?'disabled':''}>SOLO</button>
+    </div>`:''}
+    <div class="rl-mode-selected">
+      <div class="rl-mode-name">${mode==='coop'?'SQUAD DEFENSE':'SOLO DEFENSE'}</div>
+    </div>
+    <div class="rl-section-hd" style="margin-top:10px;">MISSION ZONE</div>
+    <div class="rl-map-row">
+      ${maps.map(m=>`<button class="rl-map-btn${selMap===m.id?' active':''}"
         onclick="${isHost?`_setLobbyMap('${m.id}')`:''}" ${!isHost?'disabled':''}>
-        <div class="map-btn-name">${m.label}</div>
-        <div class="map-btn-sub">${m.sub}</div>
+        ${m.label}<span class="rl-map-sub">${m.sub}</span>
       </button>`).join('')}
     </div>
-    ${party?`<div class="play-label" style="margin-top:10px;">Mode</div>
-    <div class="mode-row">
-      <button class="mode-btn${mode==='coop'?' active':''}" onclick="${isHost?`fbSetPartyMode('coop');renderLobby()`:''}" ${!isHost?'disabled':''}>🤝 Coop</button>
-      <button class="mode-btn${mode==='solo'?' active':''}" onclick="${isHost?`fbSetPartyMode('solo');renderLobby()`:''}" ${!isHost?'disabled':''}>👤 Solo</button>
-    </div>`:''}
-    <div class="play-deploy-row">
-      ${isHost?`<button class="menu-btn btn-primary play-deploy-btn" onclick="deployFromLobby()">▶ DEPLOY${party&&(party.members||[]).length>1?' PARTY':''}</button>`:'<div class="play-waiting">Waiting for host…</div>'}
-    </div>`;
+    <div class="rl-threat-row">
+      <span class="rl-threat-lbl">THREAT LEVEL</span>
+      <span class="rl-threat-val">HIGH</span>
+    </div>
+    <div class="rl-deploy-wrap">${deployHtml}</div>`;
 }
 
 function _setLobbyMap(locId){
@@ -707,4 +744,47 @@ function equipWeapon(id){
   saveData.equippedWeapons=equip;
   saveSave();
   renderWeaponsScreen();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SEASON / XP / CHALLENGES PANEL
+// ═══════════════════════════════════════════════════════════════
+function _renderSeasonPanel(){
+  const el=document.getElementById('rlSeasonPanel');
+  if(!el) return;
+  const lv=Math.max(1,saveData.level||1);
+  const xp=saveData.bpXP||0;
+  const tier=saveData.bpLevel||0;
+  const xpNeeded=Math.floor(750+lv*180+Math.pow(lv,1.35)*35);
+  const xpPct=Math.min(100,Math.round(xp/Math.max(1,xpNeeded)*100));
+  const challenges=[
+    {name:'INTERCEPT 25 MISSILES',prog:Math.min(saveData.totalIntercepted||0,25),total:25,xp:500},
+    {name:'COMPLETE A MISSION',prog:Math.min(saveData.totalWaves||0,1),total:1,xp:500},
+    {name:'DESTROY 10 ENEMIES',prog:Math.min(saveData.totalBossKills||0,10),total:10,xp:500},
+    {name:'FIRE 200 SHOTS',prog:Math.min(saveData.totalShotsFired||0,200),total:200,xp:300},
+  ];
+  el.innerHTML=`
+    <div class="rll-season">SEASON 1</div>
+    <div class="rll-level-row">
+      <div class="rll-lv-label">LEVEL</div>
+      <div class="rll-lv-num">${lv}</div>
+    </div>
+    <div class="rll-xp-track"><div class="rll-xp-fill" style="width:${xpPct}%"></div></div>
+    <div class="rll-xp-text">${xp.toLocaleString()} / ${xpNeeded.toLocaleString()} XP</div>
+    <div class="rll-bp-row" onclick="showScreen('mainMenu')">
+      BATTLE PASS <span class="rll-bp-tier">TIER ${tier}</span>
+    </div>
+    <div class="rll-divider"></div>
+    <div class="rll-section-hd">DAILY CHALLENGES</div>
+    ${challenges.map(c=>`
+    <div class="rll-challenge">
+      <div class="rll-ch-header">
+        <div class="rll-ch-name">${c.name}</div>
+        <div class="rll-ch-xp">+${c.xp} XP</div>
+      </div>
+      <div class="rll-ch-track">
+        <div class="rll-ch-fill" style="width:${Math.round(c.prog/c.total*100)}%"></div>
+      </div>
+      <div class="rll-ch-prog">${c.prog} / ${c.total}</div>
+    </div>`).join('')}`;
 }

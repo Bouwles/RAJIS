@@ -104,49 +104,84 @@
   </div>
 </div>
 
-<!-- MAIN MENU — Lobby Hub -->
+<!-- MAIN MENU — Battle Royale Lobby -->
 <div id="mainMenu" class="screen">
-  <!-- Hidden legacy buttons (referenced by JS event listeners) -->
+  <!-- Hidden legacy buttons (referenced by JS) -->
   <button id="btnPlay"        style="display:none">New Mission</button>
   <button id="btnMultiplayer" style="display:none">Multiplayer</button>
   <button id="btnShop"        style="display:none">Shop</button>
   <button id="btnStats"       style="display:none">Stats</button>
   <button id="btnCredits"     style="display:none">Info</button>
 
-  <div class="lobby-layout">
-    <!-- LEFT: Party panel -->
-    <div class="lobby-left">
-      <div class="lobby-section-hd">YOUR PARTY</div>
-      <div id="lobbyPartySlots" class="party-slots"></div>
-      <div id="lobbyPartyActions"></div>
-      <div class="lobby-mp-row">
-        <button class="menu-btn btn-mp" style="width:100%;margin:10px 0 0;font-size:.8em;" onclick="showScreen('lobbyScreen')">🌐 Peer Multiplayer</button>
+  <!-- Embedded lobby nav -->
+  <nav class="rl-nav">
+    <div class="rl-logo">ABUJAMRA<span>INTERCEPTION</span></div>
+    <div class="rl-tabs">
+      <button class="rl-tab rl-tab-active">⌂ LOBBY</button>
+      <button class="rl-tab" onclick="showScreen('mainMenu')">BATTLE PASS</button>
+      <button class="rl-tab" onclick="renderFriendsScreen();showScreen('friendsScreen')">FRIENDS</button>
+      <button class="rl-tab" onclick="showLockerScreen()">LOCKER</button>
+      <button class="rl-tab" onclick="renderWeaponsScreen();showScreen('weaponsScreen')">WEAPONS</button>
+      <button class="rl-tab" onclick="buildShop();showScreen('shopScreen')">ITEM SHOP</button>
+      <button class="rl-tab" onclick="buildStatsScreen();showScreen('statsScreen')">PROFILE</button>
+      <button class="rl-tab" onclick="showScreen('settingsScreen')">⚙ SETTINGS</button>
+    </div>
+    <div class="rl-topright">
+      <span id="rlCredits" class="rl-currency">💰 0</span>
+      <span id="rlCallsign" class="rl-callsign-badge">—</span>
+    </div>
+  </nav>
+
+  <!-- Main three-column area -->
+  <div class="rl-main">
+
+    <!-- LEFT: Season / XP / Daily Challenges -->
+    <div class="rl-left">
+      <div id="rlSeasonPanel"></div>
+    </div>
+
+    <!-- CENTER: Full-screen 3D character stage -->
+    <div class="rl-center">
+      <canvas id="lobbyStageCanvas"></canvas>
+      <div id="lobbyStageLabels" class="lobby-stage-labels"></div>
+    </div>
+
+    <!-- RIGHT: Game mode + deploy -->
+    <div class="rl-right">
+      <div id="rlModePanel" class="rl-mode-panel"></div>
+      <div id="lobbyPartyActions" class="rl-party-actions"></div>
+      <div class="rl-mp-row">
+        <button class="rl-sm-btn" onclick="showScreen('lobbyScreen')">🌐 PEER MULTIPLAYER</button>
       </div>
     </div>
 
-    <!-- CENTER: Character stage + play panel -->
-    <div class="lobby-center">
-      <div class="lobby-stage-wrap">
-        <canvas id="lobbyStageCanvas"></canvas>
-        <div id="lobbyStageLabels" class="lobby-stage-labels"></div>
-      </div>
-      <div id="lobbyPlayPanel" class="lobby-play-panel"></div>
-    </div>
+  </div>
 
-    <!-- RIGHT: Online friends + profile strip -->
-    <div class="lobby-right">
-      <div class="lobby-section-hd">ONLINE FRIENDS</div>
-      <div id="lobbySidebarFriends" class="sidebar-friends"></div>
-      <div class="lobby-right-footer">
-        <div class="save-badge" id="saveBadge">No save found</div>
-        <div id="bpBadge" style="margin-top:6px;font-size:.74em;letter-spacing:.1em;color:var(--amber);display:none">
-          BATTLE PASS <span id="bpLevelLabel">LV 0</span>
-          <div style="width:120px;height:3px;background:rgba(53,59,71,.6);margin:5px 0 0;overflow:hidden">
-            <div id="bpXpBar" style="height:100%;background:linear-gradient(90deg,var(--amber),#E08020);width:0%"></div>
-          </div>
-        </div>
-        <div id="menuUserBadge"></div>
-      </div>
+  <!-- Bottom status bar -->
+  <div class="rl-statusbar">
+    <div class="rl-sb-left">
+      <span class="rl-chat-hint">PRESS ENTER TO CHAT</span>
+      <span class="rl-online-dot">● ONLINE</span>
+    </div>
+    <div class="rl-sb-mid">
+      <span id="saveBadge" class="save-badge"></span>
+    </div>
+    <div class="rl-sb-right">
+      <span id="menuUserBadge" class="rl-user-badge"></span>
+      <button class="rl-sb-icon" onclick="renderFriendsScreen();showScreen('friendsScreen')">
+        👥<span id="rlFriendBadge" class="nav-badge" style="display:none"></span>
+      </button>
+      <button class="rl-sb-icon" onclick="showScreen('settingsScreen')">⚙</button>
+    </div>
+  </div>
+
+  <!-- Hidden: legacy IDs still written to by social.js -->
+  <div id="lobbyPartySlots"     style="display:none"></div>
+  <div id="lobbySidebarFriends" style="display:none"></div>
+  <div id="bpBadge"             style="display:none">
+    BATTLE PASS <span id="bpLevelLabel">LV 0</span>
+    <div style="width:120px;height:3px;background:rgba(53,59,71,.6);margin:5px 0 0;overflow:hidden">
+      <div id="bpXpBar" style="height:100%;background:linear-gradient(90deg,var(--amber),#E08020);width:0%"></div>
     </div>
   </div>
 </div>

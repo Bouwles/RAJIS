@@ -113,7 +113,7 @@ function showScreen(name){
   if(el) el.classList.add('active');
   currentScreen=name;
   // Top nav: visible on hub screens
-  const hubScreens=['mainMenu','shopScreen','statsScreen','customization','weaponsScreen','friendsScreen','settingsScreen'];
+  const hubScreens=['shopScreen','statsScreen','customization','weaponsScreen','friendsScreen','settingsScreen'];
   const nav=document.getElementById('topNav');
   if(nav){
     nav.style.display=hubScreens.includes(name)?'flex':'none';

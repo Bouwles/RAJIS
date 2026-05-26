@@ -296,8 +296,13 @@ function openShopModal(itemId){
   if(prev){
     if(item.rewardType==='skin'){
       const col=_skinColor(item.id);
+      const vc=_skinVisorColor(item.id);
       prev.innerHTML=`<div style="width:100%;height:100%;background:linear-gradient(180deg,${col}44,${r.bg});display:flex;align-items:center;justify-content:center;">
-        <div style="font-size:4.5em;filter:drop-shadow(0 4px 16px ${col}88);">🪖</div>
+        <div class="is2-char-preview" style="transform:scale(1.1);">
+          <div class="is2-cp-head" style="background:${col};border-bottom:4px solid ${vc};box-shadow:0 0 12px ${vc}66;"></div>
+          <div class="is2-cp-body" style="background:${col};box-shadow:inset 0 -6px 10px rgba(0,0,0,.45);"></div>
+          <div class="is2-cp-legs" style="background:${col};opacity:.75;"></div>
+        </div>
       </div>`;
     } else if(item.rewardType==='weaponCamo'){
       const hex=_camoHex(item);
@@ -485,8 +490,13 @@ function buildLockerScreen(tab){
       const item={...sk,_type:'skin',_subtype:'OUTFIT'};
       const div=document.createElement('div');
       div.className='lkr-item'+(isEq?' lkr-item-equipped':'');
+      const vc=sk.custo.visorColor||'#44CCFF';
       div.innerHTML=`<div class="lkr-item-preview" style="background:linear-gradient(180deg,${col}28 0%,${col}06 100%);">
-        <div class="lkr-item-icon" style="color:${col};text-shadow:0 0 14px ${col}88;">🪖</div>
+        <div class="lkr-char-mini">
+          <div class="lkr-cm-head" style="background:${col};border-bottom:2px solid ${vc};box-shadow:0 0 6px ${vc}55;"></div>
+          <div class="lkr-cm-body" style="background:${col};box-shadow:inset 0 -3px 6px rgba(0,0,0,.4);"></div>
+          <div class="lkr-cm-legs" style="background:${col};opacity:.75;"></div>
+        </div>
       </div>
       ${isEq?'<div class="lkr-item-eq-badge">ON</div>':''}
       <div class="lkr-rarity-bar" style="background:${_rarity(sk.rarity||'uncommon').color};"></div>

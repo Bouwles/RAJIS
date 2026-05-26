@@ -1551,6 +1551,10 @@ body::after{content:'';position:fixed;inset:0;
 .lkr-item-equipped{border-color:rgba(212,149,42,.45)!important;}
 .lkr-item-preview{position:absolute;top:0;left:0;right:0;bottom:22px;display:flex;align-items:center;justify-content:center;}
 .lkr-item-icon{font-size:2em;line-height:1;}
+.lkr-char-mini{display:flex;flex-direction:column;align-items:center;gap:2px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6));}
+.lkr-cm-head{width:18px;height:15px;border-radius:3px 3px 1px 1px;}
+.lkr-cm-body{width:26px;height:26px;border-radius:2px;}
+.lkr-cm-legs{width:22px;height:20px;border-radius:0 0 2px 2px;}
 .lkr-item-camo-swatch{width:100%;height:100%;}
 .lkr-item-footer{
   position:relative;z-index:1;width:100%;text-align:center;

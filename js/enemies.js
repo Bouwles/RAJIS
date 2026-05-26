@@ -144,21 +144,6 @@ function updateProjectiles(dt){
       }
     }
 
-    // Rocket jump: launcher projectile near ground applies impulse to player
-    if(!hit&&p.weapon==='launcher'&&p.pos.y<2.0){
-      const pdx=p.pos.x-px, pdz=p.pos.z-pz;
-      const distToPlayer=Math.sqrt(pdx*pdx+pdz*pdz);
-      spawnExplosion(p.pos.clone(),2.4,0xFF6600);
-      if(distToPlayer<9){
-        const impulse=(1-(distToPlayer/9))*22;
-        vy=Math.max(vy,impulse);
-        onGround=false;
-        triggerScreenShake(0.6);
-        showNotif('ROCKET JUMP!');
-      }
-      hit=true;
-    }
-
     if(!hit) hit=checkSoldierHits(p.pos,p.dmg);
     // Building wall impact
     if(!hit){
@@ -173,11 +158,21 @@ function updateProjectiles(dt){
         }
       }
     }
-    // Floor impact
+    // Floor impact — rocket jump if near player
     if(!hit&&p.pos.y<=0.15){
       const isRpg=p.weapon==='launcher';
       spawnExplosion(p.pos.clone(),isRpg?2.8:0.28,isRpg?0xFF6600:0xDDDDDD);
-      if(isRpg) triggerScreenShake(0.4);
+      if(isRpg){
+        triggerScreenShake(0.4);
+        const pdx=p.pos.x-px,pdz=p.pos.z-pz;
+        const distToPlayer=Math.sqrt(pdx*pdx+pdz*pdz);
+        if(distToPlayer<9){
+          const impulse=(1-(distToPlayer/9))*22;
+          vy=Math.max(vy,impulse);
+          onGround=false;
+          showNotif('ROCKET JUMP!');
+        }
+      }
       hit=true;
     }
     // Battle mode: check hits on remote players

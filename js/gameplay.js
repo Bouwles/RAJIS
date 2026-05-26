@@ -124,6 +124,10 @@ function _resolveGulagCollisions(){
 function updatePlayer(dt){
   // While being pulled by grapple — surrender ground control entirely
   if(hookPulling){
+    if(hookTarget){
+      const _hp=hookTarget.type==='static'?hookTarget.pos:new THREE.Vector3(hookTarget.ref.pos.x,ENEMY_TYPES[hookTarget.ref.type].baseScale,hookTarget.ref.pos.z);
+      if(_hp.distanceTo(new THREE.Vector3(px,py,pz))<1.6){ releaseHook(); return; }
+    }
     px+=vx*dt; py+=vy*dt; pz+=vz*dt;
     const _b=battleActive?39:MAP_BOUND;
     px=Math.max(-_b,Math.min(_b,px));

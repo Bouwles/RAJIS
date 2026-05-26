@@ -513,7 +513,8 @@ function checkAmmoPack(){
     const pk=ammoPacks[i];
     const dx=px-pk.pos.x,dz=pz-pk.pos.z;
     if(Math.sqrt(dx*dx+dz*dz)<2.5){
-      ammo=WEAPONS[currentWeapon].maxAmmo;isReloading=false;
+      ammo=Math.floor(WEAPONS[currentWeapon].maxAmmo*(window._ammoPackMult||1));
+      isReloading=false;
       weaponAmmo[currentWeapon]=ammo;
       scene.remove(pk.mesh);ammoPacks.splice(i,1);
       showNotif('AMMO PICKED UP');sfxAmmoPick();

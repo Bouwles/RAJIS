@@ -56,7 +56,7 @@ function endWave(){
   const accuracy=waveShotsFired>0?Math.round(waveIntercepted/waveShotsFired*100):0;
   const baseEarned=waveIntercepted*80+Math.max(0,(waveMissileTotal-waveMissed)*50);
   const cleanBonus=waveMissed===0?200+waveNum*50:0;
-  const earned=baseEarned+cleanBonus;
+  const earned=Math.round((baseEarned+cleanBonus)*(window._creditMult||1));
   saveData.currency+=earned;
   saveData.totalScore+=waveScore;
   saveData.waveRecord=Math.max(saveData.waveRecord,waveNum);
@@ -716,9 +716,10 @@ function useFlashbang(){
   activeGadgets.flashbang--;
   // Stun all soldiers in radius 18
   let hit=0;
+  const fbRadius=18*(window._flashRad||1);
   soldiers.forEach(s=>{
     const d=Math.sqrt((s.pos.x-px)**2+(s.pos.z-pz)**2);
-    if(d<18){s._stunT=3.5;hit++;}
+    if(d<fbRadius){s._stunT=3.5;hit++;}
   });
   showNotif('Flashbang! '+hit+' stunned.');
   // Flash white

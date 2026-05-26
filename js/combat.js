@@ -115,7 +115,7 @@ function destroyMissile(missile,intercepted){
     killStreak++;
     killStreakTimer=4.0;
     const mult=killStreak>=5?2:killStreak>=3?1.5:1;
-    const pts=Math.floor((missile.isBoss?500:100)*mult);
+    const pts=Math.floor((missile.isBoss?500:100)*mult*(window._streakScoreMult||1));
     score+=pts;
     waveScore+=pts;
     showScorePop(pts,pos);
@@ -134,7 +134,7 @@ function destroyMissile(missile,intercepted){
       if(b.isDestroyed) continue;
       const dx=b.pos.x-pos.x, dz=b.pos.z-pos.z;
       const dist=Math.sqrt(dx*dx+dz*dz);
-      if(dist<blastR) damageBuilding(b,missile.isBoss?2:1);
+      if(dist<blastR) damageBuilding(b,(missile.isBoss?2:1)*(window._cityBlastMult||1));
     }
     triggerScreenShake(.55);
     showDamageFlash();

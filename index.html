@@ -594,15 +594,33 @@
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
 <!-- LOCKER SCREEN -->
-<div id="lockerScreen" class="screen">
-  <div class="lkr-wrap">
-    <div class="screen-title" style="margin-bottom:10px;">Locker</div>
-    <div class="lkr-tab-row">
-      <button class="lkr-tab lkr-tab-active" id="lkrTabSkins" onclick="buildLockerScreen('skins')">SKINS</button>
-      <button class="lkr-tab" id="lkrTabCamos" onclick="buildLockerScreen('camos')">CAMOS</button>
+<div id="lockerScreen" class="screen lkr-screen">
+  <div class="lkr-bg-geo"></div>
+  <div class="lkr-body">
+    <div class="lkr-left">
+      <div class="lkr-cat-tabs">
+        <button class="lkr-cat-tab lkr-cat-active" id="lkrTabSkins" onclick="buildLockerScreen('skins')">OUTFITS</button>
+        <button class="lkr-cat-tab" id="lkrTabCamos" onclick="buildLockerScreen('camos')">CAMOS</button>
+      </div>
+      <div id="lockerGrid" class="lkr-grid"></div>
     </div>
-    <div id="lockerGrid" class="lkr-grid"></div>
-    <button class="back-btn" style="margin-top:16px;" onclick="showScreen('mainMenu');renderLobby()">← Back to Lobby</button>
+    <div class="lkr-right">
+      <div class="lkr-preview-area">
+        <canvas id="lockerPreviewCanvas"></canvas>
+        <div class="lkr-platform-glow"></div>
+      </div>
+      <div class="lkr-info-panel">
+        <div class="lkr-info-name" id="lkrInfoName">— SELECT AN ITEM —</div>
+        <div class="lkr-info-sub" id="lkrInfoSub"></div>
+        <div class="lkr-info-rarity" id="lkrInfoRarity"></div>
+      </div>
+    </div>
+  </div>
+  <div class="lkr-bottombar">
+    <span class="lkr-game-name">RAJIS — INTERCEPTION SIMULATION</span>
+    <div class="lkr-bottom-actions">
+      <button class="lkr-equip-btn" id="lkrEquipBtn" onclick="_lkrEquip()" disabled>EQUIP</button>
+    </div>
   </div>
 </div>
 

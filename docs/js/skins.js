@@ -356,48 +356,142 @@ function equipWeaponCamo(weaponId,camoId){
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  LOCKER (view & equip owned)
+//  LOCKER — two-column layout + Three.js preview
 // ═══════════════════════════════════════════════════════════════
 let _lockerTab='skins';
+let _lkrSel=null;
+let _lkrRenderer=null,_lkrScene=null,_lkrCamera=null,_lkrChar=null,_lkrT=0,_lkrRafId=null;
+
+function _initLkrRenderer(){
+  const canvas=document.getElementById('lockerPreviewCanvas');
+  if(!canvas||_lkrRenderer) return;
+  const w=canvas.clientWidth||340, h=canvas.clientHeight||500;
+  _lkrRenderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  _lkrRenderer.setSize(w,h,false);
+  _lkrScene=new THREE.Scene();
+  _lkrCamera=new THREE.PerspectiveCamera(42,w/h,0.1,50);
+  _lkrCamera.position.set(0,1.1,4.2);
+  _lkrCamera.lookAt(0,0.9,0);
+  _lkrScene.add(new THREE.AmbientLight(0xffffff,0.65));
+  const dl=new THREE.DirectionalLight(0xffffff,0.9);dl.position.set(2,4,2);_lkrScene.add(dl);
+  const dl2=new THREE.DirectionalLight(0x4488ff,0.3);dl2.position.set(-2,1,-3);_lkrScene.add(dl2);
+}
+function _lkrStartLoop(){
+  if(_lkrRafId) return;
+  (function _loop(){
+    if(typeof currentScreen!=='undefined'&&currentScreen!=='lockerScreen'){_lkrRafId=null;return;}
+    _lkrT+=0.016;
+    if(_lkrChar) _lkrChar.rotation.y=_lkrT*0.5;
+    if(_lkrRenderer&&_lkrScene&&_lkrCamera) _lkrRenderer.render(_lkrScene,_lkrCamera);
+    _lkrRafId=requestAnimationFrame(_loop);
+  })();
+}
+function _lkrShowChar(custo){
+  if(!_lkrScene) return;
+  if(_lkrChar){_lkrScene.remove(_lkrChar);_lkrChar=null;}
+  if(typeof makeCharModel!=='function') return;
+  _lkrChar=makeCharModel(custo);
+  _lkrScene.add(_lkrChar);
+}
+function _lkrSelectItem(item,el){
+  _lkrSel=item;
+  document.querySelectorAll('.lkr-item').forEach(c=>c.classList.remove('lkr-item-sel'));
+  if(el) el.classList.add('lkr-item-sel');
+  const nameEl=document.getElementById('lkrInfoName');
+  const subEl=document.getElementById('lkrInfoSub');
+  const rarEl=document.getElementById('lkrInfoRarity');
+  if(nameEl) nameEl.textContent=item.name||item.id;
+  if(subEl) subEl.textContent=item._subtype||'';
+  if(rarEl){const rc=_rarity(item.rarity||'common');rarEl.textContent=rc.label;rarEl.style.color=rc.color;}
+  const btn=document.getElementById('lkrEquipBtn');
+  const eq=item._type==='skin'?(saveData.equippedSkin||'richard_default')===item.id
+    :(saveData.equippedWeaponCamos||{})[item.weaponId]===item.camoId;
+  if(btn){btn.textContent=eq?'EQUIPPED':'EQUIP';btn.disabled=eq;}
+  if(item._type==='skin'){
+    const skin=RICHARD_SKINS.find(s=>s.id===item.id);
+    if(skin) _lkrShowChar(skin.custo);
+  } else {
+    _lkrShowChar(saveData.customization||{});
+  }
+}
+function _lkrEquip(){
+  if(!_lkrSel) return;
+  if(_lkrSel._type==='skin') equipSkin(_lkrSel.id);
+  else equipWeaponCamo(_lkrSel.weaponId,_lkrSel.camoId);
+}
 
 function buildLockerScreen(tab){
   if(tab) _lockerTab=tab;
-  document.getElementById('lkrTabSkins')?.classList.toggle('lkr-tab-active',_lockerTab==='skins');
-  document.getElementById('lkrTabCamos')?.classList.toggle('lkr-tab-active',_lockerTab==='camos');
+  _initLkrRenderer();
+  _lkrStartLoop();
+  const ts=document.getElementById('lkrTabSkins');
+  const tc=document.getElementById('lkrTabCamos');
+  if(ts) ts.className='lkr-cat-tab'+(_lockerTab==='skins'?' lkr-cat-active':'');
+  if(tc) tc.className='lkr-cat-tab'+(_lockerTab==='camos'?' lkr-cat-active':'');
   const grid=document.getElementById('lockerGrid');
   if(!grid) return;
+  grid.innerHTML='';
+  _lkrShowChar(saveData.customization||{});
+  // reset info + button
+  const nameEl=document.getElementById('lkrInfoName');
+  const subEl=document.getElementById('lkrInfoSub');
+  const rarEl=document.getElementById('lkrInfoRarity');
+  const btn=document.getElementById('lkrEquipBtn');
+  if(nameEl) nameEl.textContent='— SELECT AN ITEM —';
+  if(subEl) subEl.textContent='';
+  if(rarEl){rarEl.textContent='';rarEl.style.color='';}
+  if(btn){btn.textContent='EQUIP';btn.disabled=true;}
+  _lkrSel=null;
+
   if(_lockerTab==='skins'){
     const owned=saveData.ownedSkins||['richard_default'];
-    const equipped=saveData.equippedSkin||'richard_default';
-    grid.innerHTML=RICHARD_SKINS.filter(s=>owned.includes(s.id)).map(sk=>{
-      const isEq=equipped===sk.id;
-      const col=sk.custo.outfitColor;
-      return`<div class="lkr-card${isEq?' lkr-eq':''}" onclick="equipSkin('${sk.id}')" style="${isEq?'border-color:rgba(212,149,42,.5);':''}background:linear-gradient(160deg,${col}18,rgba(10,14,24,.9));">
-        <div class="lkr-feat-icon" style="color:${col};text-shadow:0 0 12px ${col}66;">🪖</div>
-        <div class="lkr-card-name">${sk.name}</div>
-        <div class="lkr-card-tag">${sk.tagline}</div>
-        ${isEq?'<div class="lkr-card-badge">✓ EQUIPPED</div>':'<div class="lkr-card-equip">TAP TO EQUIP</div>'}
-      </div>`;
-    }).join('')||'<div class="lkr-empty">NO SKINS OWNED — visit Item Shop</div>';
+    const equippedSkin=saveData.equippedSkin||'richard_default';
+    const skins=RICHARD_SKINS.filter(s=>owned.includes(s.id));
+    if(!skins.length){grid.innerHTML='<div class="lkr-empty">No outfits owned — visit Item Shop</div>';return;}
+    skins.forEach(sk=>{
+      const isEq=equippedSkin===sk.id;
+      const col=sk.custo.outfitColor||'#1A3A8A';
+      const item={...sk,_type:'skin',_subtype:'OUTFIT'};
+      const div=document.createElement('div');
+      div.className='lkr-item'+(isEq?' lkr-item-equipped':'');
+      div.innerHTML=`<div class="lkr-item-preview" style="background:linear-gradient(180deg,${col}28 0%,${col}06 100%);">
+        <div class="lkr-item-icon" style="color:${col};text-shadow:0 0 14px ${col}88;">🪖</div>
+      </div>
+      ${isEq?'<div class="lkr-item-eq-badge">ON</div>':''}
+      <div class="lkr-rarity-bar" style="background:${_rarity(sk.rarity||'uncommon').color};"></div>
+      <div class="lkr-item-footer">${sk.name}</div>`;
+      div.onclick=()=>_lkrSelectItem(item,div);
+      grid.appendChild(div);
+    });
   } else {
     const ownedWC=saveData.ownedWeaponCamos||{};
     const equippedWC=saveData.equippedWeaponCamos||{};
-    let html='';
+    let hasAny=false;
     Object.entries(WEAPON_CAMOS).forEach(([wid,camos])=>{
       const owned=ownedWC[wid]||[];
-      const ownedCamos=camos.filter(c=>c.id==='default'||owned.includes(c.id));
-      if(ownedCamos.length===0) return;
-      html+=`<div class="lkr-weapon-hd">${wid.toUpperCase()}</div>`;
-      html+=ownedCamos.map(cm=>{
+      const visible=camos.filter(c=>c.id==='default'||owned.includes(c.id));
+      if(!visible.length) return;
+      hasAny=true;
+      const hd=document.createElement('div');
+      hd.className='lkr-weapon-section-hd';
+      hd.textContent=wid.toUpperCase();
+      grid.appendChild(hd);
+      visible.forEach(cm=>{
         const isEq=(equippedWC[wid]||'default')===cm.id;
-        return`<div class="lkr-card lkr-camo-card${isEq?' lkr-eq':''}" onclick="equipWeaponCamo('${wid}','${cm.id}');buildLockerScreen()">
-          <div class="lkr-camo-swatch" style="background:${cm.hexStr};box-shadow:0 0 8px ${cm.hexStr}44;"></div>
-          <div class="lkr-card-name">${cm.name}</div>
-          ${isEq?'<div class="lkr-card-badge">✓ EQUIPPED</div>':'<div class="lkr-card-equip">TAP TO EQUIP</div>'}
-        </div>`;
-      }).join('');
+        const item={...cm,_type:'camo',_subtype:wid.toUpperCase()+' CAMO',weaponId:wid,camoId:cm.id};
+        const div=document.createElement('div');
+        div.className='lkr-item'+(isEq?' lkr-item-equipped':'');
+        div.innerHTML=`<div class="lkr-item-preview">
+          <div class="lkr-item-camo-swatch" style="background:${cm.hexStr||'#303030'};"></div>
+        </div>
+        ${isEq?'<div class="lkr-item-eq-badge">ON</div>':''}
+        <div class="lkr-rarity-bar" style="background:${_rarity(cm.rarity||'common').color};"></div>
+        <div class="lkr-item-footer">${cm.name}</div>`;
+        div.onclick=()=>_lkrSelectItem(item,div);
+        grid.appendChild(div);
+      });
     });
-    grid.innerHTML=html||'<div class="lkr-empty">NO CAMOS OWNED — visit Item Shop</div>';
+    if(!hasAny) grid.innerHTML='<div class="lkr-empty">No camos owned — visit Item Shop</div>';
   }
 }
 

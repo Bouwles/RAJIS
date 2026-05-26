@@ -731,22 +731,19 @@ function renderWeaponsScreen(){
 function equipWeapon(id){
   if(!WEAPONS[id]) return;
   const equip=[...(saveData.equippedWeapons||['pistol','launcher'])];
-  if(equip[1]===id){
-    // In slot 2 → move to slot 1 (swap slots)
-    const prev=equip[0];
-    equip[0]=id;
-    equip[1]=prev;
+  if(equip[0]===id){
+    // Already slot 1 → swap to slot 2, old slot 2 goes to slot 1
+    equip[0]=equip[1]; equip[1]=id;
+    showNotif(WEAPONS[id].name+' swapped to Slot 2');
+  } else if(equip[1]===id){
+    // Already slot 2 → move to slot 1, old slot 1 goes to slot 2
+    equip[1]=equip[0]; equip[0]=id;
     showNotif(WEAPONS[id].name+' → Slot 1');
-  } else if(equip[0]===id){
-    // In slot 1 → remove, fill slot 1 with a default
-    equip[0]=equip[1]==='pistol'?'launcher':'pistol';
-    showNotif(WEAPONS[id].name+' removed');
   } else {
-    // Not equipped → slot 2
+    // Not equipped → replace slot 2
     equip[1]=id;
-    showNotif(WEAPONS[id].name+' → Slot 2 (click again = Slot 1)');
+    showNotif(WEAPONS[id].name+' → Slot 2  |  Click again → Slot 1');
   }
-  if(equip[0]===equip[1]) equip[1]=equip[0]==='pistol'?'launcher':'pistol';
   saveData.equippedWeapons=equip;
   saveSave();
   renderWeaponsScreen();

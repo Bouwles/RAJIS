@@ -1381,7 +1381,7 @@ body::after{content:'';position:fixed;inset:0;
   font-family:var(--font-ui);font-size:.55em;font-weight:900;color:var(--amber);}
 
 /* ── Item Shop (Fortnite-style two-column) ───────────────────── */
-#itemShopScreen.active{display:flex!important;flex-direction:column;background:#040810;overflow:hidden;}
+#itemShopScreen.active{display:flex!important;flex-direction:column;background:#040810;overflow:hidden;position:fixed!important;inset:0;}
 .is2-topbar{
   display:flex;justify-content:space-between;align-items:center;
   padding:8px 18px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;
@@ -1422,10 +1422,10 @@ body::after{content:'';position:fixed;inset:0;
   flex:1;display:flex;align-items:center;justify-content:center;
   min-height:70px;}
 .is2-feat-char{font-size:2.8em;line-height:1;}
-.is2-char-preview{display:flex;flex-direction:column;align-items:center;gap:2px;filter:drop-shadow(0 4px 16px rgba(0,0,0,.6));}
-.is2-cp-head{width:26px;height:22px;border-radius:4px 4px 2px 2px;}
-.is2-cp-body{width:36px;height:38px;border-radius:2px;}
-.is2-cp-legs{width:30px;height:28px;border-radius:0 0 3px 3px;}
+.is2-char-preview{display:flex;flex-direction:column;align-items:center;gap:3px;filter:drop-shadow(0 6px 20px rgba(0,0,0,.7));}
+.is2-cp-head{width:44px;height:36px;border-radius:5px 5px 3px 3px;}
+.is2-cp-body{width:60px;height:64px;border-radius:3px;}
+.is2-cp-legs{width:50px;height:48px;border-radius:0 0 4px 4px;}
 .is2-camo-swatch{width:56px;height:34px;border:1px solid rgba(255,255,255,.12);}
 .is2-cosm-icon{font-size:1.8em;}
 .is2-card-footer{
@@ -1491,7 +1491,7 @@ body::after{content:'';position:fixed;inset:0;
 
 /* ── Locker Screen ───────────────────────────────────────────── */
 #lockerScreen.active{display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;position:fixed!important;inset:0;}
-.lkr-screen{display:flex;flex-direction:column;background:#080E1C;overflow:hidden;}
+.lkr-screen{flex-direction:column;background:#080E1C;overflow:hidden;}
 .lkr-bg-geo{position:absolute;inset:0;pointer-events:none;z-index:0;
   background:linear-gradient(135deg,#0D1A35 0%,#080E1C 60%,#04080F 100%);}
 .lkr-bg-geo::before{content:'';position:absolute;inset:0;

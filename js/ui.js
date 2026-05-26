@@ -108,6 +108,7 @@ function showWaveAnnounce(msg){
 //  SCREEN MANAGEMENT
 // ═══════════════════════════════════════════════════════════════
 function showScreen(name){
+  if(name!=='itemShopScreen'&&typeof _shopTimerIv!=='undefined'&&_shopTimerIv){clearInterval(_shopTimerIv);_shopTimerIv=null;}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el=document.getElementById(name);
   if(el) el.classList.add('active');

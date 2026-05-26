@@ -620,18 +620,41 @@
   </div>
 </div>
 
-<!-- DAILY ITEM SHOP SCREEN -->
+<!-- ITEM SHOP SCREEN -->
 <div id="itemShopScreen" class="screen">
-  <div class="is-wrap">
-    <div class="is-top-row">
-      <div class="screen-title" style="margin:0;">Item Shop</div>
-      <div class="is-meta">
-        <span id="isRefreshDate" class="is-refresh"></span>
-        <span id="isCredits" class="is-credits-badge">💰 0</span>
-      </div>
+  <div class="is2-topbar">
+    <div class="is2-title">ITEM SHOP</div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span id="is2Credits" class="is2-credits-badge">💰 0</span>
+      <button class="back-btn" style="margin:0;padding:6px 14px;font-size:.7em;" onclick="showScreen('mainMenu');renderLobby()">← BACK</button>
     </div>
-    <div id="itemShopGrid" class="is-grid"></div>
-    <button class="back-btn" style="margin-top:16px;" onclick="showScreen('mainMenu');renderLobby()">← Back to Lobby</button>
+  </div>
+  <div class="is2-wrap">
+    <div class="is2-feat-col">
+      <div class="is2-col-hd">
+        <span class="is2-col-title">FEATURED</span>
+        <span class="is2-timer" id="is2FeatTimer"></span>
+      </div>
+      <div id="is2FeatGrid" class="is2-feat-grid"></div>
+    </div>
+    <div class="is2-daily-col">
+      <div class="is2-col-hd">
+        <span class="is2-col-title">DAILY</span>
+        <span class="is2-timer" id="is2DailyTimer"></span>
+      </div>
+      <div id="is2DailyGrid" class="is2-daily-grid"></div>
+    </div>
+  </div>
+  <div class="is2-footer">
+    <span>All items are cosmetic only and provide no gameplay advantage.</span>
+    <span id="is2CreditsFooter" class="is2-credits-badge">💰 0</span>
+  </div>
+  <div id="is2Modal" class="is2-modal" style="display:none" onclick="if(event.target===this)closeShopModal()">
+    <div class="is2-modal-inner">
+      <button class="is2-modal-close" onclick="closeShopModal()">✕</button>
+      <div class="is2-modal-preview" id="is2ModalPreview"></div>
+      <div class="is2-modal-body" id="is2ModalBody"></div>
+    </div>
   </div>
 </div>
 

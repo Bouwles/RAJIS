@@ -176,7 +176,6 @@ function setupEvents(){
 
   // ── MENU BUTTONS ──
   document.getElementById('btnPlay').addEventListener('click',()=>{
-    saveData=defaultSave();saveSave();
     mapSelected=null;
     document.getElementById('mapLocDetails').style.display='none';
     document.getElementById('mapLocName').textContent='Select a theater';
@@ -268,7 +267,7 @@ function init(){
   initPreviewRenderer();
   // Restore unlocked weapons from save
   weaponInventory=new Set(['pistol','launcher']);
-  if(saveData.unlocks.includes('shotgun')) weaponInventory.add('shotgun');
+  ['shotgun','sniper','smg'].forEach(w=>{ if(saveData.unlocks.includes(w)) weaponInventory.add(w); });
   setupEvents();
   setupModMenuButtons();
   updateSaveUI();

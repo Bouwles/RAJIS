@@ -158,6 +158,24 @@ function _skinColor(skinId){
   const s=RICHARD_SKINS.find(s=>s.id===skinId);
   return s?s.custo.outfitColor:'#1A3A8A';
 }
+function _skinVisorColor(skinId){
+  const s=RICHARD_SKINS.find(s=>s.id===skinId);
+  return s?s.custo.visorColor:'#44CCFF';
+}
+function _skinTone(skinId){
+  const s=RICHARD_SKINS.find(s=>s.id===skinId);
+  return s&&s.custo.skinTone?s.custo.skinTone:'#E8C49A';
+}
+function _skinCharPreview(skinId){
+  const oc=_skinColor(skinId);
+  const vc=_skinVisorColor(skinId);
+  const st=_skinTone(skinId);
+  return`<div class="is2-char-preview">
+    <div class="is2-cp-head" style="background:${oc};border-bottom:3px solid ${vc};box-shadow:0 0 8px ${vc}66;"></div>
+    <div class="is2-cp-body" style="background:${oc};box-shadow:inset 0 -4px 8px rgba(0,0,0,.4);"></div>
+    <div class="is2-cp-legs" style="background:${oc};opacity:.75;"></div>
+  </div>`;
+}
 function _isOwned(item){
   if(item.rewardType==='skin') return(saveData.ownedSkins||['richard_default']).includes(item.id);
   if(item.rewardType==='weaponCamo') return((saveData.ownedWeaponCamos||{})[item.weaponId]||[]).includes(item.camoId);
@@ -224,7 +242,7 @@ function _featCardHtml(item){
     onclick="openShopModal('${item.id}')">
     ${item.isNew?'<div class="is2-ribbon">NEW!</div>':''}
     <div class="is2-feat-preview" style="background:linear-gradient(160deg,${col}28 0%,${r.bg} 100%);">
-      <div class="is2-feat-char" style="color:${col};text-shadow:0 0 18px ${col}88;">🪖</div>
+      ${item.rewardType==='skin'?_skinCharPreview(item.id):`<div class="is2-feat-char" style="color:${col};text-shadow:0 0 18px ${col}88;">🪖</div>`}
     </div>
     <div class="is2-card-footer" style="border-top-color:${r.border};">
       <div class="is2-rarity-stripe" style="background:${r.color};"></div>
@@ -352,7 +370,9 @@ function equipWeaponCamo(weaponId,camoId){
   if(!saveData.equippedWeaponCamos) saveData.equippedWeaponCamos={};
   saveData.equippedWeaponCamos[weaponId]=camoId;
   saveSave();
-  showNotif(camoId+' camo equipped for '+weaponId+'!');
+  showNotif(camoId+' camo equipped!');
+  if(typeof switchWeapon==='function'&&typeof currentWeapon!=='undefined'&&currentWeapon===weaponId)
+    switchWeapon(currentWeapon);
 }
 
 // ═══════════════════════════════════════════════════════════════

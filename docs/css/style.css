@@ -1417,11 +1417,15 @@ body::after{content:'';position:fixed;inset:0;
 .is2-feat-card:hover,.is2-daily-card:hover{filter:brightness(1.14);transform:scale(1.015);z-index:2;}
 .is2-feat-preview{
   flex:1;display:flex;align-items:center;justify-content:center;
-  min-height:120px;}
+  min-height:160px;}
 .is2-daily-preview{
   flex:1;display:flex;align-items:center;justify-content:center;
   min-height:70px;}
 .is2-feat-char{font-size:2.8em;line-height:1;}
+.is2-char-preview{display:flex;flex-direction:column;align-items:center;gap:2px;filter:drop-shadow(0 4px 16px rgba(0,0,0,.6));}
+.is2-cp-head{width:26px;height:22px;border-radius:4px 4px 2px 2px;}
+.is2-cp-body{width:36px;height:38px;border-radius:2px;}
+.is2-cp-legs{width:30px;height:28px;border-radius:0 0 3px 3px;}
 .is2-camo-swatch{width:56px;height:34px;border:1px solid rgba(255,255,255,.12);}
 .is2-cosm-icon{font-size:1.8em;}
 .is2-card-footer{
@@ -1486,6 +1490,7 @@ body::after{content:'';position:fixed;inset:0;
 .is2-modal-buy:disabled{opacity:.45;cursor:default;filter:none;}
 
 /* ── Locker Screen ───────────────────────────────────────────── */
+#lockerScreen.active{display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;}
 .lkr-screen{display:flex;flex-direction:column;background:#080E1C;position:relative;overflow:hidden;}
 .lkr-bg-geo{position:absolute;inset:0;pointer-events:none;z-index:0;
   background:linear-gradient(135deg,#0D1A35 0%,#080E1C 60%,#04080F 100%);}

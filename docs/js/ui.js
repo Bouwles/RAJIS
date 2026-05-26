@@ -247,7 +247,6 @@ const SHOP_ITEMS=[
   {id:'shotgun',       name:'Super Shotgun', icon:'SGN', cost:1200, type:'weapon',   value:'shotgun'},
   {id:'sniper',        name:'Sniper Rifle',  icon:'SNP', cost:1800, type:'weapon',   value:'sniper'},
   {id:'smg',           name:'P90 SMG',       icon:'SMG', cost:900,  type:'weapon',   value:'smg'},
-  {id:'hookbreaker',   name:'Hookbreaker',   icon:'🪝', cost:1600, type:'weapon',   value:'hookbreaker'},
   // Gadgets
   {id:'flashbang',     name:'Flashbang',     icon:'FBG', cost:600,  type:'gadget',   value:'flashbang'},
   {id:'airstrike',     name:'Airstrike',     icon:'AIR', cost:2200, type:'gadget',   value:'airstrike'},
@@ -293,7 +292,6 @@ const SHOP_DESCS={
   shotgun:'Double barrel + grappling hook (RMB).',
   sniper:'High zoom, extreme range. RMB for scope.',
   smg:'Full-auto, 30-round drum mag. Fast TTK.',
-  hookbreaker:'Heavy double barrel + enhanced grapple hook. More pellets, more power.',
   flashbang:'Stuns soldiers in 18m for 3.5s.',
   airstrike:'Destroys missiles in 12m radius after 3s.',
   cover:'Deploys a barrier 4m ahead for 20s.',
@@ -318,7 +316,7 @@ const SHOP_DESCS={
   bp_tactical:'Tactical frame pack.',
 };
 const SHOP_TAB_MAP={
-  weapons:  ['shotgun','sniper','smg','hookbreaker'],
+  weapons:  ['shotgun','sniper','smg'],
   upgrades: ['armor_plate_1','speed_chip_1','hot_rounds_1'],
   gadgets:  ['flashbang','airstrike','cover'],
   ultimate: ['cyber_bullet','rajpn_fist'],

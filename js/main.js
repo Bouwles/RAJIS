@@ -164,13 +164,13 @@ function setupEvents(){
     if(!isLocked||!gameActive||gamePaused) return;
     if(e.button===0){ mouseHeld=true; fireProjectile(); }
     if(e.button===2){
-      if(currentWeapon==='shotgun'||currentWeapon==='hookbreaker') fireHook();
+      if(currentWeapon==='shotgun') fireHook();
       else {scoped=true;sfxScope();}
     }
   });
   document.addEventListener('mouseup',e=>{
     if(e.button===0) mouseHeld=false;
-    if(e.button===2){if(currentWeapon!=='shotgun'&&currentWeapon!=='hookbreaker') scoped=false;}
+    if(e.button===2){if(currentWeapon!=='shotgun') scoped=false;}
   });
   document.addEventListener('contextmenu',e=>e.preventDefault());
 

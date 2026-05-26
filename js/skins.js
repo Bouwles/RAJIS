@@ -64,12 +64,6 @@ const WEAPON_CAMOS={
     {id:'arctic',  name:'Arctic',   hexStr:'#D0E8F0', price:800,  rarity:'epic'},
     {id:'gold',    name:'Gold',     hexStr:'#DDB040', price:2000, rarity:'legendary'},
   ],
-  hookbreaker:[
-    {id:'default', name:'Default',  hexStr:'#303030', price:0},
-    {id:'carbon',  name:'Carbon',   hexStr:'#141414', price:800,  rarity:'epic'},
-    {id:'hazard',  name:'Hazard',   hexStr:'#CC7700', price:600,  rarity:'rare'},
-    {id:'chrome',  name:'Chrome',   hexStr:'#B0B0B0', price:900,  rarity:'epic'},
-  ],
   sniper:[
     {id:'default',  name:'Default',  hexStr:'#303030', price:0},
     {id:'midnight', name:'Midnight', hexStr:'#0A1A3A', price:600, rarity:'rare'},
@@ -115,10 +109,6 @@ const SHOP_CATALOG=[
   {id:'shop_camo_launch_red',    name:'Redline Launcher', itemType:'Launcher Camo',    section:'daily', rewardType:'weaponCamo', weaponId:'launcher',    camoId:'redline', rarity:'legendary', price:1200, isNew:true},
   {id:'shop_camo_launch_arctic', name:'Arctic Launcher',  itemType:'Launcher Camo',    section:'daily', rewardType:'weaponCamo', weaponId:'launcher',    camoId:'arctic',  rarity:'epic',      price:800},
   {id:'shop_camo_launch_gold',   name:'Gold Launcher',    itemType:'Launcher Camo',    section:'daily', rewardType:'weaponCamo', weaponId:'launcher',    camoId:'gold',    rarity:'legendary', price:2000},
-  // HOOKBREAKER CAMOS — daily
-  {id:'shop_camo_hook_carbon',   name:'Carbon Hookbreaker',itemType:'Hookbreaker Camo',section:'daily', rewardType:'weaponCamo', weaponId:'hookbreaker', camoId:'carbon',  rarity:'epic',      price:800},
-  {id:'shop_camo_hook_hazard',   name:'Hazard Hookbreaker',itemType:'Hookbreaker Camo',section:'daily', rewardType:'weaponCamo', weaponId:'hookbreaker', camoId:'hazard',  rarity:'rare',      price:600, isNew:true},
-  {id:'shop_camo_hook_chrome',   name:'Chrome Hookbreaker',itemType:'Hookbreaker Camo',section:'daily', rewardType:'weaponCamo', weaponId:'hookbreaker', camoId:'chrome',  rarity:'epic',      price:900},
   // SNIPER CAMOS — daily
   {id:'shop_camo_snp_mid',   name:'Midnight Sniper',      itemType:'Sniper Camo',      section:'daily', rewardType:'weaponCamo', weaponId:'sniper',      camoId:'midnight',rarity:'rare',      price:600},
   {id:'shop_camo_snp_ember', name:'Ember Sniper',         itemType:'Sniper Camo',      section:'daily', rewardType:'weaponCamo', weaponId:'sniper',      camoId:'ember',   rarity:'epic',      price:900},

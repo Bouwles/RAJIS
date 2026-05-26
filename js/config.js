@@ -238,7 +238,6 @@ const WEAPONS = {
   shotgun:     { id:'shotgun',     name:'SUPER SHOTGUN',  maxAmmo:2,  fireCD:1.05, reloadTime:1.7, projSpeed:78,  pellets:8,  spread:0.10, projRadius:0.26, projColor:0xFF5522, icon:'💥', shopId:'shotgun',     shopCost:1200, hasHook:true,  dmg:18 },
   sniper:      { id:'sniper',      name:'SNIPER RIFLE',   maxAmmo:5,  fireCD:1.40, reloadTime:2.8, projSpeed:200, pellets:1,  spread:0,    projRadius:0.30, projColor:0x88FFCC, icon:'🎯', shopId:'sniper',      shopCost:1800, hasScope:true, dmg:80 },
   smg:         { id:'smg',         name:'P90 SMG',        maxAmmo:30, fireCD:0.08, reloadTime:1.4, projSpeed:95,  pellets:1,  spread:0.04, projRadius:0.20, projColor:0xFFFF44, icon:'🔧', shopId:'smg',         shopCost:900,  dmg:14, autoFire:true },
-  hookbreaker: { id:'hookbreaker', name:'HOOKBREAKER',    maxAmmo:2,  fireCD:1.10, reloadTime:1.9, projSpeed:76,  pellets:10, spread:0.12, projRadius:0.26, projColor:0xFF6633, icon:'🪝', shopId:'hookbreaker', shopCost:1600, hasHook:true,  dmg:22 },
 };
 const MISS_RADIUS  = 0.9;
 const BOSS_RADIUS  = 1.6;

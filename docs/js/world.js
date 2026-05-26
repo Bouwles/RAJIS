@@ -622,7 +622,6 @@ function makeWeaponMesh(){
   if(currentWeapon==='shotgun')     return makeShotgunMesh();
   if(currentWeapon==='sniper')      return makeSniperMesh();
   if(currentWeapon==='smg')         return makeSmgMesh();
-  if(currentWeapon==='hookbreaker') return makeHookbreakerMesh();
   return makeLauncherMesh();
 }
 function makeLauncherMesh(){
@@ -700,47 +699,6 @@ function makeShotgunMesh(){
   const chain=new THREE.Mesh(new THREE.BoxGeometry(.006,.006,.1),new THREE.MeshLambertMaterial({color:0xAAAAAA}));
   chain.position.set(0,-.065,-.08);g.add(chain);
   g.position.set(.26,-.21,-.44);return g;
-}
-function makeHookbreakerMesh(){
-  const g=new THREE.Group();
-  const metalM=new THREE.MeshLambertMaterial({color:0x111111});
-  const darkM =new THREE.MeshLambertMaterial({color:0x080808});
-  const accentM=new THREE.MeshLambertMaterial({color:0x441100});
-  // Wider double barrels — more aggressive
-  const bL=new THREE.Mesh(new THREE.CylinderGeometry(.032,.032,.62,8),metalM);
-  bL.rotation.x=Math.PI/2;bL.position.set(-.044,0,-.14);g.add(bL);
-  const bR=new THREE.Mesh(new THREE.CylinderGeometry(.032,.032,.62,8),metalM);
-  bR.rotation.x=Math.PI/2;bR.position.set(.044,0,-.14);g.add(bR);
-  // Muzzle brakes
-  [-1,1].forEach(s=>{
-    const mb=new THREE.Mesh(new THREE.CylinderGeometry(.036,.028,.06,8),accentM);
-    mb.rotation.x=Math.PI/2;mb.position.set(s*.044,0,-.47);g.add(mb);
-  });
-  // Connecting band (wider / tactical)
-  const band=new THREE.Mesh(new THREE.BoxGeometry(.12,.06,.05),darkM);
-  band.position.set(0,0,-.07);g.add(band);
-  // Receiver
-  const recv=new THREE.Mesh(new THREE.BoxGeometry(.13,.11,.26),metalM);
-  recv.position.set(0,-.008,.15);g.add(recv);
-  // Accent stripe
-  const stripe=new THREE.Mesh(new THREE.BoxGeometry(.132,.014,.26),accentM);
-  stripe.position.set(0,.062,.15);g.add(stripe);
-  // Stock
-  const stock=new THREE.Mesh(new THREE.BoxGeometry(.09,.09,.28),darkM);
-  stock.position.set(0,-.02,.32);g.add(stock);
-  // Heavy-duty hook launcher under barrels
-  const hookTube=new THREE.Mesh(new THREE.CylinderGeometry(.024,.024,.3,6),darkM);
-  hookTube.rotation.x=Math.PI/2;hookTube.position.set(0,-.076,-.01);g.add(hookTube);
-  const hookTip=new THREE.Mesh(new THREE.ConeGeometry(.024,.06,6),accentM);
-  hookTip.rotation.x=Math.PI/2;hookTip.position.set(0,-.076,-.185);g.add(hookTip);
-  // Claw prongs
-  [[-1,0],[1,0],[0,-1]].forEach(([cx,cz])=>{
-    const prong=new THREE.Mesh(new THREE.BoxGeometry(.018,.055,.018),metalM);
-    prong.position.set(cx*.03+0,-.076-.03,cz*.02-.2);
-    prong.rotation.z=cx*0.65;prong.rotation.x=cz*0.45;
-    g.add(prong);
-  });
-  g.position.set(.26,-.22,-.44);return g;
 }
 function makeSniperMesh(){
   const g=new THREE.Group();

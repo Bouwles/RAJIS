@@ -16,8 +16,8 @@ function defaultSave(){
     equippedWeapons:['pistol','launcher'],
     bpXP:0, bpLevel:0, bpClaimedTiers:[],
     ownedSkins:['richard_default'], equippedSkin:'richard_default',
-    ownedWeaponCamos:{pistol:[],launcher:[],hookbreaker:[],sniper:[],smg:[],shotgun:[]},
-    equippedWeaponCamos:{pistol:'default',launcher:'default',hookbreaker:'default',sniper:'default',smg:'default',shotgun:'default'},
+    ownedWeaponCamos:{pistol:[],launcher:[],sniper:[],smg:[],shotgun:[]},
+    equippedWeaponCamos:{pistol:'default',launcher:'default',sniper:'default',smg:'default',shotgun:'default'},
     totalSoldierKills:0, claimedChallenges:[],
     customization:{
       outfitColor:'#1A3A8A', armorStyle:'light',

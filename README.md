@@ -1,123 +1,171 @@
 # Richard Abou Jamra Interception Simulation
 
-A browser-based 3D first-person missile defense game built with Three.js. Shoot down incoming missiles before they destroy the city, survive escalating waves, and compete against other players online.
+**Richard Abou Jamra Interception Simulation** is a browser-based 3D first-person missile defense game built with Three.js. Defend the city from incoming missile strikes, survive increasingly difficult waves, unlock new equipment, and compete against other players online.
 
-Play it here: [https://bouwles.github.io/rajis](https://bouwles.github.io/RAJIS/)
+Play it here: [https://bouwles.github.io/RAJIS/](https://bouwles.github.io/RAJIS/)
 
----
+## Overview
 
-## What You Do
+Missiles are falling toward the city, and your job is to intercept them before they hit. As the waves progress, the attacks become faster and more intense. Enemy soldiers also begin spawning across the map, forcing you to balance missile defense, combat, movement, and survival.
 
-Missiles rain down on the city. You shoot them down with your weapons before they hit buildings. Every wave gets harder -- more missiles, faster, and enemy soldiers start hunting you. Survive as long as possible, rack up points, and spend them in the shop between rounds.
-
----
+Earn points by destroying missiles and eliminating enemies, then spend those points in the shop to unlock weapons, gadgets, ultimates, upgrades, and cosmetics.
 
 ## Game Modes
 
-**Solo** -- Classic wave survival. Protect the city from missile strikes while fighting off ground soldiers. Wave difficulty scales over time.
+### Solo
 
-**1v1 Battle (Gulag)** -- Fight another player head-to-head online in an enclosed arena. First to eliminate the other wins.
+A wave-based survival mode where you protect the city from missile strikes while fighting enemy soldiers. Each wave increases in difficulty with faster missiles, more enemies, and greater pressure on the city.
 
----
+### 1v1 Battle
+
+An online head-to-head arena mode where two players fight in an enclosed combat zone. The first player to eliminate the other wins.
 
 ## Locations
 
-Choose your map before starting. Each has different weather, building density, and aesthetics.
+Choose your map before starting. Each location has its own atmosphere, weather, layout, and visual style.
 
-- **Sweden** -- Cold overcast sky, dense brick city, trees and snow-capped rooftops
-- **Beirut** -- Sunny and dry, sandy urban sprawl, palm trees
-- **Dubai** -- Harsh desert sun, massive skyscrapers
-
----
+- **Sweden**: Cold overcast skies, dense brick buildings, trees, and snow-covered rooftops
+- **Beirut**: Sunny and dry urban environment with sandy streets, palm trees, and warm lighting
+- **Dubai**: Harsh desert sunlight, wide roads, and large modern skyscrapers
 
 ## Weapons
 
-You start with a pistol and an RPG launcher. More weapons unlock in the shop.
+You start with a pistol and an RPG launcher. More weapons can be unlocked through the shop and progression systems.
 
-| Weapon | Type 
+| Weapon | Type | Description |
 |---|---|---|
-| M9 Pistol | Semi-auto sidearm | Default, free |
-| RPG Launcher | Explosive | Default, high damage, slow fire |
-| P90 SMG | Full auto | Hold to fire, 30-round magazine |
-| Super Shotgun | Burst spread | 8 pellets per shot, doubles as a grappling hook |
-| Sniper Rifle | Bolt-action | Scoped, one-shot soldiers, long range |
+| M9 Pistol | Semi-auto sidearm | Default weapon with reliable fire rate and low damage |
+| RPG Launcher | Explosive launcher | Default heavy weapon with high damage and slow fire rate |
+| P90 SMG | Full-auto weapon | Fast fire rate with a 30-round magazine |
+| Super Shotgun | Burst spread weapon | Fires 8 pellets per shot and includes a grappling hook ability |
+| Sniper Rifle | Bolt-action rifle | Scoped weapon with high precision and strong long-range damage |
 
-Right-click to scope with the sniper. Right-click with the shotgun to launch the grappling hook.
-
----
+Right-click to scope with the sniper rifle. Right-click with the Super Shotgun to fire the grappling hook.
 
 ## Movement
 
-Standard WASD movement with mouse look. Full air control while grappling.
+The game uses standard first-person movement.
 
-**Grappling Hook** -- Equip the shotgun, right-click a surface or building to latch on, and you get pulled toward it. Use it to reach rooftops, swing across streets, or reposition fast.
+- **WASD**: Move
+- **Mouse**: Look around
+- **Space**: Jump
+- **Shift**: Sprint
+- **Right-click**: Scope or use secondary weapon ability
 
----
+### Grappling Hook
+
+Equip the Super Shotgun and right-click a surface or building to latch on. The grappling hook pulls you toward the target, allowing you to reach rooftops, cross streets quickly, or reposition during combat.
+
+You have full air control while grappling.
 
 ## Ultimates
 
-Unlock these in the shop and activate them in-game with the assigned key.
+Ultimates can be unlocked in the shop and activated during gameplay with their assigned key.
 
-**Cyber Bullet** -- Fires a homing car that tracks and destroys the nearest missile. Has a cooldown.
+### Cyber Bullet
 
-**RAJPN Fist Bump** -- Sends two massive fists slamming together in front of you, destroying any missiles caught in the blast.
----
+Fires a homing car that tracks and destroys the nearest missile. This ability has a cooldown.
+
+### RAJPN Fist Bump
+
+Summons two massive fists that slam together in front of the player, destroying missiles caught in the blast zone.
 
 ## Gadgets
 
-Buy gadgets from the shop and carry them into battle.
+Gadgets can be purchased from the shop and carried into battle.
 
-- **Flashbang** -- Blinds and disorients nearby enemies
-- **Airstrike** -- Calls in a strike that destroys a cluster of missiles and soldiers
-- **Cover Charge** -- Drops a deployable barrier to block incoming fire
-
----
+- **Flashbang**: Blinds and disorients nearby enemies
+- **Airstrike**: Calls in a strike that destroys a cluster of missiles and soldiers
+- **Cover Charge**: Deploys a temporary barrier for protection
 
 ## Shop and Upgrades
 
-Earn points by shooting down missiles and killing soldiers. Spend them in the in-game shop to unlock:
+Earn points by intercepting missiles and eliminating enemy soldiers. Spend points in the in-game shop to unlock and upgrade:
 
-- New weapons
+- Weapons
 - Ultimate abilities
 - Gadgets
-- Character cosmetics (outfit colors, visor tints, backpack styles)
-- Stat upgrades (armor, speed, damage, fire rate)
+- Character cosmetics
+- Outfit colors
+- Visor tints
+- Backpack styles
+- Armor upgrades
+- Speed upgrades
+- Damage upgrades
+- Fire rate upgrades
 - Battle pass progression
 
 Purchases and progress are saved to your account.
 
----
-
 ## Accounts and Cloud Saves
 
-Create an account with a username and password. Your save data (unlocks, cosmetics, currency, battle pass tier) syncs to the cloud via Firebase so you never lose progress.
+Create an account with a username and password. Your save data is synced through Firebase, including:
 
----
+- Unlocks
+- Cosmetics
+- Currency
+- Battle pass tier
+- Progression
+- Equipped items
+
+This allows your progress to stay saved across sessions.
 
 ## Online Multiplayer
 
-Uses peer-to-peer networking (PeerJS). Create a lobby and share your room code with a friend. One player hosts, the other joins. Once both are in, the 1v1 Gulag battle starts.
+Online multiplayer uses peer-to-peer networking through PeerJS.
 
----
+Players can create a lobby and share a room code with a friend. One player hosts, the other joins, and once both players are connected, the 1v1 battle begins.
 
 ## Enemy Soldiers
 
-Ground soldiers spawn alongside missiles as waves progress. Three types:
+Enemy soldiers spawn alongside missile waves as the game progresses.
 
-- **Grunt** -- Fast, low health, aggressive engagement range
-- **Heavy** -- Slow, high health, high damage
-- **Sniper** -- Stays at distance, high accuracy, dangerous at range
+| Enemy | Behavior |
+|---|---|
+| Grunt | Fast, low health, aggressive at close to medium range |
+| Heavy | Slow, high health, high damage |
+| Sniper | Keeps distance, has high accuracy, dangerous at long range |
 
-Killing soldiers drops ammo packs.
-
----
+Killing soldiers can drop ammo packs.
 
 ## Building Damage
 
-Missiles that reach buildings deal structural damage. Once a building takes enough hits it collapses. Lose too many buildings and the city falls.
+Missiles that reach the city damage nearby buildings. Buildings have structural health and collapse after taking enough damage. If too many buildings are destroyed, the city falls and the run ends.
 
----
+## Tech Stack
 
-## Tech
+- Vanilla JavaScript
+- Three.js r128
+- Firebase for accounts and cloud saves
+- PeerJS for online multiplayer
+- Browser-based deployment through GitHub Pages
 
-Built entirely in vanilla JavaScript with Three.js (r128) for 3D rendering. No build tools or frameworks. Runs in any modern browser with no install required.
+No build tools or frameworks are required. The game runs directly in any modern browser.
+
+## Main Features
+
+- Browser-based 3D first-person gameplay
+- Missile interception mechanics
+- Wave-based survival
+- Destructible city buildings
+- Multiple playable locations
+- Unlockable weapons
+- Gadgets and ultimate abilities
+- Character cosmetics
+- Shop and upgrade system
+- Firebase cloud saves
+- Online 1v1 multiplayer
+- Enemy soldier AI
+- Grappling hook movement
+- Battle pass progression
+
+## How to Play
+
+1. Open the game link.
+2. Create or log into your account.
+3. Choose a location.
+4. Start Solo mode or join a 1v1 battle.
+5. Shoot down missiles before they destroy the city.
+6. Fight enemy soldiers as waves become harder.
+7. Earn points and unlock better equipment.
+8. Survive as long as possible.

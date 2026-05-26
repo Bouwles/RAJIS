@@ -152,7 +152,7 @@
       <div id="rlModePanel" class="rl-mode-panel"></div>
       <div id="lobbyPartyActions" class="rl-party-actions"></div>
       <div class="rl-mp-row">
-        <button class="rl-sm-btn" onclick="showScreen('lobbyScreen')">🌐 PEER MULTIPLAYER</button>
+        <button class="rl-sm-btn" onclick="showScreen('lobbyScreen')">MULTIPLAYER</button>
       </div>
     </div>
 
@@ -205,7 +205,7 @@
   <div class="mp-card">
     <div class="mp-title">Multiplayer</div>
     <div class="mp-sub">Choose your callsign</div>
-    <input class="mp-input" id="mpUsername" placeholder="Callsign (e.g. RAJ_ACE)" maxlength="16" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_]/g,'')"/>
+    <input class="mp-input" id="mpUsername" placeholder="Callsign (e.g. Richi)" maxlength="16" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_]/g,'')"/>
     <div class="mp-err" id="mpUsernameErr"></div>
     <button class="menu-btn btn-primary" style="width:100%;margin:0 0 8px;" onclick="mpSetUsername()">Continue →</button>
     <button class="menu-btn btn-secondary" style="width:100%;margin:0;" onclick="showScreen('mainMenu')">← Back</button>
@@ -617,7 +617,7 @@
     </div>
   </div>
   <div class="lkr-bottombar">
-    <span class="lkr-game-name">RAJIS — INTERCEPTION SIMULATION</span>
+    <button class="lkr-back-btn" onclick="showScreen('mainMenu');renderLobby()">← LOBBY</button>
     <div class="lkr-bottom-actions">
       <button class="lkr-equip-btn" id="lkrEquipBtn" onclick="_lkrEquip()" disabled>EQUIP</button>
     </div>

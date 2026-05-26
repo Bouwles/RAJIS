@@ -1490,8 +1490,8 @@ body::after{content:'';position:fixed;inset:0;
 .is2-modal-buy:disabled{opacity:.45;cursor:default;filter:none;}
 
 /* ── Locker Screen ───────────────────────────────────────────── */
-#lockerScreen.active{display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;}
-.lkr-screen{display:flex;flex-direction:column;background:#080E1C;position:relative;overflow:hidden;}
+#lockerScreen.active{display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;position:fixed!important;inset:0;}
+.lkr-screen{display:flex;flex-direction:column;background:#080E1C;overflow:hidden;}
 .lkr-bg-geo{position:absolute;inset:0;pointer-events:none;z-index:0;
   background:linear-gradient(135deg,#0D1A35 0%,#080E1C 60%,#04080F 100%);}
 .lkr-bg-geo::before{content:'';position:absolute;inset:0;
@@ -1533,6 +1533,8 @@ body::after{content:'';position:fixed;inset:0;
   padding:10px 20px;border-top:1px solid rgba(255,255,255,.06);
   background:rgba(0,0,0,.35);position:relative;z-index:1;flex-shrink:0;}
 .lkr-game-name{font-family:var(--font-ui);font-size:.58em;letter-spacing:.2em;color:rgba(255,255,255,.18);text-transform:uppercase;font-weight:700;}
+.lkr-back-btn{background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-family:var(--font-ui);font-size:.66em;font-weight:700;letter-spacing:.12em;padding:8px 18px;cursor:pointer;transition:all .15s;}
+.lkr-back-btn:hover{border-color:rgba(255,255,255,.35);color:var(--text);}
 .lkr-bottom-actions{display:flex;gap:8px;align-items:center;}
 .lkr-equip-btn{
   padding:10px 36px;background:#1E3E90;border:1px solid rgba(100,160,255,.35);

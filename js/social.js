@@ -731,15 +731,20 @@ function renderWeaponsScreen(){
 function equipWeapon(id){
   if(!WEAPONS[id]) return;
   const equip=[...(saveData.equippedWeapons||['pistol','launcher'])];
-  if(equip[0]===id||equip[1]===id){
-    // Already equipped — swap out
-    if(equip[0]===id) equip[0]=equip[1]!=='pistol'?'pistol':(equip[1]!=='launcher'?'launcher':'pistol');
-    else              equip[1]=equip[0]!=='pistol'?'pistol':(equip[0]!=='launcher'?'launcher':'pistol');
-    showNotif(WEAPONS[id].name+' removed from loadout.');
+  if(equip[1]===id){
+    // In slot 2 → move to slot 1 (swap slots)
+    const prev=equip[0];
+    equip[0]=id;
+    equip[1]=prev;
+    showNotif(WEAPONS[id].name+' → Slot 1');
+  } else if(equip[0]===id){
+    // In slot 1 → remove, fill slot 1 with a default
+    equip[0]=equip[1]==='pistol'?'launcher':'pistol';
+    showNotif(WEAPONS[id].name+' removed');
   } else {
-    // Put in slot 2 (slot 1 is considered primary)
+    // Not equipped → slot 2
     equip[1]=id;
-    showNotif(WEAPONS[id].name+' → Slot 2');
+    showNotif(WEAPONS[id].name+' → Slot 2 (click again = Slot 1)');
   }
   if(equip[0]===equip[1]) equip[1]=equip[0]==='pistol'?'launcher':'pistol';
   saveData.equippedWeapons=equip;

@@ -384,17 +384,25 @@ let _lkrRenderer=null,_lkrScene=null,_lkrCamera=null,_lkrChar=null,_lkrT=0,_lkrR
 
 function _initLkrRenderer(){
   const canvas=document.getElementById('lockerPreviewCanvas');
-  if(!canvas||_lkrRenderer) return;
-  const w=canvas.clientWidth||340, h=canvas.clientHeight||500;
-  _lkrRenderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-  _lkrRenderer.setSize(w,h,false);
-  _lkrScene=new THREE.Scene();
-  _lkrCamera=new THREE.PerspectiveCamera(42,w/h,0.1,50);
-  _lkrCamera.position.set(0,1.1,4.2);
-  _lkrCamera.lookAt(0,0.9,0);
-  _lkrScene.add(new THREE.AmbientLight(0xffffff,0.65));
-  const dl=new THREE.DirectionalLight(0xffffff,0.9);dl.position.set(2,4,2);_lkrScene.add(dl);
-  const dl2=new THREE.DirectionalLight(0x4488ff,0.3);dl2.position.set(-2,1,-3);_lkrScene.add(dl2);
+  if(!canvas) return;
+  const area=canvas.parentElement;
+  const w=area?area.clientWidth||340:340;
+  const h=area?area.clientHeight||500:500;
+  if(!_lkrRenderer){
+    _lkrRenderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+    _lkrScene=new THREE.Scene();
+    _lkrCamera=new THREE.PerspectiveCamera(42,w/h,0.1,50);
+    _lkrCamera.position.set(0,1.1,4.2);
+    _lkrCamera.lookAt(0,0.9,0);
+    _lkrScene.add(new THREE.AmbientLight(0xffffff,0.65));
+    const dl=new THREE.DirectionalLight(0xffffff,0.9);dl.position.set(2,4,2);_lkrScene.add(dl);
+    const dl2=new THREE.DirectionalLight(0x4488ff,0.3);dl2.position.set(-2,1,-3);_lkrScene.add(dl2);
+  }
+  if(w>0&&h>0){
+    _lkrRenderer.setSize(w,h,false);
+    _lkrCamera.aspect=w/h;
+    _lkrCamera.updateProjectionMatrix();
+  }
 }
 function _lkrStartLoop(){
   if(_lkrRafId) return;
@@ -442,8 +450,12 @@ function _lkrEquip(){
 
 function buildLockerScreen(tab){
   if(tab) _lockerTab=tab;
-  _initLkrRenderer();
-  _lkrStartLoop();
+  // Defer init to next frame so screen is visible and has real dimensions
+  requestAnimationFrame(()=>{
+    _initLkrRenderer();
+    _lkrStartLoop();
+    _lkrShowChar(saveData.customization||{});
+  });
   const ts=document.getElementById('lkrTabSkins');
   const tc=document.getElementById('lkrTabCamos');
   if(ts) ts.className='lkr-cat-tab'+(_lockerTab==='skins'?' lkr-cat-active':'');
@@ -451,7 +463,6 @@ function buildLockerScreen(tab){
   const grid=document.getElementById('lockerGrid');
   if(!grid) return;
   grid.innerHTML='';
-  _lkrShowChar(saveData.customization||{});
   // reset info + button
   const nameEl=document.getElementById('lkrInfoName');
   const subEl=document.getElementById('lkrInfoSub');

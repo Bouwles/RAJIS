@@ -320,66 +320,65 @@ const RARITY_COLORS={C:'#888',U:'#4A90D9',R:'#B066E8',E:'#F0C040',L:'#FF5544',M:
 const RARITY_NAMES={C:'Common',U:'Uncommon',R:'Rare',E:'Epic',L:'Legendary',M:'Mythic'};
 const RARITY_WEIGHTS={C:400,U:300,R:150,E:100,L:40,M:10};
 
-// Card pool — Common: mostly beneficial. Uncommon: mixed. Rare+: mostly detrimental (give credits).
-// creditReward = credits given for picking the card (harder cards pay more)
+// Card pool — ALL chaos & debuffs. Pick a curse, earn credits.
+// creditReward = credits given for picking the card (harder = more credits)
 const CARD_POOL=[
-  // ── COMMON (beneficial) ─────────────────────────────────────
-  {id:'c01',r:'C',icon:'⚡',name:'Adrenaline Rush',    desc:'+8% move speed.',         fx:()=>{ effectiveSpd*=1.08; effectiveSprint*=1.08; }},
-  {id:'c02',r:'C',icon:'M+', name:'Extended Mag',      desc:'+25% max ammo.',          fx:()=>{ Object.keys(WEAPONS).forEach(k=>{ WEAPONS[k].maxAmmo=Math.ceil(WEAPONS[k].maxAmmo*1.25); weaponAmmo[k]=WEAPONS[k].maxAmmo; }); ammo=WEAPONS[currentWeapon].maxAmmo; }},
-  {id:'c03',r:'C',icon:'RL', name:'Quick Hands',       desc:'-15% reload time.',       fx:()=>{ Object.keys(WEAPONS).forEach(k=>WEAPONS[k].reloadTime*=0.85); }},
-  {id:'c04',r:'C',icon:'CR', name:'Salvage Crew',      desc:'+100 credits.',           fx:()=>{ saveData.currency+=100; saveSave(); }},
-  {id:'c05',r:'C',icon:'AIM',name:'Steady Aim',        desc:'-20% weapon spread.',     fx:()=>{ Object.keys(WEAPONS).forEach(k=>{ if(WEAPONS[k].spread>0) WEAPONS[k].spread*=0.80; }); }},
-  {id:'c06',r:'C',icon:'VS', name:'Padded Vest',       desc:'+20% bullet resist.',     fx:()=>{ window._playerDmgMult=(window._playerDmgMult||1)*0.80; }},
-  {id:'c07',r:'C',icon:'DMG',name:'Hot Tip',           desc:'+10% projectile damage.', fx:()=>{ dmgMult*=1.10; }},
-  {id:'c08',r:'C',icon:'SPD',name:'Rangefinder',       desc:'+12% projectile speed.',  fx:()=>{ Object.keys(WEAPONS).forEach(k=>WEAPONS[k].projSpeed=Math.ceil(WEAPONS[k].projSpeed*1.12)); }},
-  {id:'c09',r:'C',icon:'SP', name:'Combat Stims',      desc:'+5% sprint speed.',       fx:()=>{ effectiveSprint*=1.05; }},
-  {id:'c10',r:'C',icon:'AMO',name:'Ammo Magnet',       desc:'Ammo packs +50% more.',   fx:()=>{ window._ammoPackMult=(window._ammoPackMult||1)*1.5; }},
-  // ── UNCOMMON (mixed) ────────────────────────────────────────
-  {id:'u01',r:'U',icon:'INC',name:'Incendiary',        desc:'+20% damage, +5% fire rate.',fx:()=>{ dmgMult*=1.20; Object.keys(WEAPONS).forEach(k=>WEAPONS[k].fireCD*=0.95); }},
-  {id:'u02',r:'U',icon:'RL', name:'Auto-Loader',       desc:'-25% reload time.',       fx:()=>{ Object.keys(WEAPONS).forEach(k=>WEAPONS[k].reloadTime*=0.75); }},
-  {id:'u03',r:'U',icon:'MVS',name:'Afterburner',       desc:'+18% all movement.',      fx:()=>{ effectiveSpd*=1.18; effectiveSprint*=1.18; }},
-  {id:'u04',r:'U',icon:'CR', name:'War Profiteer',     desc:'+50% credits per wave.',  fx:()=>{ window._creditMult=(window._creditMult||1)*1.5; }},
-  // Detrimental uncommons
-  {id:'u05',r:'U',icon:'HVY',name:'Weighted Boots',    desc:'HARDER: -15% move speed.  +80 credits', creditReward:80, fx:()=>{ effectiveSpd*=0.85; effectiveSprint*=0.85; }},
-  {id:'u06',r:'U',icon:'FOG',name:'Fog of War',        desc:'HARDER: Minimap disabled this game.  +60 credits', creditReward:60, fx:()=>{ const mm=document.getElementById('minimap'); if(mm) mm.style.visibility='hidden'; }},
-  {id:'u07',r:'U',icon:'SLP',name:'Slippery Boots',    desc:'HARDER: +25% player acceleration lag.  +70 credits', creditReward:70, fx:()=>{ effectiveSpd*=0.90; }},
-  {id:'u08',r:'U',icon:'FBG',name:'Tactical Eye',      desc:'+1 flashbang charge.',    fx:()=>{ activeGadgets.flashbang=(activeGadgets.flashbang||0)+1; }},
-  {id:'u09',r:'U',icon:'FLH',name:'Concussion Expert', desc:'Flashbang radius +30%.',  fx:()=>{ window._flashRad=(window._flashRad||1)*1.3; }},
-  {id:'u10',r:'U',icon:'CR', name:'Supply Drop',       desc:'+300 credits.',           fx:()=>{ saveData.currency+=300; saveSave(); }},
-  // ── RARE (mostly detrimental + credit reward) ────────────────
-  {id:'r01',r:'R',icon:'OC', name:'Overclocked',       desc:'+30% fire rate.',         fx:()=>{ Object.keys(WEAPONS).forEach(k=>WEAPONS[k].fireCD*=0.70); }},
-  {id:'r02',r:'R',icon:'HLF',name:'Half Health City',  desc:'HARDER: City integrity -20% now.  +150 credits', creditReward:150, fx:()=>{ cityIntegrity=Math.max(10,cityIntegrity-20); }},
-  {id:'r03',r:'R',icon:'BLT',name:'Bullet Sponge',     desc:'HARDER: Soldiers take +50% shots to kill.  +180 credits', creditReward:180, fx:()=>{ soldiers.forEach(s=>s.health=Math.ceil(s.health*1.5)); }},
-  {id:'r04',r:'R',icon:'SLW',name:'Molasses Rounds',   desc:'HARDER: -30% projectile speed.  +160 credits', creditReward:160, fx:()=>{ Object.keys(WEAPONS).forEach(k=>WEAPONS[k].projSpeed=Math.max(10,Math.ceil(WEAPONS[k].projSpeed*0.70))); }},
-  {id:'r05',r:'R',icon:'MSL',name:'Missile Surge',     desc:'HARDER: +3 extra missiles this wave.  +140 credits', creditReward:140, fx:()=>{ waveMissileTotal+=3; showNotif('3 more missiles incoming!'); }},
-  {id:'r06',r:'R',icon:'SPD',name:'Rocket Fuel',       desc:'+40% projectile speed.',  fx:()=>{ Object.keys(WEAPONS).forEach(k=>WEAPONS[k].projSpeed=Math.ceil(WEAPONS[k].projSpeed*1.40)); }},
-  {id:'r07',r:'R',icon:'AMO',name:'Drought',           desc:'HARDER: All weapon ammo halved.  +200 credits', creditReward:200, fx:()=>{ Object.keys(WEAPONS).forEach(k=>{ WEAPONS[k].maxAmmo=Math.max(1,Math.floor(WEAPONS[k].maxAmmo/2)); weaponAmmo[k]=WEAPONS[k].maxAmmo; }); ammo=WEAPONS[currentWeapon].maxAmmo; }},
-  {id:'r08',r:'R',icon:'NOH',name:'No Gadgets',        desc:'HARDER: All gadget charges set to 0.  +180 credits', creditReward:180, fx:()=>{ activeGadgets={flashbang:0,airstrike:0,cover:0}; showNotif('Gadgets disabled!'); }},
-  {id:'r09',r:'R',icon:'SPS',name:'Speed Missiles',    desc:'HARDER: Missiles +35% faster.  +220 credits', creditReward:220, fx:()=>{ missiles.forEach(m=>{ m.vel.x*=1.35;m.vel.y*=1.35;m.vel.z*=1.35; }); }},
-  {id:'r10',r:'R',icon:'RAR',name:'Rare Find',         desc:'+500 credits.',           fx:()=>{ saveData.currency+=500; saveSave(); }},
-  // ── EPIC (mostly detrimental, higher credits) ────────────────
-  {id:'e01',r:'E',icon:'ANN',name:'Annihilator',       desc:'+60% damage to all targets.',fx:()=>{ dmgMult*=1.60; }},
-  {id:'e02',r:'E',icon:'SMK',name:'Smoke Screen',      desc:'HARDER: Crosshair removed for remainder of game.  +300 credits', creditReward:300, fx:()=>{ const ch=document.getElementById('crosshair'); if(ch) ch.style.display='none'; }},
-  {id:'e03',r:'E',icon:'BOS',name:'Boss Upgrade',      desc:'HARDER: All remaining missiles get +50% HP.  +350 credits', creditReward:350, fx:()=>{ missiles.forEach(m=>{ m.maxHealth=Math.ceil(m.maxHealth*1.5);m.health=Math.ceil(m.health*1.5); }); }},
-  {id:'e04',r:'E',icon:'ELT',name:'Elite Squad',       desc:'HARDER: Spawns 3 sniper soldiers now.  +280 credits', creditReward:280, fx:()=>{ if(selectedLoc) for(let i=0;i<3;i++) setTimeout(()=>spawnSoldiers(selectedLoc,1,'sniper'),i*600); showNotif('SNIPERS DEPLOYED!'); }},
-  {id:'e05',r:'E',icon:'BLT',name:'Fragile City',      desc:'HARDER: City blast damage ×2 this game.  +400 credits', creditReward:400, fx:()=>{ window._cityBlastMult=(window._cityBlastMult||1)*2; showNotif('City is fragile!'); }},
-  {id:'e06',r:'E',icon:'CRD',name:'Tactical HUD',      desc:'All streaks give ×3 score.',fx:()=>{ window._streakScoreMult=(window._streakScoreMult||1)*3; }},
-  {id:'e07',r:'E',icon:'AIR',name:'Air Superiority',   desc:'+2 airstrike charges.',    fx:()=>{ activeGadgets.airstrike=(activeGadgets.airstrike||0)+2; }},
-  {id:'e08',r:'E',icon:'DRK',name:'Darkness Falls',    desc:'HARDER: Fog distance halved.  +320 credits', creditReward:320, fx:()=>{ if(scene.fog){scene.fog.near*=0.5;scene.fog.far*=0.5;} }},
-  {id:'e09',r:'E',icon:'CRD',name:'Credit Matrix',     desc:'+1000 credits + ×2 future.',fx:()=>{ saveData.currency+=1000; window._creditMult=(window._creditMult||1)*2; saveSave(); }},
-  {id:'e10',r:'E',icon:'WV', name:'Wave Surge',        desc:'HARDER: Next wave has 2× missiles.  +450 credits', creditReward:450, fx:()=>{ waveMissileTotal+=Math.ceil(waveMissileTotal); showNotif('WAVE SURGE — double missiles!'); }},
-  // ── LEGENDARY (all detrimental, big credit rewards) ──────────
-  {id:'l01',r:'L',icon:'HRD',name:'Hard Mode',         desc:'HARDER: City integrity -35%. Missiles +50% HP.  +600 credits', creditReward:600, fx:()=>{ cityIntegrity=Math.max(5,cityIntegrity-35); missiles.forEach(m=>{m.maxHealth=Math.ceil(m.maxHealth*1.5);m.health=Math.ceil(m.health*1.5);}); }},
-  {id:'l02',r:'L',icon:'BLK',name:'Blackout',          desc:'HARDER: No HUD for 30 seconds.  +700 credits', creditReward:700, fx:()=>{ const hud=document.getElementById('hud'); if(hud){const e=hud.querySelectorAll('.hud-panel,.hud-row');e.forEach(el=>el.style.opacity='0');setTimeout(()=>e.forEach(el=>el.style.opacity=''),30000);} showNotif('HUD OFFLINE 30s!'); }},
-  {id:'l03',r:'L',icon:'INV',name:'Invaders',          desc:'HARDER: +5 elite soldiers + boss missile now.  +750 credits', creditReward:750, fx:()=>{ spawnMissile(true); if(selectedLoc) for(let i=0;i<5;i++) setTimeout(()=>spawnSoldiers(selectedLoc,1,'heavy'),i*300); showNotif('INVASION!'); }},
-  {id:'l04',r:'L',icon:'SPD',name:'Hypersonic Threat', desc:'HARDER: Missiles move 2× faster.  +800 credits', creditReward:800, fx:()=>{ missiles.forEach(m=>{m.vel.x*=2;m.vel.y*=2;m.vel.z*=2;}); showNotif('HYPERSONIC MISSILES!'); }},
-  {id:'l05',r:'L',icon:'AMO',name:'Empty Arsenal',     desc:'HARDER: Ammo reduced to 1 per weapon. City -10%.  +900 credits', creditReward:900, fx:()=>{ Object.keys(WEAPONS).forEach(k=>{WEAPONS[k].maxAmmo=1;weaponAmmo[k]=1;}); ammo=1; cityIntegrity=Math.max(5,cityIntegrity-10); showNotif('ARSENAL DRAINED!'); }},
-  // ── MYTHIC (chaos — all extreme) ────────────────────────────
-  {id:'m01',r:'M',icon:'BOS',name:'BOSS MISSILE',      desc:'HARDER: Spawns an extra boss missile! +1000 credits', creditReward:1000, fx:()=>{ spawnMissile(true); showNotif('A BOSS MISSILE WAS SUMMONED!'); }},
-  {id:'m02',r:'M',icon:'BN', name:'ENEMY BATTALION',   desc:'HARDER: Spawns 5 elite soldiers! +1200 credits',  creditReward:1200, fx:()=>{ if(selectedLoc) for(let i=0;i<5;i++) setTimeout(()=>spawnSoldiers(selectedLoc,1,'heavy'),i*400); showNotif('ENEMY BATTALION DEPLOYED!'); }},
-  {id:'m03',r:'M',icon:'STM',name:'MISSILE STORM',     desc:'HARDER: Doubles missiles this wave! +1500 credits', creditReward:1500, fx:()=>{ waveMissileTotal+=Math.ceil(waveMissileTotal*0.8); showNotif('MISSILE STORM INCOMING!'); }},
-  {id:'m04',r:'M',icon:'NUK',name:'NUCLEAR THREAT',    desc:'HARDER: All missiles become boss class! +2000 credits', creditReward:2000, fx:()=>{ window._allBoss=true; showNotif('ALL MISSILES ARE NOW BOSS CLASS!'); }},
-  {id:'m05',r:'M',icon:'CRX',name:'CHAIN REACTION',    desc:'City takes ×3 blast damage BUT you deal ×4. +1800 credits', creditReward:1800, fx:()=>{ dmgMult*=4; window._cityBlastMult=(window._cityBlastMult||1)*3; showNotif('CHAIN REACTION — High risk, high reward!'); }},
+  // ── COMMON (mostly debuffs + small credit rewards) ──────────────
+  {id:'c01',r:'C',icon:'💀',name:'Enemy Rush',      desc:'HARDER: A heavy soldier spawns now. +50 credits',           creditReward:50,  fx:()=>{ if(selectedLoc) spawnSoldiers(selectedLoc,1,'heavy'); showNotif('Enemy reinforcements!'); }},
+  {id:'c02',r:'C',icon:'📭',name:'Jammed Mags',     desc:'HARDER: -20% max ammo. +60 credits',                        creditReward:60,  fx:()=>{ Object.keys(WEAPONS).forEach(k=>{WEAPONS[k].maxAmmo=Math.max(1,Math.floor(WEAPONS[k].maxAmmo*.80));weaponAmmo[k]=WEAPONS[k].maxAmmo;}); ammo=WEAPONS[currentWeapon].maxAmmo; }},
+  {id:'c03',r:'C',icon:'🪨',name:'Heavy Boots',     desc:'HARDER: -12% move speed. +50 credits',                      creditReward:50,  fx:()=>{ effectiveSpd*=.88; effectiveSprint*=.88; }},
+  {id:'c04',r:'C',icon:'💰',name:'Salvage Crew',    desc:'+100 credits.',                                              fx:()=>{ saveData.currency+=100; saveSave(); }},
+  {id:'c05',r:'C',icon:'💨',name:'Shaky Hands',     desc:'HARDER: +15% weapon spread. +55 credits',                   creditReward:55,  fx:()=>{ Object.keys(WEAPONS).forEach(k=>{WEAPONS[k].spread=Math.min(.5,(WEAPONS[k].spread||0)+.04);}); }},
+  {id:'c06',r:'C',icon:'🩸',name:'Cracked Vest',    desc:'HARDER: You take +25% more damage. +60 credits',            creditReward:60,  fx:()=>{ window._playerDmgMult=(window._playerDmgMult||1)*1.25; }},
+  {id:'c07',r:'C',icon:'🪫',name:'Dull Rounds',     desc:'HARDER: -15% projectile damage. +50 credits',               creditReward:50,  fx:()=>{ dmgMult*=.85; }},
+  {id:'c08',r:'C',icon:'🚀',name:'Extra Missile',   desc:'HARDER: +1 missile this wave. +80 credits',                 creditReward:80,  fx:()=>{ waveMissileTotal+=1; showNotif('+1 missile incoming!'); }},
+  {id:'c09',r:'C',icon:'🐢',name:'Sluggish',        desc:'HARDER: -15% sprint speed. +50 credits',                    creditReward:50,  fx:()=>{ effectiveSprint*=.85; }},
+  {id:'c10',r:'C',icon:'⏳',name:'Slow Reload',     desc:'HARDER: +20% reload time. +55 credits',                     creditReward:55,  fx:()=>{ Object.keys(WEAPONS).forEach(k=>WEAPONS[k].reloadTime*=1.20); }},
+  // ── UNCOMMON (mostly debuffs + medium credit rewards) ───────────
+  {id:'u01',r:'U',icon:'🚀',name:'Missile Salvo',   desc:'HARDER: +3 extra missiles. +130 credits',                   creditReward:130, fx:()=>{ waveMissileTotal+=3; showNotif('3 more missiles incoming!'); }},
+  {id:'u02',r:'U',icon:'⏰',name:'Broken Loader',   desc:'HARDER: +35% reload time. +110 credits',                    creditReward:110, fx:()=>{ Object.keys(WEAPONS).forEach(k=>WEAPONS[k].reloadTime*=1.35); }},
+  {id:'u03',r:'U',icon:'🪨',name:'Lead Legs',       desc:'HARDER: -20% all movement. +120 credits',                   creditReward:120, fx:()=>{ effectiveSpd*=.80; effectiveSprint*=.80; }},
+  {id:'u04',r:'U',icon:'💰',name:'War Profiteer',   desc:'+50% credits per wave.',                                     fx:()=>{ window._creditMult=(window._creditMult||1)*1.5; }},
+  {id:'u05',r:'U',icon:'💀',name:'Soldier Squad',   desc:'HARDER: 2 heavy soldiers spawn now. +140 credits',          creditReward:140, fx:()=>{ if(selectedLoc){spawnSoldiers(selectedLoc,1,'heavy');setTimeout(()=>spawnSoldiers(selectedLoc,1,'heavy'),500);} showNotif('Heavies deployed!'); }},
+  {id:'u06',r:'U',icon:'🗺',name:'Fog of War',      desc:'HARDER: Minimap disabled. +120 credits',                    creditReward:120, fx:()=>{ const mm=document.getElementById('minimap'); if(mm) mm.style.visibility='hidden'; }},
+  {id:'u07',r:'U',icon:'💨',name:'Turbo Missiles',  desc:'HARDER: Missiles +25% faster. +150 credits',                creditReward:150, fx:()=>{ missiles.forEach(m=>{m.vel.x*=1.25;m.vel.y*=1.25;m.vel.z*=1.25;}); }},
+  {id:'u08',r:'U',icon:'🏙',name:'City Damage',     desc:'HARDER: City integrity -12% now. +160 credits',             creditReward:160, fx:()=>{ cityIntegrity=Math.max(5,cityIntegrity-12); showNotif('City damaged!'); }},
+  {id:'u09',r:'U',icon:'🪫',name:'Weak Rounds',     desc:'HARDER: -35% ammo. +130 credits',                           creditReward:130, fx:()=>{ Object.keys(WEAPONS).forEach(k=>{WEAPONS[k].maxAmmo=Math.max(1,Math.floor(WEAPONS[k].maxAmmo*.65));weaponAmmo[k]=WEAPONS[k].maxAmmo;}); ammo=WEAPONS[currentWeapon].maxAmmo; }},
+  {id:'u10',r:'U',icon:'💰',name:'Supply Drop',     desc:'+300 credits.',                                              fx:()=>{ saveData.currency+=300; saveSave(); }},
+  // ── RARE (heavy debuffs + good credits) ─────────────────────────
+  {id:'r01',r:'R',icon:'👾',name:'Boss Arrival',    desc:'HARDER: A boss missile spawns now! +200 credits',           creditReward:200, fx:()=>{ spawnMissile(true); showNotif('BOSS MISSILE!'); }},
+  {id:'r02',r:'R',icon:'🏙',name:'Half Health',     desc:'HARDER: City integrity -20%. +180 credits',                 creditReward:180, fx:()=>{ cityIntegrity=Math.max(5,cityIntegrity-20); }},
+  {id:'r03',r:'R',icon:'🦾',name:'Iron Soldiers',   desc:'HARDER: All soldiers +75% HP. +200 credits',                creditReward:200, fx:()=>{ soldiers.forEach(s=>s.health=Math.ceil(s.health*1.75)); }},
+  {id:'r04',r:'R',icon:'📭',name:'Drought',         desc:'HARDER: All weapon ammo halved. +220 credits',              creditReward:220, fx:()=>{ Object.keys(WEAPONS).forEach(k=>{WEAPONS[k].maxAmmo=Math.max(1,Math.floor(WEAPONS[k].maxAmmo/2));weaponAmmo[k]=WEAPONS[k].maxAmmo;}); ammo=WEAPONS[currentWeapon].maxAmmo; }},
+  {id:'r05',r:'R',icon:'🚀',name:'Missile Storm',   desc:'HARDER: +5 extra missiles. +250 credits',                   creditReward:250, fx:()=>{ waveMissileTotal+=5; showNotif('5 more missiles!'); }},
+  {id:'r06',r:'R',icon:'💨',name:'Speed Blitz',     desc:'HARDER: Missiles +35% faster. +220 credits',                creditReward:220, fx:()=>{ missiles.forEach(m=>{m.vel.x*=1.35;m.vel.y*=1.35;m.vel.z*=1.35;}); }},
+  {id:'r07',r:'R',icon:'🚫',name:'No Gadgets',      desc:'HARDER: All gadget charges set to 0. +200 credits',         creditReward:200, fx:()=>{ activeGadgets={flashbang:0,airstrike:0,cover:0}; showNotif('Gadgets disabled!'); }},
+  {id:'r08',r:'R',icon:'🌫',name:'Thick Fog',       desc:'HARDER: Fog distance halved. +240 credits',                 creditReward:240, fx:()=>{ if(scene.fog){scene.fog.near*=.5;scene.fog.far*=.5;} }},
+  {id:'r09',r:'R',icon:'💰',name:'Rare Find',       desc:'+500 credits.',                                              fx:()=>{ saveData.currency+=500; saveSave(); }},
+  {id:'r10',r:'R',icon:'🎯',name:'Sniper Ambush',   desc:'HARDER: 3 snipers + 2 heavies spawn now. +280 credits',     creditReward:280, fx:()=>{ if(selectedLoc){for(let i=0;i<3;i++)setTimeout(()=>spawnSoldiers(selectedLoc,1,'sniper'),i*400);setTimeout(()=>spawnSoldiers(selectedLoc,1,'heavy'),300);setTimeout(()=>spawnSoldiers(selectedLoc,1,'heavy'),800);} showNotif('AMBUSH!'); }},
+  // ── EPIC (severe debuffs + great credits) ────────────────────────
+  {id:'e01',r:'E',icon:'👾',name:'Boss Surge',      desc:'HARDER: 2 boss missiles spawn now! +450 credits',           creditReward:450, fx:()=>{ spawnMissile(true); setTimeout(()=>spawnMissile(true),1200); showNotif('2 BOSS MISSILES!'); }},
+  {id:'e02',r:'E',icon:'🎯',name:'Smoke Screen',    desc:'HARDER: Crosshair removed for the rest of the game. +320 credits', creditReward:320, fx:()=>{ const ch=document.getElementById('crosshair'); if(ch) ch.style.display='none'; }},
+  {id:'e03',r:'E',icon:'🦾',name:'Armored Missiles',desc:'HARDER: All missiles +60% HP. +380 credits',                creditReward:380, fx:()=>{ missiles.forEach(m=>{m.maxHealth=Math.ceil(m.maxHealth*1.6);m.health=Math.ceil(m.health*1.6);}); }},
+  {id:'e04',r:'E',icon:'🎯',name:'Elite Force',     desc:'HARDER: 5 snipers + city -10%. +400 credits',               creditReward:400, fx:()=>{ if(selectedLoc) for(let i=0;i<5;i++) setTimeout(()=>spawnSoldiers(selectedLoc,1,'sniper'),i*300); cityIntegrity=Math.max(5,cityIntegrity-10); showNotif('ELITE SNIPERS!'); }},
+  {id:'e05',r:'E',icon:'💥',name:'Fragile City',    desc:'HARDER: City blast damage ×3. +450 credits',                creditReward:450, fx:()=>{ window._cityBlastMult=(window._cityBlastMult||1)*3; showNotif('City is FRAGILE!'); }},
+  {id:'e06',r:'E',icon:'📺',name:'HUD Down',        desc:'HARDER: HUD offline for 45 seconds. +400 credits',          creditReward:400, fx:()=>{ const hud=document.getElementById('hud'); if(hud){const e=hud.querySelectorAll('.hud-panel,.hud-row');e.forEach(el=>el.style.opacity='0');setTimeout(()=>e.forEach(el=>el.style.opacity=''),45000);} showNotif('HUD OFFLINE 45s!'); }},
+  {id:'e07',r:'E',icon:'💀',name:'Invasion Force',  desc:'HARDER: 7 heavies + boss missile. +550 credits',            creditReward:550, fx:()=>{ spawnMissile(true); if(selectedLoc) for(let i=0;i<7;i++) setTimeout(()=>spawnSoldiers(selectedLoc,1,'heavy'),i*250); showNotif('INVASION!'); }},
+  {id:'e08',r:'E',icon:'🌫',name:'Blackout Fog',    desc:'HARDER: Fog halved + minimap gone. +420 credits',           creditReward:420, fx:()=>{ if(scene.fog){scene.fog.near*=.5;scene.fog.far*=.5;} const mm=document.getElementById('minimap'); if(mm) mm.style.visibility='hidden'; }},
+  {id:'e09',r:'E',icon:'💰',name:'Credit Matrix',   desc:'+1000 credits + ×2 future credits.',                        fx:()=>{ saveData.currency+=1000; window._creditMult=(window._creditMult||1)*2; saveSave(); }},
+  {id:'e10',r:'E',icon:'🚀',name:'Wave Surge',      desc:'HARDER: Missiles doubled + 25% faster. +500 credits',       creditReward:500, fx:()=>{ waveMissileTotal+=Math.ceil(waveMissileTotal); missiles.forEach(m=>{m.vel.x*=1.25;m.vel.y*=1.25;m.vel.z*=1.25;}); showNotif('WAVE SURGE!'); }},
+  // ── LEGENDARY (devastating + huge credits) ──────────────────────
+  {id:'l01',r:'L',icon:'💀',name:'Hard Mode',       desc:'HARDER: City -40%, missiles +60% HP. +700 credits',          creditReward:700, fx:()=>{ cityIntegrity=Math.max(5,cityIntegrity-40); missiles.forEach(m=>{m.maxHealth=Math.ceil(m.maxHealth*1.6);m.health=Math.ceil(m.health*1.6);}); showNotif('HARD MODE!'); }},
+  {id:'l02',r:'L',icon:'📺',name:'Total Blackout',  desc:'HARDER: HUD + crosshair gone 60s. +800 credits',             creditReward:800, fx:()=>{ const hud=document.getElementById('hud'); if(hud){const e=hud.querySelectorAll('.hud-panel,.hud-row');e.forEach(el=>el.style.opacity='0');setTimeout(()=>e.forEach(el=>el.style.opacity=''),60000);} const ch=document.getElementById('crosshair'); if(ch){ch.style.display='none';setTimeout(()=>ch.style.display='',60000);} showNotif('TOTAL BLACKOUT 60s!'); }},
+  {id:'l03',r:'L',icon:'💀',name:'Full Invasion',   desc:'HARDER: 8 heavies + 3 boss missiles. +950 credits',          creditReward:950, fx:()=>{ for(let i=0;i<3;i++) setTimeout(()=>spawnMissile(true),i*1000); if(selectedLoc) for(let i=0;i<8;i++) setTimeout(()=>spawnSoldiers(selectedLoc,1,'heavy'),i*200); showNotif('FULL INVASION!'); }},
+  {id:'l04',r:'L',icon:'💨',name:'Hypersonic',      desc:'HARDER: All missiles 2.5× faster. +850 credits',             creditReward:850, fx:()=>{ missiles.forEach(m=>{m.vel.x*=2.5;m.vel.y*=2.5;m.vel.z*=2.5;}); showNotif('HYPERSONIC MISSILES!'); }},
+  {id:'l05',r:'L',icon:'📭',name:'Empty Arsenal',   desc:'HARDER: Ammo=1, city -15%, missiles +40% HP. +1000 credits', creditReward:1000, fx:()=>{ Object.keys(WEAPONS).forEach(k=>{WEAPONS[k].maxAmmo=1;weaponAmmo[k]=1;}); ammo=1; cityIntegrity=Math.max(5,cityIntegrity-15); missiles.forEach(m=>{m.maxHealth=Math.ceil(m.maxHealth*1.4);m.health=Math.ceil(m.health*1.4);}); showNotif('ARSENAL DRAINED!'); }},
+  // ── MYTHIC (apocalyptic — all debuffs, massive rewards) ─────────
+  {id:'m01',r:'M',icon:'👾',name:'BOSS MISSILE',    desc:'HARDER: Boss missile spawned! +1200 credits',                creditReward:1200, fx:()=>{ spawnMissile(true); showNotif('A BOSS MISSILE WAS SUMMONED!'); }},
+  {id:'m02',r:'M',icon:'💀',name:'ENEMY BATTALION', desc:'HARDER: 8 elite soldiers spawned! +1400 credits',           creditReward:1400, fx:()=>{ if(selectedLoc) for(let i=0;i<8;i++) setTimeout(()=>spawnSoldiers(selectedLoc,1,'heavy'),i*200); showNotif('ENEMY BATTALION!'); }},
+  {id:'m03',r:'M',icon:'🚀',name:'MISSILE STORM',   desc:'HARDER: Missiles tripled this wave! +1800 credits',          creditReward:1800, fx:()=>{ waveMissileTotal+=waveMissileTotal*2; showNotif('MISSILE STORM!'); }},
+  {id:'m04',r:'M',icon:'☢',name:'NUCLEAR THREAT',   desc:'HARDER: All missiles boss class + 2× speed! +2500 credits', creditReward:2500, fx:()=>{ window._allBoss=true; missiles.forEach(m=>{m.vel.x*=2;m.vel.y*=2;m.vel.z*=2;}); showNotif('ALL MISSILES BOSS CLASS!'); }},
+  {id:'m05',r:'M',icon:'🌍',name:'ARMAGEDDON',      desc:'HARDER: City -30%, all boss missiles, 3 boss spawns, fog gone. +3000 credits', creditReward:3000, fx:()=>{ window._allBoss=true; cityIntegrity=Math.max(5,cityIntegrity-30); for(let i=0;i<3;i++) setTimeout(()=>spawnMissile(true),i*800); if(scene.fog){scene.fog.near*=.25;scene.fog.far*=.25;} const mm=document.getElementById('minimap'); if(mm) mm.style.visibility='hidden'; const ch=document.getElementById('crosshair'); if(ch){ch.style.display='none';setTimeout(()=>ch.style.display='',90000);} showNotif('ARMAGEDDON!'); }},
 ];
 
 function _rollRarity(){

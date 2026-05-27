@@ -81,6 +81,24 @@ const WEAPON_CAMOS={
     {id:'woodland', name:'Woodland', hexStr:'#3A4A2A', price:600, rarity:'rare'},
     {id:'urban',    name:'Urban',    hexStr:'#5A5A5A', price:500, rarity:'uncommon'},
   ],
+  railgun:[
+    {id:'default', name:'Default', hexStr:'#303030', price:0},
+    {id:'plasma',  name:'Plasma',  hexStr:'#00FFCC', price:800,  rarity:'epic'},
+    {id:'void',    name:'Void',    hexStr:'#220044', price:1000, rarity:'legendary'},
+    {id:'solar',   name:'Solar',   hexStr:'#FFCC00', price:700,  rarity:'rare'},
+  ],
+  cluster:[
+    {id:'default', name:'Default', hexStr:'#303030', price:0},
+    {id:'hazard',  name:'Hazard',  hexStr:'#FF6600', price:600,  rarity:'rare'},
+    {id:'olive',   name:'Olive',   hexStr:'#4A5A1A', price:500,  rarity:'uncommon'},
+    {id:'inferno', name:'Inferno', hexStr:'#CC2200', price:900,  rarity:'epic'},
+  ],
+  shock:[
+    {id:'default', name:'Default', hexStr:'#303030', price:0},
+    {id:'violet',  name:'Violet',  hexStr:'#8833FF', price:700,  rarity:'rare'},
+    {id:'thunder', name:'Thunder', hexStr:'#FFFF00', price:800,  rarity:'epic'},
+    {id:'ghost',   name:'Ghost',   hexStr:'#CCCCFF', price:600,  rarity:'uncommon'},
+  ],
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -120,6 +138,18 @@ const SHOP_CATALOG=[
   // SHOTGUN CAMOS — daily
   {id:'shop_camo_sg_wood',   name:'Woodland Shotgun',     itemType:'Shotgun Camo',     section:'daily', rewardType:'weaponCamo', weaponId:'shotgun',     camoId:'woodland',rarity:'rare',      price:600},
   {id:'shop_camo_sg_urban',  name:'Urban Shotgun',        itemType:'Shotgun Camo',     section:'daily', rewardType:'weaponCamo', weaponId:'shotgun',     camoId:'urban',   rarity:'uncommon',  price:500},
+  // RAILGUN CAMOS — daily
+  {id:'shop_camo_rail_plasma',name:'Plasma Railgun',      itemType:'Railgun Camo',     section:'daily', rewardType:'weaponCamo', weaponId:'railgun',     camoId:'plasma',  rarity:'epic',      price:800, isNew:true},
+  {id:'shop_camo_rail_void',  name:'Void Railgun',        itemType:'Railgun Camo',     section:'daily', rewardType:'weaponCamo', weaponId:'railgun',     camoId:'void',    rarity:'legendary', price:1000},
+  {id:'shop_camo_rail_solar', name:'Solar Railgun',       itemType:'Railgun Camo',     section:'daily', rewardType:'weaponCamo', weaponId:'railgun',     camoId:'solar',   rarity:'rare',      price:700},
+  // CLUSTER CAMOS — daily
+  {id:'shop_camo_clus_hazard',name:'Hazard Cluster',      itemType:'Cluster Camo',     section:'daily', rewardType:'weaponCamo', weaponId:'cluster',     camoId:'hazard',  rarity:'rare',      price:600},
+  {id:'shop_camo_clus_olive', name:'Olive Cluster',       itemType:'Cluster Camo',     section:'daily', rewardType:'weaponCamo', weaponId:'cluster',     camoId:'olive',   rarity:'uncommon',  price:500},
+  {id:'shop_camo_clus_inf',   name:'Inferno Cluster',     itemType:'Cluster Camo',     section:'daily', rewardType:'weaponCamo', weaponId:'cluster',     camoId:'inferno', rarity:'epic',      price:900, isNew:true},
+  // SHOCK CAMOS — daily
+  {id:'shop_camo_shk_violet', name:'Violet Shock',        itemType:'Shock Camo',       section:'daily', rewardType:'weaponCamo', weaponId:'shock',       camoId:'violet',  rarity:'rare',      price:700},
+  {id:'shop_camo_shk_thunder',name:'Thunder Shock',       itemType:'Shock Camo',       section:'daily', rewardType:'weaponCamo', weaponId:'shock',       camoId:'thunder', rarity:'epic',      price:800, isNew:true},
+  {id:'shop_camo_shk_ghost',  name:'Ghost Shock',         itemType:'Shock Camo',       section:'daily', rewardType:'weaponCamo', weaponId:'shock',       camoId:'ghost',   rarity:'uncommon',  price:600},
 ];
 
 // ─────────────────────────────────────────────────────────────────

@@ -140,7 +140,24 @@ function updateProjectiles(dt){
           setTimeout(()=>{ if(!m.isDestroyed){m.bodyMesh.material.emissiveIntensity=0;} },150);
           spawnExplosion(p.pos.clone(),.8,0xFF8800);
         }
-        hit=true; break;
+        // CLUSTER: area burst on any hit
+        if(p.weapon==='cluster'){
+          const cr=WEAPONS.cluster.clusterRadius||22;
+          for(let ci=missiles.length-1;ci>=0;ci--){
+            const cm=missiles[ci];
+            if(cm.isDestroyed||cm===m) continue;
+            const cd=cm.pos.distanceTo(p.pos);
+            if(cd<cr){const f=1-(cd/cr);cm.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult*.5*f));if(cm.health<=0)destroyMissile(cm,true);}
+          }
+          spawnExplosion(p.pos.clone(),3.5,0xFF8800);triggerScreenShake(.5);
+        }
+        // SHOCK: chain lightning to nearest missiles
+        if(p.weapon==='shock'){
+          const chainN=WEAPONS.shock.chainCount||3;const chainMult=WEAPONS.shock.chainDmgMult||.5;
+          const others=missiles.filter(sm=>!sm.isDestroyed&&sm!==m).sort((a,b)=>a.pos.distanceTo(p.pos)-b.pos.distanceTo(p.pos)).slice(0,chainN);
+          others.forEach(sm=>{sm.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult*chainMult));if(sm.health<=0)destroyMissile(sm,true);sm.bodyMesh.material.emissive.set(0xAA44FF);sm.bodyMesh.material.emissiveIntensity=1;setTimeout(()=>{if(!sm.isDestroyed)sm.bodyMesh.material.emissiveIntensity=0;},200);});
+        }
+        if(p.weapon!=='railgun'){hit=true;break;}
       }
     }
 
@@ -189,6 +206,12 @@ function updateProjectiles(dt){
       });
     }
     // Gulag: projectiles stopped by arena walls
+    // CLUSTER: detonate at max range even with no direct hit
+    if(!hit&&p.life<=0&&p.weapon==='cluster'){
+      const cr=WEAPONS.cluster.clusterRadius||22;
+      missiles.forEach(m=>{if(m.isDestroyed)return;const cd=m.pos.distanceTo(p.pos);if(cd<cr){const f=1-(cd/cr);m.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult*.4*f));if(m.health<=0)destroyMissile(m,true);}});
+      spawnExplosion(p.pos.clone(),3.0,0xFF8800);
+    }
     const pArena=battleActive&&(Math.abs(p.pos.x)>41||Math.abs(p.pos.z)>41||p.pos.y<0||p.pos.y>9);
     if(hit||p.life<=0||p.pos.y<-2||Math.abs(p.pos.x)>200||Math.abs(p.pos.z)>200||pArena){
       scene.remove(p.mesh);

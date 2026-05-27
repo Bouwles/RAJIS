@@ -631,6 +631,9 @@ function makeWeaponMesh(){
   if(currentWeapon==='shotgun')     return makeShotgunMesh();
   if(currentWeapon==='sniper')      return makeSniperMesh();
   if(currentWeapon==='smg')         return makeSmgMesh();
+  if(currentWeapon==='railgun')     return makeRailgunMesh();
+  if(currentWeapon==='cluster')     return makeClusterMesh();
+  if(currentWeapon==='shock')       return makeShockMesh();
   return makeLauncherMesh();
 }
 function makeLauncherMesh(){
@@ -766,5 +769,81 @@ function makeSmgMesh(){
   const grip=new THREE.Mesh(new THREE.BoxGeometry(.054,.12,.06),polyM);
   grip.rotation.x=.18;grip.position.set(0,-.1,.1);g.add(grip);
   g.position.set(.22,-.19,-.42);return g;
+}
+function makeRailgunMesh(){
+  const g=new THREE.Group();
+  const _rc=_getWeaponCamoColor('railgun');
+  const metalM=new THREE.MeshLambertMaterial({color:_rc,emissive:new THREE.Color(_rc),emissiveIntensity:.5});
+  const darkM =new THREE.MeshLambertMaterial({color:0x080808});
+  const glowM =new THREE.MeshLambertMaterial({color:0x00FFFF,emissive:new THREE.Color(0x00FFFF),emissiveIntensity:1.5});
+  // long barrel
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,1.0,8),metalM);
+  barrel.rotation.x=Math.PI/2;barrel.position.z=-.3;g.add(barrel);
+  // two rail tracks with glowing capacitor beads
+  [-1,1].forEach(s=>{
+    const rail=new THREE.Mesh(new THREE.BoxGeometry(.008,.028,.9),darkM);
+    rail.position.set(s*.022,0,-.3);g.add(rail);
+    for(let b=0;b<4;b++){
+      const cap=new THREE.Mesh(new THREE.BoxGeometry(.012,.012,.012),glowM);
+      cap.position.set(s*.022,0,-.05-b*.18);g.add(cap);
+    }
+  });
+  const recv=new THREE.Mesh(new THREE.BoxGeometry(.08,.07,.28),metalM);
+  recv.position.set(0,-.004,.18);g.add(recv);
+  const grip=new THREE.Mesh(new THREE.BoxGeometry(.048,.12,.052),darkM);
+  grip.rotation.x=.18;grip.position.set(0,-.1,.12);g.add(grip);
+  const stock=new THREE.Mesh(new THREE.BoxGeometry(.052,.044,.18),metalM);
+  stock.position.set(0,.008,.32);g.add(stock);
+  const muzzle=new THREE.Mesh(new THREE.TorusGeometry(.022,.006,6,8),glowM);
+  muzzle.rotation.y=Math.PI/2;muzzle.position.z=-.82;g.add(muzzle);
+  g.position.set(.22,-.2,-.44);return g;
+}
+function makeClusterMesh(){
+  const g=new THREE.Group();
+  const _cc=_getWeaponCamoColor('cluster');
+  const metalM=new THREE.MeshLambertMaterial({color:_cc,emissive:new THREE.Color(_cc),emissiveIntensity:.5});
+  const darkM =new THREE.MeshLambertMaterial({color:0x1A1A0A});
+  const drumM =new THREE.MeshLambertMaterial({color:0x2A2A2A});
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.052,.058,.38,8),metalM);
+  barrel.rotation.x=Math.PI/2;barrel.position.z=-.08;g.add(barrel);
+  const bell=new THREE.Mesh(new THREE.CylinderGeometry(.07,.052,.06,8),darkM);
+  bell.rotation.x=Math.PI/2;bell.position.z=-.3;g.add(bell);
+  const recv=new THREE.Mesh(new THREE.BoxGeometry(.11,.11,.28),metalM);
+  recv.position.set(0,-.004,.16);g.add(recv);
+  const drum=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.1,12),drumM);
+  drum.rotation.x=Math.PI/2;drum.position.set(0,-.04,.18);g.add(drum);
+  for(let d=0;d<3;d++){
+    const div=new THREE.Mesh(new THREE.BoxGeometry(.005,.19,.005),darkM);
+    div.position.set(0,-.04,.18);div.rotation.z=d*(Math.PI/3);g.add(div);
+  }
+  const grip=new THREE.Mesh(new THREE.BoxGeometry(.062,.14,.064),darkM);
+  grip.rotation.x=.15;grip.position.set(0,-.12,.12);g.add(grip);
+  const stock=new THREE.Mesh(new THREE.BoxGeometry(.07,.072,.2),metalM);
+  stock.position.set(0,-.01,.3);g.add(stock);
+  g.position.set(.26,-.22,-.4);return g;
+}
+function makeShockMesh(){
+  const g=new THREE.Group();
+  const _shc=_getWeaponCamoColor('shock');
+  const metalM=new THREE.MeshLambertMaterial({color:_shc,emissive:new THREE.Color(_shc),emissiveIntensity:.5});
+  const darkM =new THREE.MeshLambertMaterial({color:0x0A0A14});
+  const glowM =new THREE.MeshLambertMaterial({color:0xAA44FF,emissive:new THREE.Color(0xAA44FF),emissiveIntensity:1.2});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.088,.082,.44),metalM);
+  body.position.set(0,0,.04);g.add(body);
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.3,8),darkM);
+  barrel.rotation.x=Math.PI/2;barrel.position.z=-.24;g.add(barrel);
+  [-1,1].forEach(s=>{
+    const prong=new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,.1,6),metalM);
+    prong.rotation.x=Math.PI/2;prong.position.set(s*.022,0,-.38);g.add(prong);
+    const tip=new THREE.Mesh(new THREE.SphereGeometry(.012,6,6),glowM);
+    tip.position.set(s*.022,0,-.44);g.add(tip);
+  });
+  const cell=new THREE.Mesh(new THREE.CylinderGeometry(.036,.036,.1,8),glowM);
+  cell.rotation.x=Math.PI/2;cell.position.set(0,-.046,.02);g.add(cell);
+  const grip=new THREE.Mesh(new THREE.BoxGeometry(.052,.12,.056),darkM);
+  grip.rotation.x=.18;grip.position.set(0,-.1,.08);g.add(grip);
+  const stock=new THREE.Mesh(new THREE.BoxGeometry(.06,.05,.18),metalM);
+  stock.position.set(0,.01,.3);g.add(stock);
+  g.position.set(.24,-.2,-.42);return g;
 }
 

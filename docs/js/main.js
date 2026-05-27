@@ -245,6 +245,7 @@ function gameLoop(t){
     updateHUD();
     updateMinimap();
     updateRemotePlayers();
+    _updateAiBot(dt);
     mpStateTimer+=dt;
     if(mpStateTimer>=MP_TICK){ mpStateTimer=0; mpBroadcastState(); _updateCoopLb(); }
   }

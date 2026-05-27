@@ -5,7 +5,7 @@
 let mpUser = null;          // {username}
 let mpPeer = null;          // PeerJS Peer instance
 let mpConn = null;          // guest→host connection
-let mpConns = [];           // host: array of guest connections
+let mpConns = [];           // host: array of guest connections (max 3 = 4 players total)
 let mpIsHost = false;
 let mpRoom = null;          // 6-char room code
 let mpMode = 'coop';        // 'coop' | 'battle'
@@ -15,6 +15,15 @@ const MP_TICK = 0.05;
 // Coop leaderboard stats
 let mpLocalStats={missiles:0,soldiers:0};
 let mpRemoteStats={}; // username→{missiles,soldiers}
+// 4-player additions
+let mpWaitingCustos = new Map(); // username → custo object
+let mpMyTeam = null;             // 'A' | 'B' | null (battle mode)
+let _mpTeams = null;             // {A:[...names], B:[...names]}
+let _aiBotTeam = null;           // which team the AI bot is on
+let _aiBot = null;               // {pos, hp, shootTimer}
+const AI_BOT_NAME = '__AI_BOT__';
+// Shared override so lobbyScene.js can show waiting room players
+let _mpOverrideSlots = null;
 
 function _updateCoopLb(){
   const el=document.getElementById('coopLeaderboard');
@@ -73,19 +82,26 @@ function mpCreateRoom(){
     document.getElementById('waitingMode').textContent='Mode: '+(mpMode==='battle'?'⚔️ Battle':'🤝 Coop');
     document.getElementById('btnStartMp').style.display='';
     mpRenderWaiting();
+    _mpUpdateWaitingStage();
     showScreen('waitingScreen');
   });
   mpPeer.on('connection',conn=>{
-    if(mpConns.length>=1){ conn.close(); return; }
+    if(mpConns.length>=3){ conn.close(); return; } // max 4 players total
     mpConns.push(conn);
     conn.on('open',()=>{
-      conn.send({type:'welcome',code,mode:mpMode,hostName:mpUser.username});
+      conn.send({type:'welcome',code,mode:mpMode,hostName:mpUser.username,custo:saveData.customization});
     });
     conn.on('data',d=>mpHandleData(d,conn));
     conn.on('close',()=>{
-      if(conn._mpName) removeRemotePlayer(conn._mpName);
+      const leaving=conn._mpName;
+      if(leaving){
+        removeRemotePlayer(leaving);
+        mpWaitingCustos.delete(leaving);
+        mpConns.filter(c=>c!==conn&&c.open).forEach(c=>c.send({type:'player_left',username:leaving}));
+      }
       mpConns=mpConns.filter(c=>c!==conn);
       mpRenderWaiting();
+      _mpUpdateWaitingStage();
     });
   });
   mpPeer.on('error',e=>{ mpShowErr('lobbyErr','PeerJS: '+e.type+' — try again'); });
@@ -101,12 +117,14 @@ function mpJoinRoom(){
   mpPeer=new Peer({debug:0});
   mpPeer.on('open',()=>{
     mpConn=mpPeer.connect('raj-'+code.toLowerCase(),{reliable:true});
-    mpConn.on('open',()=>{ mpConn.send({type:'hello',username:mpUser.username}); });
+    mpConn.on('open',()=>{ mpConn.send({type:'hello',username:mpUser.username,custo:saveData.customization}); });
     mpConn.on('data',d=>mpHandleData(d,mpConn));
     mpConn.on('close',()=>{
       showNotif('Host disconnected.');
       mpRemotePlayers.forEach((_,u)=>removeRemotePlayer(u));
       mpRemotePlayers.clear();
+      mpWaitingCustos.clear();
+      _mpOverrideSlots=null;
       showScreen('lobbyScreen');
     });
   });
@@ -118,53 +136,103 @@ function mpHandleData(data, conn){
   switch(data.type){
     case 'welcome':
       mpMode=data.mode;
+      if(data.custo&&data.hostName) mpWaitingCustos.set(data.hostName,data.custo);
       document.getElementById('waitingCode').textContent=data.code||mpRoom;
       document.getElementById('waitingMode').textContent='Mode: '+(data.mode==='battle'?'⚔️ Battle':'🤝 Coop');
       document.getElementById('waitingTitle').textContent='Waiting Room';
       document.getElementById('btnStartMp').style.display='none';
       conn._mpName=data.hostName;
-      conn.send({type:'hello',username:mpUser.username});
+      // hello is also sent on 'open', this is the response to welcome
       mpRenderWaiting();
+      _mpUpdateWaitingStage();
       showScreen('waitingScreen');
       break;
     case 'hello':
       conn._mpName=data.username;
-      if(mpIsHost) conn.send({type:'hello_ok',username:mpUser.username});
+      if(data.custo) mpWaitingCustos.set(data.username,data.custo);
+      if(mpIsHost){
+        // Send hello_ok with own info + list of all other players
+        const playerList=mpConns
+          .filter(c=>c!==conn&&c._mpName)
+          .map(c=>({username:c._mpName,custo:mpWaitingCustos.get(c._mpName)||_defaultCusto()}));
+        conn.send({type:'hello_ok',username:mpUser.username,custo:saveData.customization,playerList});
+        // Tell other connected guests about the new player
+        mpConns.filter(c=>c!==conn&&c.open&&c._mpName).forEach(c=>
+          c.send({type:'player_joined',username:data.username,custo:data.custo||_defaultCusto()})
+        );
+      }
       mpRenderWaiting();
+      _mpUpdateWaitingStage();
       break;
     case 'hello_ok':
       conn._mpName=data.username;
+      if(data.custo) mpWaitingCustos.set(data.username,data.custo);
+      if(data.playerList) data.playerList.forEach(p=>{ if(p.username) mpWaitingCustos.set(p.username,p.custo||_defaultCusto()); });
       mpRenderWaiting();
+      _mpUpdateWaitingStage();
+      break;
+    case 'player_joined':
+      if(data.username) mpWaitingCustos.set(data.username,data.custo||_defaultCusto());
+      mpRenderWaiting();
+      _mpUpdateWaitingStage();
+      break;
+    case 'player_left':
+      if(data.username){
+        removeRemotePlayer(data.username);
+        mpWaitingCustos.delete(data.username);
+      }
+      mpRenderWaiting();
+      _mpUpdateWaitingStage();
       break;
     case 'start':
       mpMode=data.mode;
+      mpIsGuest=true;
       if(mpMode==='battle'){
-        mpIsGuest=!mpIsHost;
+        mpMyTeam=data.myTeam||'B';
+        _mpTeams=data.teams||null;
+        _aiBotTeam=data.aiTeam||null;
         startBattleMode();
       } else {
-        mpIsGuest=true;
         const loc=data.locId||saveData.locId||'beirut';
         startGame(loc,1);
-        const rpName=data.hostName||conn._mpName||'Host';
-        const rp=createRemotePlayerMesh(rpName);
-        mpRemotePlayers.set(rpName,rp);
+        // Create meshes for all other players (host + other guests)
+        (data.players||[]).forEach(p=>{
+          const name=p.username||p;
+          const rp=createRemotePlayerMesh(name);
+          mpRemotePlayers.set(name,rp);
+        });
       }
       break;
     case 'pos':
       if(data.username) mpApplyRemoteState(data);
+      // Host relays pos from one guest to all other guests
+      if(mpIsHost){
+        mpConns.forEach(c=>{ if(c.open&&c._mpName!==data.username) c.send(data); });
+      }
       break;
     case 'game_state':
       if(mpIsGuest) mpApplyGameState(data);
       break;
     case 'state':
       if(data.username) mpApplyRemoteState(data);
+      if(mpIsHost){
+        mpConns.forEach(c=>{ if(c.open&&c._mpName!==data.username) c.send(data); });
+      }
       break;
     case 'battle_hit':
-      battleHP.local=Math.max(0,battleHP.local-data.dmg);
-      showDamageFlash();
-      _updateBattleHud();
-      showNotif('HIT! '+battleHP.local+'HP left');
-      if(battleHP.local<=0) _battleRoundEnd(false);
+      // Only apply damage if we're the target (undefined target = 1v1 compat)
+      if(!data.target||data.target===mpUser.username){
+        battleHP.local=Math.max(0,battleHP.local-data.dmg);
+        showDamageFlash();
+        _updateBattleHud();
+        showNotif('HIT! '+battleHP.local+'HP left');
+        if(battleHP.local<=0) _battleRoundEnd(false);
+      }
+      // Host relays targeted hits to the correct guest
+      if(mpIsHost&&data.target&&data.target!==mpUser.username){
+        const tc=mpConns.find(c=>c._mpName===data.target);
+        if(tc?.open) tc.send(data);
+      }
       break;
     case 'battle_end':
       endBattleMode(false);
@@ -175,13 +243,11 @@ function mpHandleData(data, conn){
     case 'rematch_vote':
       { const el=document.getElementById('beRematchStatus');
         if(_rematchVoted){
-          // Both voted — host kicks it off
           battleRounds={local:0,remote:0}; _rematchVoted=false;
           if(mpIsHost){
             mpConns.forEach(c=>{ if(c.open) c.send({type:'rematch_go'}); });
             startBattleMode();
           }
-          // guest waits for rematch_go
         } else {
           if(el) el.textContent='Opponent wants a rematch — click Rematch to confirm!';
         }
@@ -205,79 +271,158 @@ function mpLeaveRoom(){
   if(mpPeer&&!mpPeer.destroyed) mpPeer.destroy();
   mpPeer=null; mpConn=null; mpConns=[];
   mpIsHost=false; mpIsGuest=false; mpRoom=null;
+  mpMyTeam=null; _mpTeams=null; _aiBotTeam=null; _aiBot=null;
+  mpWaitingCustos.clear();
+  _mpOverrideSlots=null;
   mpRemotePlayers.forEach((_,u)=>removeRemotePlayer(u));
   mpRemotePlayers.clear();
   showScreen('lobbyScreen');
 }
+
 function mpStartGame(){
   if(!mpIsHost) return;
-  const guestConn=mpConns[0];
-  if(!guestConn){ showNotif('Need 1 more player!'); return; }
-  const guestName=guestConn._mpName||'Guest';
+  if(mpConns.length===0){ showNotif('Need at least 1 more player!'); return; }
   const loc=saveData.locId||'beirut';
-  guestConn.send({type:'start',mode:mpMode,hostName:mpUser.username,locId:loc});
-  mpIsGuest=false;
+
   if(mpMode==='battle'){
+    // Assign teams
+    const allNames=[mpUser.username,...mpConns.filter(c=>c._mpName).map(c=>c._mpName)];
+    const assigned=_assignTeams(allNames);
+    _mpTeams=assigned.teams;
+    _aiBotTeam=assigned.aiTeam;
+    mpMyTeam=_mpTeams.A.includes(mpUser.username)?'A':'B';
+
+    // Send start to each guest with their team assignment
+    mpConns.forEach(c=>{
+      if(!c.open||!c._mpName) return;
+      const gTeam=_mpTeams.A.includes(c._mpName)?'A':'B';
+      c.send({type:'start',mode:'battle',teams:_mpTeams,aiTeam:_aiBotTeam,myTeam:gTeam,hostName:mpUser.username});
+    });
     startBattleMode();
   } else {
+    // Coop: gather all player info
+    const allPlayers=[
+      {username:mpUser.username,custo:saveData.customization},
+      ...mpConns.filter(c=>c._mpName).map(c=>({username:c._mpName,custo:mpWaitingCustos.get(c._mpName)||_defaultCusto()}))
+    ];
+    // Send to each guest: all OTHER players (not themselves)
+    mpConns.forEach(c=>{
+      if(!c.open||!c._mpName) return;
+      const others=allPlayers.filter(p=>p.username!==c._mpName);
+      c.send({type:'start',mode:'coop',hostName:mpUser.username,locId:loc,players:others});
+    });
+    mpIsGuest=false;
     startGame(loc,1);
-    const rp=createRemotePlayerMesh(guestName);
-    mpRemotePlayers.set(guestName,rp);
+    // Create meshes for all guests
+    mpConns.forEach(c=>{
+      if(!c._mpName) return;
+      const rp=createRemotePlayerMesh(c._mpName);
+      mpRemotePlayers.set(c._mpName,rp);
+    });
   }
 }
+
 function mpRenderWaiting(){
   const list=document.getElementById('waitingPlayerList');
+  if(!list) return;
   const rows=[];
-  rows.push(`<div class="mp-player-row">${mpUser?.username||'You'}${mpIsHost?' <span>HOST</span>':''}</div>`);
-  mpConns.forEach(c=>{ if(c._mpName) rows.push(`<div class="mp-player-row">${c._mpName}</div>`); });
-  if(!mpIsHost){
+
+  if(mpIsHost){
+    rows.push(`<div class="mp-player-row self">${mpUser?.username||'You'} <span class="mp-tag">HOST</span></div>`);
+    for(let i=0;i<3;i++){
+      const c=mpConns[i];
+      if(c?._mpName) rows.push(`<div class="mp-player-row">${c._mpName}</div>`);
+      else rows.push(`<div class="mp-player-row empty">Waiting for player ${i+2}…</div>`);
+    }
+  } else {
+    // Build the known player set: host + self + other guests
     const hname=mpConn?._mpName;
-    if(hname) rows.push(`<div class="mp-player-row">${hname} <span>HOST</span></div>`);
+    if(hname) rows.push(`<div class="mp-player-row">${hname} <span class="mp-tag">HOST</span></div>`);
     else rows.push(`<div class="mp-player-row" style="color:var(--text2)">Connecting to host…</div>`);
+    rows.push(`<div class="mp-player-row self">${mpUser?.username||'You'} <span class="mp-tag">YOU</span></div>`);
+    // Other guests from mpWaitingCustos (exclude host and self)
+    mpWaitingCustos.forEach((_,name)=>{
+      if(name===hname||name===mpUser?.username) return;
+      rows.push(`<div class="mp-player-row">${name}</div>`);
+    });
+    // Empty slots
+    const filled=1+(hname?1:0)+(mpWaitingCustos.size-((hname&&mpWaitingCustos.has(hname))?1:0)-((mpWaitingCustos.has(mpUser?.username))?1:0));
+    for(let i=filled;i<4;i++) rows.push(`<div class="mp-player-row empty">Waiting…</div>`);
   }
+
   list.innerHTML=rows.join('');
   const startBtn=document.getElementById('btnStartMp');
   if(startBtn) startBtn.style.display=mpIsHost&&mpConns.length>0?'':'none';
 }
 
+// Feed waiting room players into the lobby 3D stage
+function _mpUpdateWaitingStage(){
+  if(!mpRoom||!mpPeer) return;
+  const slots=[{
+    uid:'__local__',username:mpUser?.username||'PLAYER',
+    custo:saveData.customization,ready:false,
+    isHost:mpIsHost,isSelf:true,level:saveData.level||1
+  }];
+  if(mpIsHost){
+    mpConns.forEach(c=>{
+      if(!c._mpName) return;
+      slots.push({uid:c._mpName,username:c._mpName,
+        custo:mpWaitingCustos.get(c._mpName)||_defaultCusto(),
+        ready:false,isHost:false,isSelf:false,level:1});
+    });
+  } else {
+    const hname=mpConn?._mpName;
+    if(hname) slots.push({uid:hname,username:hname,
+      custo:mpWaitingCustos.get(hname)||_defaultCusto(),
+      ready:false,isHost:true,isSelf:false,level:1});
+    mpWaitingCustos.forEach((custo,name)=>{
+      if(name===hname||name===mpUser?.username) return;
+      slots.push({uid:name,username:name,custo,ready:false,isHost:false,isSelf:false,level:1});
+    });
+  }
+  _mpOverrideSlots=slots;
+  if(typeof updateLobbyScene==='function') updateLobbyScene();
+}
+
 // ── Remote player rendering ─────────────────────────────────────
-function createRemotePlayerMesh(username){
-  // Use actual character model with distinct blue-tinted outfit
+function createRemotePlayerMesh(username, isTeammate){
+  // isTeammate: true=green, false=red, undefined/null=cyan (coop)
+  const outfitColors={true:'#1A5A1A',false:'#5A1A1A'};
+  const outfitColor=outfitColors[isTeammate]||'#1A4A8A';
   const charModel=makeCharModel({
-    outfitColor:'#1A4A8A', armorStyle:'light', helmet:true,
-    visorColor:'#44DDFF', backpack:'missile', skinTone:'#C8955A'
+    outfitColor, armorStyle:'light', helmet:true,
+    visorColor: isTeammate===true?'#44FF88':isTeammate===false?'#FF4444':'#44DDFF',
+    backpack:'missile', skinTone:'#C8955A'
   });
   charModel.scale.set(1,1,1);
-  // Add username label
+  const labelColor=isTeammate===true?'#4AE870':isTeammate===false?'#E84A4A':'#4ADFF0';
   const labelDiv=document.createElement('div');
-  labelDiv.style.cssText='position:fixed;pointer-events:none;font-size:.7em;font-family:Rajdhani,sans-serif;color:#4ADFF0;font-weight:700;letter-spacing:.08em;text-shadow:0 1px 4px #000;z-index:28;display:none';
-  labelDiv.textContent=username;
+  labelDiv.style.cssText=`position:fixed;pointer-events:none;font-size:.7em;font-family:Rajdhani,sans-serif;color:${labelColor};font-weight:700;letter-spacing:.08em;text-shadow:0 1px 4px #000;z-index:28;display:none`;
+  labelDiv.textContent=username===AI_BOT_NAME?'AI ENEMY':username;
   document.body.appendChild(labelDiv);
   scene.add(charModel);
   const startPos=new THREE.Vector3();
-  return {mesh:charModel, pos:startPos.clone(), targetPos:startPos.clone(), yaw:0, targetYaw:0, username, label:labelDiv};
+  return {mesh:charModel,pos:startPos.clone(),targetPos:startPos.clone(),yaw:0,targetYaw:0,username,label:labelDiv};
 }
+
 function removeRemotePlayer(username){
   const rp=mpRemotePlayers.get(username);
   if(rp){ scene.remove(rp.mesh); if(rp.label) rp.label.remove(); }
   mpRemotePlayers.delete(username);
 }
+
 function updateRemotePlayers(){
   const lastDt=Math.min((performance.now()-_rpLastT)/1000,.05);
   _rpLastT=performance.now();
   const alpha=Math.min(1,lastDt*30);
   mpRemotePlayers.forEach(rp=>{
-    // Smooth interpolation toward received position
     rp.pos.lerp(rp.targetPos,alpha);
-    // Shortest-path yaw lerp
     let dyaw=rp.targetYaw-rp.yaw;
     if(dyaw>Math.PI) dyaw-=2*Math.PI;
     if(dyaw<-Math.PI) dyaw+=2*Math.PI;
     rp.yaw+=dyaw*alpha;
-
-    rp.mesh.position.set(rp.pos.x, rp.pos.y-PLAYER_H, rp.pos.z);
+    rp.mesh.position.set(rp.pos.x,rp.pos.y-PLAYER_H,rp.pos.z);
     rp.mesh.rotation.y=rp.yaw+Math.PI;
-    // Project label
     if(rp.label){
       const lp=new THREE.Vector3(rp.pos.x,rp.pos.y+0.5,rp.pos.z).project(camera);
       if(lp.z<1){
@@ -295,21 +440,17 @@ let _rpLastT=performance.now();
 // ── State broadcast @20Hz ───────────────────────────────────────
 function mpBroadcastState(){
   if(!mpRoom||!mpUser) return;
-  // Always send own position + coop stats
   const pos={type:'pos',username:mpUser.username,px,py,pz,yaw,
     missiles:mpLocalStats.missiles,soldiers:mpLocalStats.soldiers};
   if(mpIsHost){
     mpConns.forEach(c=>{ if(c.open) c.send(pos); });
-    // Host also broadcasts full game state
     const gs={
-      type:'game_state',
-      locId:selectedLoc,
-      waveNum, waveActive,
-      cityIntegrity, score,
+      type:'game_state', locId:selectedLoc,
+      waveNum,waveActive, cityIntegrity,score,
       missiles:missiles.filter(m=>!m.isDestroyed).map(m=>({
-        id:m._id, x:m.pos.x, y:m.pos.y, z:m.pos.z,
-        vx:m.vel.x, vy:m.vel.y, vz:m.vel.z,
-        health:m.health, maxHealth:m.maxHealth, isBoss:m.isBoss
+        id:m._id,x:m.pos.x,y:m.pos.y,z:m.pos.z,
+        vx:m.vel.x,vy:m.vel.y,vz:m.vel.z,
+        health:m.health,maxHealth:m.maxHealth,isBoss:m.isBoss
       })),
       soldiers:soldiers.map(s=>({id:s._id||0,x:s.pos.x,z:s.pos.z,hp:s.health,type:s.type}))
     };
@@ -318,6 +459,7 @@ function mpBroadcastState(){
     mpConn.send(pos);
   }
 }
+
 function mpApplyRemoteState(data){
   let rp=mpRemotePlayers.get(data.username);
   if(rp){ rp.targetPos.set(data.px,data.py,data.pz); rp.targetYaw=data.yaw; }
@@ -326,40 +468,27 @@ function mpApplyRemoteState(data){
     _updateCoopLb();
   }
 }
+
 function mpApplyGameState(data){
   if(!gameActive) return;
-  // Sync loc — rebuild world if different
   if(data.locId&&data.locId!==selectedLoc){ selectedLoc=data.locId; buildWorld(data.locId); }
-  waveNum=data.waveNum;
-  waveActive=data.waveActive;
+  waveNum=data.waveNum; waveActive=data.waveActive;
   if(data.cityIntegrity!==undefined) cityIntegrity=data.cityIntegrity;
   if(data.score!==undefined) score=data.score;
-
-  // Sync missiles — create/move/remove to match host
   const hostIds=new Set((data.missiles||[]).map(m=>m.id));
-  // Remove missiles not in host state
   for(let i=missiles.length-1;i>=0;i--){
-    if(!hostIds.has(missiles[i]._id)&&!missiles[i].isDestroyed){
-      destroyMissile(missiles[i],false);
-    }
+    if(!hostIds.has(missiles[i]._id)&&!missiles[i].isDestroyed) destroyMissile(missiles[i],false);
   }
-  // Update or create missiles
   for(const hm of (data.missiles||[])){
     let m=missiles.find(x=>x._id===hm.id);
-    if(!m){
-      spawnMissile(hm.isBoss);
-      m=missiles[missiles.length-1];
-      m._id=hm.id;
-    }
-    m.pos.set(hm.x,hm.y,hm.z);
-    m.vel.set(hm.vx,hm.vy,hm.vz);
-    m.health=hm.health;
-    m.group.position.copy(m.pos);
+    if(!m){ spawnMissile(hm.isBoss); m=missiles[missiles.length-1]; m._id=hm.id; }
+    m.pos.set(hm.x,hm.y,hm.z); m.vel.set(hm.vx,hm.vy,hm.vz);
+    m.health=hm.health; m.group.position.copy(m.pos);
   }
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  BATTLE MODE  (1v1 Gulag)
+//  BATTLE MODE  (up to 4 players, team-based)
 // ═══════════════════════════════════════════════════════════════
 let battleActive=false;
 let battleHP={local:200,remote:200};
@@ -370,6 +499,28 @@ let gulagCollidables=[];
 let _rematchVoted=false;
 const BATTLE_MAX_HP=200;
 const BATTLE_WEAPONS=['pistol','shotgun','smg','sniper'];
+
+// Assign players to teams, AI bot for odd counts
+function _assignTeams(players){
+  const shuffled=[...players].sort(()=>Math.random()-.5);
+  const odd=shuffled.length%2!==0;
+  const aSize=Math.ceil(shuffled.length/2);
+  const A=shuffled.slice(0,aSize);
+  const B=shuffled.slice(aSize);
+  // Odd: team B gets AI bot so both sides equal
+  const aiTeam=odd?'B':null;
+  return {teams:{A,B},aiTeam};
+}
+
+// Spawn position for a player in a team
+function _getTeamSpawnPos(team,idxInTeam,teamSize){
+  const xBase=team==='A'?-20:20;
+  const faceYaw=team==='A'?Math.PI/2:-Math.PI/2;
+  const zSpreads=[[0],[-4,4],[-6,0,6],[-8,-3,3,8]];
+  const spread=zSpreads[Math.min(teamSize-1,3)];
+  const z=spread[Math.min(idxInTeam,spread.length-1)];
+  return {x:xBase,z,yaw:faceYaw};
+}
 
 function _applyBattleWeapon(w){
   const ammos={pistol:60,shotgun:24,smg:270,sniper:15};
@@ -388,46 +539,30 @@ function _applyBattleWeapon(w){
 
 function _buildGulag(){
   clearWorld();
-  // Remove previous gulag lights
   _gulagLights.forEach(l=>scene.remove(l));
   _gulagLights=[];
   gulagCollidables=[];
-
   waveActive=false;
-
   scene.background=new THREE.Color(0x5AABDD);
   scene.fog=null;
   renderer.setClearColor(0x5AABDD);
-
-  // Track lights so they don't accumulate across rounds
   const addL=l=>{ scene.add(l); _gulagLights.push(l); return l; };
   addL(new THREE.AmbientLight(0xFFFFFF,.65));
   const sun=addL(new THREE.DirectionalLight(0xFFEECC,.9)); sun.position.set(8,25,5);
   const blueL=addL(new THREE.PointLight(0x4488FF,.5,60)); blueL.position.set(-30,5,0);
   const redL=addL(new THREE.PointLight(0xFF4422,.5,60)); redL.position.set(30,5,0);
-
-  // add=visual only | addC=visual+collision
   const add=(geo,color,x,y,z)=>{
     const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color}));
     m.position.set(x,y,z); scene.add(m); worldObjects.push(m); return m;
   };
   const addC=(geo,color,x,y,z)=>{ const m=add(geo,color,x,y,z); gulagCollidables.push(m); return m; };
-
-  // Floor — 80×80 concrete
   add(new THREE.BoxGeometry(80,.3,80),0x2E2A24,0,-.15,0);
-  // Grate stripes (visual only — no collision)
   for(let i=-38;i<=38;i+=5) add(new THREE.BoxGeometry(.1,.05,80),0x3A3530,i,.05,0);
-
-  // Outer walls — 8 units tall, open sky
   addC(new THREE.BoxGeometry(80,8,.5),0x7A7060,0,4,40.25);
   addC(new THREE.BoxGeometry(80,8,.5),0x7A7060,0,4,-40.25);
   addC(new THREE.BoxGeometry(.5,8,80),0x7A7060,40.25,4,0);
   addC(new THREE.BoxGeometry(.5,8,80),0x7A7060,-40.25,4,0);
-
-  // Center divider
   addC(new THREE.BoxGeometry(.4,2.5,20),0x5A4A38,0,1.25,0);
-
-  // Scattered cover (collidable)
   const cov=[
     [-15,.75,-15,3,1.5,2],[15,.75,15,3,1.5,2],[-15,.75,15,2,1.5,3],[15,.75,-15,2,1.5,3],
     [0,.5,-22,5,1,1.5],   [0,.5,22,5,1,1.5],
@@ -441,30 +576,38 @@ function _buildGulag(){
     [0,.5,-35,4,1,2],     [0,.5,35,4,1,2],
   ];
   cov.forEach(([x,y,z,w,h,d])=>addC(new THREE.BoxGeometry(w,h,d),0x6A5A48,x,y,z));
-
-  // Pillars (collidable)
   [[-32,3,-32],[-32,3,32],[32,3,-32],[32,3,32],[-32,3,0],[32,3,0],[0,3,-32],[0,3,32]].forEach(([x,y,z])=>
     addC(new THREE.BoxGeometry(1.2,6,1.2),0x4A3A2A,x,y,z));
 }
 
 function _updateBattleHud(){
   if(!_battleHudEl) return;
+  const myLabel=mpUser?.username||'YOU';
   const lPct=Math.round(battleHP.local/BATTLE_MAX_HP*100);
   const rPct=Math.round(battleHP.remote/BATTLE_MAX_HP*100);
+
+  // Show teams if assigned
+  const teamA=_mpTeams?.A||[];
+  const teamB=_mpTeams?.B||[];
+  const myTeamLabel=mpMyTeam?`TEAM ${mpMyTeam}`:'YOU';
+  const oppTeamLabel=mpMyTeam?(mpMyTeam==='A'?'TEAM B':'TEAM A'):'ENEMY';
+  const oppName=mpIsHost?(mpConns[0]?._mpName||'ENEMY'):(mpConn?._mpName||'ENEMY');
+  const oppDisplay=teamA.length>1||teamB.length>1?oppTeamLabel:oppName;
+
   _battleHudEl.innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;">
       <div style="text-align:right;min-width:80px">
-        <div style="font-size:.7em;color:var(--text2);letter-spacing:.1em">${mpUser?.username||'YOU'}</div>
+        <div style="font-size:.7em;color:var(--text2);letter-spacing:.1em">${myLabel}</div>
         <div style="width:150px;height:10px;background:#222;border-radius:3px;overflow:hidden;margin-top:2px">
           <div style="width:${lPct}%;height:100%;background:#4AE870;transition:width .15s"></div></div>
         <div style="font-size:.72em;color:#4AE870">${battleHP.local} HP</div>
       </div>
-      <div style="font-size:1em;font-weight:700;color:var(--amber);font-family:'Rajdhani',sans-serif">
+      <div style="font-size:1em;font-weight:700;color:var(--amber);font-family:'Rajdhani',sans-serif;text-align:center">
         ${battleRounds.local} — ${battleRounds.remote}<br>
         <span style="font-size:.6em;color:var(--text2)">BEST OF 3</span>
       </div>
       <div style="min-width:80px">
-        <div style="font-size:.7em;color:var(--text2);letter-spacing:.1em">${mpIsHost?(mpConns[0]?._mpName||'ENEMY'):(mpConn?._mpName||'ENEMY')}</div>
+        <div style="font-size:.7em;color:var(--text2);letter-spacing:.1em">${oppDisplay}</div>
         <div style="width:150px;height:10px;background:#222;border-radius:3px;overflow:hidden;margin-top:2px">
           <div style="width:${rPct}%;height:100%;background:#E84A4A;transition:width .15s"></div></div>
         <div style="font-size:.72em;color:#E84A4A">${battleHP.remote} HP</div>
@@ -475,14 +618,18 @@ function _updateBattleHud(){
 function startBattleMode(){
   battleActive=true;
   battleHP={local:BATTLE_MAX_HP,remote:BATTLE_MAX_HP};
-
-  // Build gulag arena
   _buildGulag();
   selectedLoc='beirut';
 
-  px=mpIsHost?-20:20; py=PLAYER_H; pz=0;
+  // Position local player based on team assignment
+  const myTeam=mpMyTeam||(mpIsHost?'A':'B');
+  const myTeamArr=_mpTeams?.[myTeam]||[mpUser?.username||''];
+  const myIdx=Math.max(0,myTeamArr.indexOf(mpUser?.username||''));
+  const sp=_getTeamSpawnPos(myTeam,myIdx,myTeamArr.length);
+  px=sp.x; py=PLAYER_H; pz=sp.z;
   vx=0; vy=0; vz=0;
-  yaw=mpIsHost?Math.PI/2:-Math.PI/2; pitch=0;
+  yaw=sp.yaw; pitch=0;
+
   currentWeapon='pistol';
   weaponInventory=new Set(['pistol']);
   weaponAmmo={pistol:60,shotgun:0,smg:0,launcher:0,sniper:0};
@@ -490,13 +637,49 @@ function startBattleMode(){
   effectiveSpd=PLAYER_SPD*1.1; effectiveSprint=SPRINT_SPD*1.1; dmgMult=1;
   activeGadgets={flashbang:1,airstrike:0,cover:1};
 
-  // Spawn opponent mesh
-  const oppName=mpIsHost?(mpConns[0]?._mpName||'Enemy'):(mpConn?._mpName||'Enemy');
-  const rp=createRemotePlayerMesh(oppName);
-  rp.pos.set(mpIsHost?20:-20, PLAYER_H, 0);
-  mpRemotePlayers.set(oppName,rp);
+  // Spawn remote player meshes
+  mpRemotePlayers.forEach((_,u)=>removeRemotePlayer(u));
+  mpRemotePlayers.clear();
 
-  // Host picks initial random weapon and broadcasts
+  if(_mpTeams){
+    const enemyTeam=myTeam==='A'?'B':'A';
+    const friendTeam=myTeam;
+    // Friendly teammates (green)
+    (_mpTeams[friendTeam]||[]).forEach((name,idx)=>{
+      if(name===mpUser?.username) return;
+      const rp=createRemotePlayerMesh(name,true);
+      const tsp=_getTeamSpawnPos(friendTeam,idx,_mpTeams[friendTeam].length);
+      rp.pos.set(tsp.x,PLAYER_H,tsp.z); rp.targetPos.copy(rp.pos);
+      mpRemotePlayers.set(name,rp);
+    });
+    // Enemies (red)
+    (_mpTeams[enemyTeam]||[]).forEach((name,idx)=>{
+      if(name===AI_BOT_NAME) return;
+      const rp=createRemotePlayerMesh(name,false);
+      const tsp=_getTeamSpawnPos(enemyTeam,idx,_mpTeams[enemyTeam].length);
+      rp.pos.set(tsp.x,PLAYER_H,tsp.z); rp.targetPos.copy(rp.pos);
+      mpRemotePlayers.set(name,rp);
+    });
+    // AI bot mesh (for all players to see)
+    if(_aiBotTeam){
+      const aiIsTeammate=_aiBotTeam===myTeam;
+      const aiArr=_mpTeams[_aiBotTeam]||[];
+      const aiRp=createRemotePlayerMesh(AI_BOT_NAME,aiIsTeammate);
+      const aiSp=_getTeamSpawnPos(_aiBotTeam,aiArr.length,aiArr.length+1);
+      aiRp.pos.set(aiSp.x,PLAYER_H,aiSp.z); aiRp.targetPos.copy(aiRp.pos);
+      mpRemotePlayers.set(AI_BOT_NAME,aiRp);
+      // Host inits AI logic
+      if(mpIsHost) _initAiBot(_aiBotTeam);
+    }
+  } else {
+    // Fallback 1v1
+    const oppName=mpIsHost?(mpConns[0]?._mpName||'Enemy'):(mpConn?._mpName||'Enemy');
+    const rp=createRemotePlayerMesh(oppName,false);
+    rp.pos.set(mpIsHost?20:-20,PLAYER_H,0); rp.targetPos.copy(rp.pos);
+    mpRemotePlayers.set(oppName,rp);
+  }
+
+  // Host picks initial weapon
   if(mpIsHost){
     setTimeout(()=>{
       const w=BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];
@@ -505,7 +688,6 @@ function startBattleMode(){
     },800);
   }
 
-  // Battle HUD overlay
   if(!_battleHudEl){
     _battleHudEl=document.createElement('div');
     _battleHudEl.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:35;pointer-events:none;font-family:"Rajdhani",sans-serif;text-align:center;';
@@ -514,11 +696,9 @@ function startBattleMode(){
   _battleHudEl.style.display='block';
   _updateBattleHud();
 
-  // Hide gadget/ultimate HUDs — battle mode doesn't use them
   ['cyberBulletHud','rajpnFistHud','gadgetHud','coopLeaderboard'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
   });
-  // Rebuild weapon mesh (clearWorld stripped it)
   if(weaponMesh) camera.remove(weaponMesh);
   weaponMesh=makeWeaponMesh(); camera.add(weaponMesh);
 
@@ -529,11 +709,69 @@ function startBattleMode(){
   document.getElementById('minimap').style.display='none';
   document.getElementById('clickNotice').style.display='flex';
   updateWeaponBar();
-  showNotif('GULAG — 1v1! Best of 3 rounds!');
+  const teamMsg=_mpTeams?`GULAG — Team ${myTeam} vs Team ${myTeam==='A'?'B':'A'}! Best of 3!`:'GULAG — 1v1! Best of 3 rounds!';
+  showNotif(teamMsg);
 }
 
-function mpBattleSendHit(dmg){
-  const msg={type:'battle_hit',dmg};
+// ── AI Bot (runs on host only) ──────────────────────────────────
+function _initAiBot(team){
+  const arr=_mpTeams?.[team]||[];
+  const sp=_getTeamSpawnPos(team,arr.length,arr.length+1);
+  _aiBot={pos:new THREE.Vector3(sp.x,PLAYER_H,sp.z),team,hp:BATTLE_MAX_HP,shootTimer:0};
+}
+
+function _updateAiBot(dt){
+  if(!_aiBot||!battleActive||!mpIsHost) return;
+  _aiBot.shootTimer-=dt;
+
+  // Find nearest enemy
+  let nearestDist=Infinity,nearestName=null;
+  const myAiTeam=_aiBot.team;
+
+  // Check local player (host) if enemy
+  if(_mpTeams&&!_mpTeams[myAiTeam].includes(mpUser?.username||'')){
+    const d=Math.sqrt((px-_aiBot.pos.x)**2+(pz-_aiBot.pos.z)**2);
+    if(d<nearestDist){ nearestDist=d; nearestName='__LOCAL__'; }
+  }
+  mpRemotePlayers.forEach((rp,name)=>{
+    if(name===AI_BOT_NAME) return;
+    if(_mpTeams&&_mpTeams[myAiTeam].includes(name)) return; // skip teammates
+    const d=Math.sqrt((rp.pos.x-_aiBot.pos.x)**2+(rp.pos.z-_aiBot.pos.z)**2);
+    if(d<nearestDist){ nearestDist=d; nearestName=name; }
+  });
+
+  if(nearestName){
+    let tx,tz;
+    if(nearestName==='__LOCAL__'){ tx=px; tz=pz; }
+    else { const rp=mpRemotePlayers.get(nearestName); tx=rp?.pos.x||0; tz=rp?.pos.z||0; }
+    const dx=tx-_aiBot.pos.x, dz=tz-_aiBot.pos.z;
+    const d=Math.sqrt(dx*dx+dz*dz);
+    if(d>6){ _aiBot.pos.x+=(dx/d)*5.5*dt; _aiBot.pos.z+=(dz/d)*5.5*dt; }
+    if(d<18&&_aiBot.shootTimer<=0){
+      _aiBot.shootTimer=1.4+(Math.random()*.6);
+      const dmg=18+Math.floor(Math.random()*10);
+      if(nearestName==='__LOCAL__'){
+        battleHP.local=Math.max(0,battleHP.local-dmg);
+        showDamageFlash(); _updateBattleHud();
+        if(battleHP.local<=0) _battleRoundEnd(false);
+      } else {
+        const msg={type:'battle_hit',dmg,target:nearestName};
+        mpConns.forEach(c=>{ if(c.open) c.send(msg); });
+      }
+    }
+  }
+
+  // Broadcast AI position so guests see it move
+  const aiMsg={type:'pos',username:AI_BOT_NAME,px:_aiBot.pos.x,py:_aiBot.pos.y,pz:_aiBot.pos.z,yaw:0};
+  mpConns.forEach(c=>{ if(c.open) c.send(aiMsg); });
+  const aiRp=mpRemotePlayers.get(AI_BOT_NAME);
+  if(aiRp){ aiRp.targetPos.copy(_aiBot.pos); }
+}
+
+function mpBattleSendHit(dmg, targetUsername){
+  // targetUsername optional — undefined falls back to 1v1 opponent
+  const resolvedTarget=targetUsername||(mpIsHost?(mpConns[0]?._mpName):(mpConn?._mpName));
+  const msg={type:'battle_hit',dmg,target:resolvedTarget};
   if(mpIsHost){ mpConns.forEach(c=>{ if(c.open) c.send(msg); }); }
   else if(mpConn?.open){ mpConn.send(msg); }
   battleHP.remote=Math.max(0,battleHP.remote-dmg);
@@ -543,20 +781,24 @@ function mpBattleSendHit(dmg){
 
 function _battleRoundEnd(won){
   if(won) battleRounds.local++; else battleRounds.remote++;
-  const totalRounds=battleRounds.local+battleRounds.remote;
   if(battleRounds.local>=2||battleRounds.remote>=2){
     endBattleMode(battleRounds.local>=2);
   } else {
     showNotif(won?'ROUND WIN! Get ready…':'ROUND LOST! Get ready…');
-    // Reset HP, reposition
     setTimeout(()=>{
       battleHP={local:BATTLE_MAX_HP,remote:BATTLE_MAX_HP};
-      px=mpIsHost?-20:20; py=PLAYER_H; pz=0;
+      // Reposition
+      const myTeam=mpMyTeam||(mpIsHost?'A':'B');
+      const myTeamArr=_mpTeams?.[myTeam]||[mpUser?.username||''];
+      const myIdx=Math.max(0,myTeamArr.indexOf(mpUser?.username||''));
+      const sp=_getTeamSpawnPos(myTeam,myIdx,myTeamArr.length);
+      px=sp.x; py=PLAYER_H; pz=sp.z;
       vx=0;vy=0;vz=0;
-      yaw=mpIsHost?Math.PI/2:-Math.PI/2;
-      scoped=false; scopeT=0;
+      yaw=sp.yaw; scoped=false; scopeT=0;
       _updateBattleHud();
       if(mpIsHost){
+        // Reinit AI bot
+        if(_aiBotTeam) _initAiBot(_aiBotTeam);
         const w=BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];
         _applyBattleWeapon(w);
         mpConns.forEach(c=>{ if(c.open) c.send({type:'battle_weapon',weapon:w}); });
@@ -567,11 +809,10 @@ function _battleRoundEnd(won){
 
 function endBattleMode(won){
   battleActive=false; gameActive=false;
-  _rematchVoted=false;
+  _rematchVoted=false; _aiBot=null;
   if(_battleHudEl) _battleHudEl.style.display='none';
   if(document.pointerLockElement) document.exitPointerLock();
   isLocked=false;
-  // Hide all floating HUDs
   ['cyberBulletHud','rajpnFistHud','gadgetHud','coopLeaderboard','healthBars'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
   });
@@ -581,7 +822,6 @@ function endBattleMode(won){
   const reward=won?(500+battleRounds.local*100):0;
   if(won){ saveData.currency+=reward; saveSave(); }
 
-  // Populate end screen
   const title=document.getElementById('battleEndTitle');
   const sub=document.getElementById('battleEndSub');
   if(title){ title.textContent=won?'VICTORY':'ELIMINATED'; title.style.color=won?'#4AE870':'#E84A4A'; }
@@ -597,9 +837,9 @@ function endBattleMode(won){
 function _setupBattleEndButtons(){
   document.getElementById('btnBattleRematch').addEventListener('click',()=>{
     if(!mpRoom){ showScreen('mainMenu'); return; }
-    const statusEl=document.getElementById('beRematchStatus');
-    if(_rematchVoted){ return; } // already voted, waiting
+    if(_rematchVoted){ return; }
     _rematchVoted=true;
+    const statusEl=document.getElementById('beRematchStatus');
     if(statusEl) statusEl.textContent='Waiting for opponent…';
     const msg={type:'rematch_vote'};
     if(mpIsHost){ mpConns[0]?.send(msg); }
@@ -663,7 +903,6 @@ document.addEventListener('DOMContentLoaded',()=>{
       }
     });
   } else {
-    // Firebase not configured — fall back to localStorage callsign
     if(loadEl) loadEl.classList.remove('active');
     const saved=localStorage.getItem('raj_callsign');
     if(saved){

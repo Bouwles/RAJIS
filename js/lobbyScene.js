@@ -72,6 +72,8 @@ function _defaultCusto(){
 function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 
 function _buildLobSlots(){
+  // MP waiting room takes priority over Firebase party
+  if(typeof _mpOverrideSlots!=='undefined'&&_mpOverrideSlots) return _mpOverrideSlots;
   const myUid=_fbUser?.uid;
   const party=socialState.party;
   if(!party){

@@ -176,6 +176,13 @@ function _skinCharPreview(skinId){
     <div class="is2-cp-legs" style="background:${oc};opacity:.75;"></div>
   </div>`;
 }
+function _camoGunPreview(hex){
+  return`<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 10px;">
+    <div style="width:120px;height:11px;border-radius:2px;background:${hex};box-shadow:0 0 14px ${hex}99;"></div>
+    <div style="width:74px;height:24px;border-radius:3px;background:${hex};opacity:.88;margin-left:8px;box-shadow:0 0 8px ${hex}66;"></div>
+    <div style="width:18px;height:36px;border-radius:2px;background:${hex};opacity:.75;margin-left:28px;margin-top:-6px;"></div>
+  </div>`;
+}
 function _isOwned(item){
   if(item.rewardType==='skin') return(saveData.ownedSkins||['richard_default']).includes(item.id);
   if(item.rewardType==='weaponCamo') return((saveData.ownedWeaponCamos||{})[item.weaponId]||[]).includes(item.camoId);
@@ -242,7 +249,7 @@ function _featCardHtml(item){
     onclick="openShopModal('${item.id}')">
     ${item.isNew?'<div class="is2-ribbon">NEW!</div>':''}
     <div class="is2-feat-preview" style="background:linear-gradient(160deg,${col}28 0%,${r.bg} 100%);">
-      ${item.rewardType==='skin'?_skinCharPreview(item.id):`<div class="is2-feat-char" style="color:${col};text-shadow:0 0 18px ${col}88;">🪖</div>`}
+      ${item.rewardType==='skin'?_skinCharPreview(item.id):_camoGunPreview(_camoHex(item))}
     </div>
     <div class="is2-card-footer" style="border-top-color:${r.border};">
       <div class="is2-rarity-stripe" style="background:${r.color};"></div>
@@ -306,9 +313,9 @@ function openShopModal(itemId){
       </div>`;
     } else if(item.rewardType==='weaponCamo'){
       const hex=_camoHex(item);
-      prev.innerHTML=`<div style="width:100%;height:100%;background:${r.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
-        <div style="width:120px;height:36px;background:${hex};border:1px solid rgba(255,255,255,.18);box-shadow:0 0 16px ${hex}55;"></div>
-        <div style="font-size:.58em;font-family:var(--font-ui);letter-spacing:.12em;color:var(--text3);text-transform:uppercase;">Weapon: ${item.weaponId}</div>
+      prev.innerHTML=`<div style="width:100%;height:100%;background:${r.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+        <div style="transform:scale(1.4);transform-origin:center center;">${_camoGunPreview(hex)}</div>
+        <div style="font-size:.58em;font-family:var(--font-ui);letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-top:12px;">${item.weaponId.toUpperCase()} CAMO</div>
       </div>`;
     }
     prev.style.borderBottom=`1px solid ${r.border}`;

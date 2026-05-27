@@ -213,6 +213,8 @@ function resumeGame(){
 }
 
 function returnToMenu(){
+  // Commit current save so purchases + wave stats survive any page refresh
+  saveSave();
   gameActive=false;
   gamePaused=false;
   battleActive=false;

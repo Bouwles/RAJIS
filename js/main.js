@@ -199,7 +199,7 @@ function setupEvents(){
 
   document.getElementById('btnResume').addEventListener('click',resumeGame);
   document.getElementById('btnPauseMainMenu').addEventListener('click',()=>{
-    if(confirm('Return to main menu? Current progress will be lost.')) returnToMenu();
+    if(confirm('Return to menu?\n\nCredits and stats from completed waves are already saved.\nOnly the current unfinished wave will not count.')) returnToMenu();
   });
 
   document.getElementById('btnNextWave').addEventListener('click',()=>_autoNextWave());
@@ -415,7 +415,7 @@ function showCardPick(){
   wrap.innerHTML='';
   cards.forEach(card=>{
     const seen=saveData.seenCards.includes(card.id);
-    saveData.seenCards.push(card.id);
+    if(!seen) saveData.seenCards.push(card.id);
     const el=document.createElement('div');
     el.className=`card r-${card.r}`;
     el.innerHTML=`<div class="card-icon">${card.icon}</div>

@@ -262,13 +262,14 @@ function updateWeaponBar(){
   const bar=document.getElementById('weaponBar');
   if(!bar) return;
   bar.innerHTML='';
-  Object.values(WEAPONS).forEach((w,i)=>{
-    const locked=!weaponInventory.has(w.id);
-    const active=w.id===currentWeapon&&!locked;
+  [...weaponInventory].forEach((wid,i)=>{
+    const w=WEAPONS[wid];
+    if(!w) return;
+    const active=wid===currentWeapon;
     const div=document.createElement('div');
-    div.className='wslot'+(active?' active':'')+(locked?' locked':'');
+    div.className='wslot'+(active?' active':'');
     div.innerHTML=`<div class="ws-num">${i+1}</div><div class="ws-icon">${w.icon}</div>`+
-      `<div class="ws-name">${w.name}</div><div class="ws-ammo">${locked?'LOCKED':(w.id===currentWeapon?ammo:weaponAmmo[w.id])+'/'+w.maxAmmo}</div>`;
+      `<div class="ws-name">${w.name}</div><div class="ws-ammo">${(wid===currentWeapon?ammo:weaponAmmo[wid])+'/'+w.maxAmmo}</div>`;
     bar.appendChild(div);
   });
 }

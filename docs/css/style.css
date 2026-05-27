@@ -1381,7 +1381,7 @@ body::after{content:'';position:fixed;inset:0;
   font-family:var(--font-ui);font-size:.55em;font-weight:900;color:var(--amber);}
 
 /* ── Item Shop (Fortnite-style two-column) ───────────────────── */
-#itemShopScreen.active{display:flex!important;flex-direction:column;background:#040810;overflow:hidden;position:fixed!important;inset:0;}
+#itemShopScreen.active{display:flex!important;flex-direction:column;background:#040810;overflow:hidden;position:fixed!important;inset:0;padding-top:52px;}
 .is2-topbar{
   display:flex;justify-content:space-between;align-items:center;
   padding:8px 18px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;
@@ -1490,7 +1490,7 @@ body::after{content:'';position:fixed;inset:0;
 .is2-modal-buy:disabled{opacity:.45;cursor:default;filter:none;}
 
 /* ── Locker Screen ───────────────────────────────────────────── */
-#lockerScreen.active{display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;position:fixed!important;inset:0;}
+#lockerScreen.active{display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;position:fixed!important;inset:0;padding-top:52px;}
 .lkr-screen{flex-direction:column;background:#080E1C;overflow:hidden;}
 .lkr-bg-geo{position:absolute;inset:0;pointer-events:none;z-index:0;
   background:linear-gradient(135deg,#0D1A35 0%,#080E1C 60%,#04080F 100%);}

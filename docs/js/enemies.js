@@ -156,7 +156,10 @@ function updateProjectiles(dt){
           spawnExplosion(p.pos.clone(),1.0,0xAA44FF);
           const chainN=WEAPONS.shock.chainCount||3;const chainMult=WEAPONS.shock.chainDmgMult||.5;
           const others=missiles.filter(sm=>!sm.isDestroyed&&sm!==m).sort((a,b)=>a.pos.distanceTo(p.pos)-b.pos.distanceTo(p.pos)).slice(0,chainN);
+          let arcSrc=p.pos.clone();
           others.forEach(sm=>{
+            spawnLightningArc(arcSrc,sm.pos.clone());
+            arcSrc=sm.pos.clone();
             sm.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult*chainMult));
             if(sm.health<=0){destroyMissile(sm,true);spawnExplosion(sm.pos.clone(),1.5,0xAA44FF);}
             else{sm.bodyMesh.material.emissive.set(0xAA44FF);sm.bodyMesh.material.emissiveIntensity=1;setTimeout(()=>{if(!sm.isDestroyed)sm.bodyMesh.material.emissiveIntensity=0;},200);spawnExplosion(sm.pos.clone(),.7,0xAA44FF);}
@@ -456,7 +459,7 @@ function updateSoldiers(dt){
         s.fireCooldown-=dt;
         if(s.fireCooldown<=0&&distToPlayer<effectiveEngageR){
           s.fireCooldown=tData.fireRate*(0.7+Math.random()*.6);
-          fireSoldierBullet(s);
+          if(soldierHasLOS(s)) fireSoldierBullet(s);
         }
       }
     }
@@ -488,6 +491,44 @@ function updateSoldiers(dt){
     }
   }
   updateSoldierBullets(dt);
+}
+
+function soldierHasLOS(s){
+  const sx=s.pos.x, sy=s.pos.y+ENEMY_TYPES[s.type].baseScale*.9, sz=s.pos.z;
+  const tx=px, ty=PLAYER_H-0.5, tz=pz;
+  const dx=tx-sx, dy=ty-sy, dz=tz-sz;
+  const dist=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;
+  const nx=dx/dist, ny=dy/dist, nz=dz/dist;
+  const steps=Math.ceil(dist/1.5);
+  for(let i=1;i<steps;i++){
+    const t=(i/steps)*dist;
+    const cx=sx+nx*t, cy=sy+ny*t, cz=sz+nz*t;
+    for(const b of buildings){
+      if(b.isDestroyed) continue;
+      if(Math.abs(cx-b.pos.x)<b.w/2&&Math.abs(cz-b.pos.z)<b.d/2&&cy>=0&&cy<b.h) return false;
+    }
+  }
+  return true;
+}
+
+function spawnLightningArc(from,to){
+  const segs=8;
+  const pts=[];
+  for(let i=0;i<=segs;i++){
+    const t=i/segs;
+    const jit=(i===0||i===segs)?0:2.8;
+    pts.push(
+      from.x+(to.x-from.x)*t+(Math.random()-.5)*jit,
+      from.y+(to.y-from.y)*t+(Math.random()-.5)*jit,
+      from.z+(to.z-from.z)*t+(Math.random()-.5)*jit
+    );
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  const mat=new THREE.LineBasicMaterial({color:0xCC66FF,linewidth:2});
+  const line=new THREE.Line(geo,mat);
+  scene.add(line);
+  setTimeout(()=>{scene.remove(line);geo.dispose();mat.dispose();},220);
 }
 
 function fireSoldierBullet(s){

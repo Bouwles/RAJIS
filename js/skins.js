@@ -200,17 +200,37 @@ function _skinCharPreview(skinId){
   const oc=_skinColor(skinId);
   const vc=_skinVisorColor(skinId);
   const st=_skinTone(skinId);
+  const dk=oc.replace('#','');
+  const darken=(h,a)=>{const n=parseInt(h,16);const r=Math.max(0,((n>>16)&255)-a),g=Math.max(0,((n>>8)&255)-a),b=Math.max(0,(n&255)-a);return`#${((r<<16)|(g<<8)|b).toString(16).padStart(6,'0')}`;};
+  const dark=darken(dk,40);
   return`<div class="is2-char-preview">
-    <div class="is2-cp-head" style="background:${oc};border-bottom:3px solid ${vc};box-shadow:0 0 8px ${vc}66;"></div>
-    <div class="is2-cp-body" style="background:${oc};box-shadow:inset 0 -4px 8px rgba(0,0,0,.4);"></div>
-    <div class="is2-cp-legs" style="background:${oc};opacity:.75;"></div>
+    <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:46px;height:32px;background:${oc};border-radius:7px 7px 3px 3px;box-shadow:0 0 12px ${vc}55,inset 0 2px 4px rgba(255,255,255,.15);"></div>
+    <div style="position:absolute;top:7px;left:50%;transform:translateX(-50%);width:32px;height:14px;background:${vc};border-radius:2px;box-shadow:0 0 10px ${vc}CC,inset 0 1px 3px rgba(255,255,255,.3);opacity:.95;"></div>
+    <div style="position:absolute;top:9px;left:50%;transform:translateX(-50%) translateX(-6px);width:10px;height:6px;background:rgba(255,255,255,.25);border-radius:1px;"></div>
+    <div style="position:absolute;top:31px;left:50%;transform:translateX(-50%);width:13px;height:7px;background:${st};"></div>
+    <div style="position:absolute;top:36px;left:50%;margin-left:-23px;width:16px;height:22px;background:${oc};border-radius:5px 2px 2px 4px;transform:rotate(-6deg);box-shadow:-3px 2px 6px rgba(0,0,0,.5),inset 1px 0 3px rgba(255,255,255,.1);"></div>
+    <div style="position:absolute;top:36px;left:50%;margin-left:7px;width:16px;height:22px;background:${oc};border-radius:2px 5px 4px 2px;transform:rotate(6deg);box-shadow:3px 2px 6px rgba(0,0,0,.5),inset -1px 0 3px rgba(255,255,255,.1);"></div>
+    <div style="position:absolute;top:38px;left:50%;transform:translateX(-50%);width:38px;height:32px;background:${oc};border-radius:2px;box-shadow:inset 0 -6px 10px rgba(0,0,0,.45),inset 0 2px 4px rgba(255,255,255,.08);"></div>
+    <div style="position:absolute;top:47px;left:50%;transform:translateX(-50%);width:24px;height:2px;background:${vc};opacity:.5;border-radius:1px;"></div>
+    <div style="position:absolute;top:52px;left:50%;transform:translateX(-50%);width:10px;height:10px;background:${vc};opacity:.35;border-radius:50%;"></div>
+    <div style="position:absolute;top:69px;left:50%;transform:translateX(-50%);width:38px;height:7px;background:${dark};border-top:1px solid rgba(255,255,255,.12);"></div>
+    <div style="position:absolute;top:75px;left:50%;margin-left:-20px;width:17px;height:42px;background:${oc};opacity:.85;border-radius:0 0 4px 4px;box-shadow:inset -3px 0 5px rgba(0,0,0,.4);"></div>
+    <div style="position:absolute;top:75px;left:50%;margin-left:3px;width:17px;height:42px;background:${oc};opacity:.85;border-radius:0 0 4px 4px;box-shadow:inset 3px 0 5px rgba(0,0,0,.4);"></div>
+    <div style="position:absolute;top:90px;left:50%;margin-left:-18px;width:13px;height:9px;background:${vc};opacity:.55;border-radius:2px;"></div>
+    <div style="position:absolute;top:90px;left:50%;margin-left:5px;width:13px;height:9px;background:${vc};opacity:.55;border-radius:2px;"></div>
+    <div style="position:absolute;top:114px;left:50%;margin-left:-20px;width:17px;height:7px;background:${dark};border-radius:0 0 3px 3px;"></div>
+    <div style="position:absolute;top:114px;left:50%;margin-left:3px;width:17px;height:7px;background:${dark};border-radius:0 0 3px 3px;"></div>
   </div>`;
 }
 function _camoGunPreview(hex){
-  return`<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 10px;">
-    <div style="width:120px;height:11px;border-radius:2px;background:${hex};box-shadow:0 0 14px ${hex}99;"></div>
-    <div style="width:74px;height:24px;border-radius:3px;background:${hex};opacity:.88;margin-left:8px;box-shadow:0 0 8px ${hex}66;"></div>
-    <div style="width:18px;height:36px;border-radius:2px;background:${hex};opacity:.75;margin-left:28px;margin-top:-6px;"></div>
+  return`<div style="position:relative;width:130px;height:80px;margin:4px auto;">
+    <div style="position:absolute;top:18px;left:4px;width:122px;height:14px;background:${hex};border-radius:3px 6px 6px 2px;box-shadow:0 0 16px ${hex}AA,inset 0 2px 4px rgba(255,255,255,.15);"></div>
+    <div style="position:absolute;top:10px;left:8px;width:30px;height:10px;background:${hex};border-radius:3px 3px 0 0;opacity:.8;box-shadow:inset 0 2px 3px rgba(0,0,0,.4);"></div>
+    <div style="position:absolute;top:8px;left:14px;width:18px;height:4px;background:rgba(0,0,0,.5);border-radius:1px;"></div>
+    <div style="position:absolute;top:32px;left:50px;width:24px;height:22px;background:${hex};border-radius:2px 2px 5px 5px;opacity:.85;box-shadow:inset 0 -3px 6px rgba(0,0,0,.5);"></div>
+    <div style="position:absolute;top:32px;left:28px;width:18px;height:6px;background:${hex};opacity:.6;border-radius:1px;"></div>
+    <div style="position:absolute;top:24px;right:2px;width:10px;height:8px;background:${hex};border-radius:0 4px 4px 0;opacity:.7;"></div>
+    <div style="position:absolute;top:26px;left:50%;margin-left:-22px;width:44px;height:2px;background:rgba(255,255,255,.18);border-radius:1px;"></div>
   </div>`;
 }
 function _isOwned(item){

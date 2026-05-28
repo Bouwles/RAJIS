@@ -153,9 +153,14 @@ function updateProjectiles(dt){
         }
         // SHOCK: chain lightning to nearest missiles
         if(p.weapon==='shock'){
+          spawnExplosion(p.pos.clone(),1.0,0xAA44FF);
           const chainN=WEAPONS.shock.chainCount||3;const chainMult=WEAPONS.shock.chainDmgMult||.5;
           const others=missiles.filter(sm=>!sm.isDestroyed&&sm!==m).sort((a,b)=>a.pos.distanceTo(p.pos)-b.pos.distanceTo(p.pos)).slice(0,chainN);
-          others.forEach(sm=>{sm.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult*chainMult));if(sm.health<=0)destroyMissile(sm,true);sm.bodyMesh.material.emissive.set(0xAA44FF);sm.bodyMesh.material.emissiveIntensity=1;setTimeout(()=>{if(!sm.isDestroyed)sm.bodyMesh.material.emissiveIntensity=0;},200);});
+          others.forEach(sm=>{
+            sm.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult*chainMult));
+            if(sm.health<=0){destroyMissile(sm,true);spawnExplosion(sm.pos.clone(),1.5,0xAA44FF);}
+            else{sm.bodyMesh.material.emissive.set(0xAA44FF);sm.bodyMesh.material.emissiveIntensity=1;setTimeout(()=>{if(!sm.isDestroyed)sm.bodyMesh.material.emissiveIntensity=0;},200);spawnExplosion(sm.pos.clone(),.7,0xAA44FF);}
+          });
         }
         if(p.weapon!=='railgun'){hit=true;break;}
       }
@@ -175,22 +180,47 @@ function updateProjectiles(dt){
         }
       }
     }
-    // Floor impact — rocket jump if near player
+    // Floor impact — rocket jump + cluster bounce
     if(!hit&&p.pos.y<=0.15){
       const isRpg=p.weapon==='launcher';
-      spawnExplosion(p.pos.clone(),isRpg?2.8:0.28,isRpg?0xFF6600:0xDDDDDD);
-      if(isRpg){
-        triggerScreenShake(0.4);
-        const pdx=p.pos.x-px,pdz=p.pos.z-pz;
-        const distToPlayer=Math.sqrt(pdx*pdx+pdz*pdz);
-        if(distToPlayer<9){
-          const impulse=(1-(distToPlayer/9))*22;
-          vy=Math.max(vy,impulse);
-          onGround=false;
-          showNotif('ROCKET JUMP!');
+      const isCluster=p.weapon==='cluster';
+      if(isCluster){
+        if(!p.bounces) p.bounces=0;
+        const cr=WEAPONS.cluster.clusterRadius||22;
+        const burstMult=p.bounces===0?.3:.55;
+        for(let ci=missiles.length-1;ci>=0;ci--){
+          const cm=missiles[ci];
+          if(cm.isDestroyed) continue;
+          const cd=cm.pos.distanceTo(p.pos);
+          if(cd<cr){const f=1-(cd/cr);cm.health-=Math.max(1,Math.round((p.dmg/10)*dmgMult*burstMult*f));if(cm.health<=0)destroyMissile(cm,true);}
         }
+        spawnExplosion(p.pos.clone(),2.5,0xFF8800);triggerScreenShake(.35);
+        const pdx=p.pos.x-px,pdz=p.pos.z-pz;
+        const dtp=Math.sqrt(pdx*pdx+pdz*pdz);
+        if(dtp<9){const imp=(1-(dtp/9))*18;vy=Math.max(vy,imp);onGround=false;showNotif('BLAST JUMP!');}
+        if(p.bounces<2){
+          p.vel.y=Math.abs(p.vel.y)*0.5+5;
+          p.vel.x*=0.8;p.vel.z*=0.8;
+          p.pos.y=0.25;
+          p.bounces++;
+        } else {
+          hit=true;
+        }
+      } else {
+        spawnExplosion(p.pos.clone(),isRpg?2.8:0.28,isRpg?0xFF6600:0xDDDDDD);
+        if(isRpg){
+          triggerScreenShake(0.4);
+          const pdx=p.pos.x-px,pdz=p.pos.z-pz;
+          const distToPlayer=Math.sqrt(pdx*pdx+pdz*pdz);
+          if(distToPlayer<9){
+            const impulse=(1-(distToPlayer/9))*22;
+            vy=Math.max(vy,impulse);
+            onGround=false;
+            showNotif('ROCKET JUMP!');
+          }
+        }
+        hit=true;
       }
-      hit=true;
     }
     // Battle mode: check hits on remote players
     if(!hit&&battleActive&&mpRoom){
@@ -485,8 +515,14 @@ function updateSoldierBullets(dt){
       triggerScreenShake(.3+b.dmg*.05);showDamageFlash();
       if(!mods.godMode){
         const dmgIn=Math.max(1,Math.round((b.dmg||2)*(window._playerDmgMult||1)*(playerArmorStyle==='heavy'?0.5:1)));
-        cityIntegrity=Math.max(0,cityIntegrity-dmgIn);
-        if(cityIntegrity<=0) triggerGameOver();
+        playerHealth=Math.max(0,playerHealth-dmgIn);
+        if(playerHealth<=0){
+          playerHealth=100;
+          cityIntegrity=Math.max(0,cityIntegrity-15);
+          showNotif('YOU DIED — city -15%!');
+          triggerScreenShake(1.0);
+          if(cityIntegrity<=0) triggerGameOver();
+        }
       }
       scene.remove(b.mesh);soldierBullets.splice(i,1);continue;
     }

@@ -314,6 +314,7 @@ body::after{content:'';position:fixed;inset:0;
 .bar-bg{width:100%;height:3px;background:rgba(53,59,71,.4);overflow:hidden;margin-top:3px;}
 .bar-fill{height:100%;transition:width .3s;}
 .bar-city{background:#5A9E6E;}
+.bar-player{background:#CC3344;}
 .bar-ammo{background:var(--amber);}
 .bar-city.critical{background:var(--red);animation:critPulse .7s ease infinite alternate;}
 @keyframes critPulse{from{opacity:.5}to{opacity:1}}

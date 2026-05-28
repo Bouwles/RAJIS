@@ -238,9 +238,9 @@ const WEAPONS = {
   shotgun:     { id:'shotgun',     name:'SUPER SHOTGUN',  maxAmmo:2,  fireCD:1.05, reloadTime:1.7, projSpeed:78,  pellets:8,  spread:0.10, projRadius:0.26, projColor:0xFF5522, icon:'💥', shopId:'shotgun',     shopCost:1200, hasHook:true,  dmg:18 },
   sniper:      { id:'sniper',      name:'SNIPER RIFLE',   maxAmmo:5,  fireCD:1.40, reloadTime:2.8, projSpeed:200, pellets:1,  spread:0,    projRadius:0.30, projColor:0x88FFCC, icon:'🎯', shopId:'sniper',      shopCost:1800, hasScope:true, dmg:80 },
   smg:         { id:'smg',         name:'P90 SMG',        maxAmmo:30, fireCD:0.08, reloadTime:1.4, projSpeed:95,  pellets:1,  spread:0.04, projRadius:0.20, projColor:0xFFFF44, icon:'🔧', shopId:'smg',         shopCost:900,  dmg:14, autoFire:true },
-  railgun:     { id:'railgun',     name:'RAILGUN',        maxAmmo:1,  fireCD:4.0,  reloadTime:3.5, projSpeed:600, pellets:1,  spread:0,    projRadius:0.45, projColor:0x00FFFF, icon:'⚡', shopId:'railgun',     shopCost:2500, dmg:120, pierce:true },
+  railgun:     { id:'railgun',     name:'RAILGUN',        maxAmmo:1,  fireCD:4.0,  reloadTime:3.5, projSpeed:600, pellets:1,  spread:0,    projRadius:1.0,  projColor:0x00FFFF, icon:'⚡', shopId:'railgun',     shopCost:2500, dmg:120, pierce:true },
   cluster:     { id:'cluster',     name:'CLUSTER BOMB',   maxAmmo:3,  fireCD:1.6,  reloadTime:2.2, projSpeed:68,  pellets:1,  spread:0,    projRadius:0.65, projColor:0xFF8800, icon:'💣', shopId:'cluster',     shopCost:2200, dmg:28,  clusterRadius:22 },
-  shock:       { id:'shock',       name:'SHOCK RIFLE',    maxAmmo:8,  fireCD:0.9,  reloadTime:2.2, projSpeed:175, pellets:1,  spread:0,    projRadius:0.35, projColor:0xAA44FF, icon:'🌩', shopId:'shock',       shopCost:2800, dmg:45,  chainCount:3, chainDmgMult:0.5 },
+  shock:       { id:'shock',       name:'SHOCK RIFLE',    maxAmmo:8,  fireCD:0.9,  reloadTime:2.2, projSpeed:175, pellets:1,  spread:0,    projRadius:0.35, projColor:0xAA44FF, icon:'🌩', shopId:'shock',       shopCost:5500, dmg:45,  chainCount:3, chainDmgMult:0.5 },
 };
 const MISS_RADIUS  = 0.9;
 const BOSS_RADIUS  = 1.6;

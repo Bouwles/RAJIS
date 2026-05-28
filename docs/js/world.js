@@ -67,6 +67,8 @@ let weaponAmmo={pistol:15, launcher:6, shotgun:2, sniper:5, smg:30};
 let ammo=6, isReloading=false, reloadT=0, fireCD=0;
 let scoped=false, scopeT=0;
 let mouseHeld=false;
+let shockCharging=false, shockChargeT=0;
+const SHOCK_CHARGE_DUR=1.5;
 let bobT=0, bobX=0, bobY=0;
 // Grappling hook
 let hookActive=false, hookPulling=false;
@@ -92,8 +94,9 @@ let playerArmorStyle='light';
 let mpIsGuest=false;
 let _missileIdCounter=0;
 
-// City
+// City / Player
 let cityIntegrity=100;
+let playerHealth=100;
 let totalBuildings=0;
 
 // Objects
@@ -288,6 +291,7 @@ function buildWorld(locId){
   spawnHelicopters(locId);
   totalBuildings=buildings.length;
   cityIntegrity=100;
+  playerHealth=100;
 }
 
 function buildSnowGround(){

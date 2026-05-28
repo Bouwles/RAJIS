@@ -213,6 +213,18 @@ function updateWeapon(dt){
   // Auto-fire for weapons with autoFire flag (e.g. P90 SMG)
   if(mouseHeld&&isLocked&&gameActive&&!gamePaused&&WEAPONS[currentWeapon]?.autoFire) fireProjectile();
 
+  // Shock rifle charge-up tick
+  if(shockCharging){
+    if(currentWeapon!=='shock'){
+      shockCharging=false;shockChargeT=0;
+      const w=document.getElementById('shockChargeWrap');if(w) w.style.display='none';
+    } else if(isLocked&&gameActive&&!gamePaused){
+      shockChargeT=Math.min(shockChargeT+dt,SHOCK_CHARGE_DUR);
+      const bar=document.getElementById('shockChargeBar');
+      if(bar) bar.style.width=(shockChargeT/SHOCK_CHARGE_DUR*100)+'%';
+    }
+  }
+
   // Reload
   if(isReloading){
     reloadT-=dt;

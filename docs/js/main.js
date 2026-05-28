@@ -162,14 +162,29 @@ function setupEvents(){
   // Mouse fire / scope
   document.addEventListener('mousedown',e=>{
     if(!isLocked||!gameActive||gamePaused) return;
-    if(e.button===0){ mouseHeld=true; fireProjectile(); }
+    if(e.button===0){
+      mouseHeld=true;
+      if(currentWeapon==='shock'&&!isReloading&&ammo>0){
+        shockCharging=true; shockChargeT=0;
+        const w=document.getElementById('shockChargeWrap'); if(w) w.style.display='block';
+      } else { fireProjectile(); }
+    }
     if(e.button===2){
       if(currentWeapon==='shotgun') fireHook();
       else {scoped=true;sfxScope();}
     }
   });
   document.addEventListener('mouseup',e=>{
-    if(e.button===0) mouseHeld=false;
+    if(e.button===0){
+      mouseHeld=false;
+      if(shockCharging){
+        shockCharging=false;
+        const w=document.getElementById('shockChargeWrap'); if(w) w.style.display='none';
+        const b=document.getElementById('shockChargeBar'); if(b) b.style.width='0%';
+        if(shockChargeT>=SHOCK_CHARGE_DUR) fireProjectile();
+        shockChargeT=0;
+      }
+    }
     if(e.button===2){if(currentWeapon!=='shotgun') scoped=false;}
   });
   document.addEventListener('contextmenu',e=>e.preventDefault());

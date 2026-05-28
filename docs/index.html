@@ -323,6 +323,11 @@
 <div id="hud" class="screen">
   <div class="hud-row">
     <div class="hud-panel"><div class="hud-lbl">Wave</div><div class="hud-val blue" id="hudWave">1</div></div>
+    <div class="hud-panel" style="text-align:center;min-width:110px;">
+      <div class="hud-lbl">Player HP</div>
+      <div class="hud-val red" id="hudPlayerHP">100</div>
+      <div class="bar-bg"><div class="bar-fill bar-player" id="playerHpBar" style="width:100%"></div></div>
+    </div>
     <div class="hud-panel" style="text-align:center;min-width:150px;">
       <div class="hud-lbl">City Integrity</div>
       <div class="hud-val green" id="hudCity">100%</div>
@@ -352,6 +357,12 @@
   </div>
 </div>
 <div id="weaponBar"></div>
+<div id="shockChargeWrap" style="display:none;position:fixed;bottom:120px;left:50%;transform:translateX(-50%);z-index:35;text-align:center;font-family:'Rajdhani',sans-serif;">
+  <div style="font-size:.65em;color:#CC66FF;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;text-shadow:0 0 8px #AA44FF;">CHARGING</div>
+  <div style="width:160px;height:8px;background:#1A0A2A;border-radius:4px;overflow:hidden;border:1px solid #AA44FF66;">
+    <div id="shockChargeBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6600CC,#CC44FF);box-shadow:0 0 10px #AA44FF;border-radius:4px;transition:none;"></div>
+  </div>
+</div>
 <div id="cyberBulletHud" style="display:none;position:fixed;bottom:80px;right:20px;
   font-family:'Rajdhani',sans-serif;font-size:.8em;letter-spacing:.08em;text-transform:uppercase;
   color:#FF4422;text-align:center;z-index:30;">

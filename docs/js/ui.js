@@ -44,6 +44,12 @@ function updateHUD(){
   const cityVal=document.getElementById('hudCity');
   cityVal.className='hud-val '+(cityIntegrity>60?'green':cityIntegrity>30?'gold':'red');
 
+  const hp=Math.max(0,Math.round(playerHealth));
+  const hpEl=document.getElementById('hudPlayerHP');
+  const hpBar=document.getElementById('playerHpBar');
+  if(hpEl){hpEl.textContent=hp;hpEl.className='hud-val '+(hp>60?'green':hp>30?'gold':'red');}
+  if(hpBar) hpBar.style.width=hp+'%';
+
   const wep=WEAPONS[currentWeapon];
   const reloading=isReloading?` [RELOAD ${Math.ceil(reloadT)}s]`:'';
   document.getElementById('hudAmmo').textContent=ammo+'/'+wep.maxAmmo+reloading;
@@ -299,7 +305,7 @@ const SHOP_DESCS={
   smg:'Full-auto, 30-round drum mag. Fast TTK.',
   railgun:'1 shot, 4s cooldown. Pierces ALL missiles in a line. Insane damage.',
   cluster:'Explodes in a 22m area burst on impact — hits every missile nearby.',
-  shock:'On hit, chains lightning to 3 nearest missiles simultaneously.',
+  shock:'Hold LMB to charge (1.5s), release to fire. Chains lightning to 3 nearest missiles.',
   flashbang:'Stuns soldiers in 18m for 3.5s.',
   airstrike:'Destroys missiles in 12m radius after 3s.',
   cover:'Deploys a barrier 4m ahead for 20s.',

@@ -1474,7 +1474,7 @@ body::after{content:'';position:fixed;inset:0;
   border:none;color:var(--text2);font-size:.9em;width:26px;height:26px;
   cursor:pointer;z-index:2;transition:background var(--t-fast);}
 .is2-modal-close:hover{background:rgba(255,255,255,.16);}
-.is2-modal-preview{height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.is2-modal-preview{height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .is2-modal-body{padding:12px 14px 14px;}
 .is2-modal-rarity{
   font-family:var(--font-ui);font-size:.54em;font-weight:800;

@@ -197,30 +197,7 @@ function _skinTone(skinId){
   return s&&s.custo.skinTone?s.custo.skinTone:'#E8C49A';
 }
 function _skinCharPreview(skinId){
-  const oc=_skinColor(skinId);
-  const vc=_skinVisorColor(skinId);
-  const st=_skinTone(skinId);
-  const dk=oc.replace('#','');
-  const darken=(h,a)=>{const n=parseInt(h,16);const r=Math.max(0,((n>>16)&255)-a),g=Math.max(0,((n>>8)&255)-a),b=Math.max(0,(n&255)-a);return`#${((r<<16)|(g<<8)|b).toString(16).padStart(6,'0')}`;};
-  const dark=darken(dk,40);
-  return`<div class="is2-char-preview">
-    <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:46px;height:32px;background:${oc};border-radius:7px 7px 3px 3px;box-shadow:0 0 12px ${vc}55,inset 0 2px 4px rgba(255,255,255,.15);"></div>
-    <div style="position:absolute;top:7px;left:50%;transform:translateX(-50%);width:32px;height:14px;background:${vc};border-radius:2px;box-shadow:0 0 10px ${vc}CC,inset 0 1px 3px rgba(255,255,255,.3);opacity:.95;"></div>
-    <div style="position:absolute;top:9px;left:50%;transform:translateX(-50%) translateX(-6px);width:10px;height:6px;background:rgba(255,255,255,.25);border-radius:1px;"></div>
-    <div style="position:absolute;top:31px;left:50%;transform:translateX(-50%);width:13px;height:7px;background:${st};"></div>
-    <div style="position:absolute;top:36px;left:50%;margin-left:-23px;width:16px;height:22px;background:${oc};border-radius:5px 2px 2px 4px;transform:rotate(-6deg);box-shadow:-3px 2px 6px rgba(0,0,0,.5),inset 1px 0 3px rgba(255,255,255,.1);"></div>
-    <div style="position:absolute;top:36px;left:50%;margin-left:7px;width:16px;height:22px;background:${oc};border-radius:2px 5px 4px 2px;transform:rotate(6deg);box-shadow:3px 2px 6px rgba(0,0,0,.5),inset -1px 0 3px rgba(255,255,255,.1);"></div>
-    <div style="position:absolute;top:38px;left:50%;transform:translateX(-50%);width:38px;height:32px;background:${oc};border-radius:2px;box-shadow:inset 0 -6px 10px rgba(0,0,0,.45),inset 0 2px 4px rgba(255,255,255,.08);"></div>
-    <div style="position:absolute;top:47px;left:50%;transform:translateX(-50%);width:24px;height:2px;background:${vc};opacity:.5;border-radius:1px;"></div>
-    <div style="position:absolute;top:52px;left:50%;transform:translateX(-50%);width:10px;height:10px;background:${vc};opacity:.35;border-radius:50%;"></div>
-    <div style="position:absolute;top:69px;left:50%;transform:translateX(-50%);width:38px;height:7px;background:${dark};border-top:1px solid rgba(255,255,255,.12);"></div>
-    <div style="position:absolute;top:75px;left:50%;margin-left:-20px;width:17px;height:42px;background:${oc};opacity:.85;border-radius:0 0 4px 4px;box-shadow:inset -3px 0 5px rgba(0,0,0,.4);"></div>
-    <div style="position:absolute;top:75px;left:50%;margin-left:3px;width:17px;height:42px;background:${oc};opacity:.85;border-radius:0 0 4px 4px;box-shadow:inset 3px 0 5px rgba(0,0,0,.4);"></div>
-    <div style="position:absolute;top:90px;left:50%;margin-left:-18px;width:13px;height:9px;background:${vc};opacity:.55;border-radius:2px;"></div>
-    <div style="position:absolute;top:90px;left:50%;margin-left:5px;width:13px;height:9px;background:${vc};opacity:.55;border-radius:2px;"></div>
-    <div style="position:absolute;top:114px;left:50%;margin-left:-20px;width:17px;height:7px;background:${dark};border-radius:0 0 3px 3px;"></div>
-    <div style="position:absolute;top:114px;left:50%;margin-left:3px;width:17px;height:7px;background:${dark};border-radius:0 0 3px 3px;"></div>
-  </div>`;
+  return`<canvas class="is2-skin-canvas" data-skin="${skinId}" width="110" height="160" style="display:block;width:110px;height:160px;"></canvas>`;
 }
 function _camoGunPreview(hex){
   return`<div style="position:relative;width:130px;height:80px;margin:4px auto;">
@@ -252,6 +229,76 @@ function getDailyShopItems(){
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  SHOP 3D PREVIEW RENDERING
+// ═══════════════════════════════════════════════════════════════
+let _shopPrevRdr=null;
+
+function _buildShopScene(){
+  const sc=new THREE.Scene();
+  sc.add(new THREE.AmbientLight(0xffffff,0.7));
+  const dl=new THREE.DirectionalLight(0xffffff,0.9);dl.position.set(2,4,2);sc.add(dl);
+  const dl2=new THREE.DirectionalLight(0x4488ff,0.3);dl2.position.set(-2,1,-3);sc.add(dl2);
+  return sc;
+}
+
+function _renderShopPreviews(){
+  if(typeof makeCharModel!=='function') return;
+  const canvases=document.querySelectorAll('.is2-skin-canvas');
+  if(!canvases.length) return;
+  if(!_shopPrevRdr){
+    const oc=document.createElement('canvas');
+    oc.width=110;oc.height=160;
+    _shopPrevRdr=new THREE.WebGLRenderer({canvas:oc,antialias:true,alpha:true});
+    _shopPrevRdr.setSize(110,160,false);
+    _shopPrevRdr.setClearColor(0x000000,0);
+  }
+  const sc=_buildShopScene();
+  const cam=new THREE.PerspectiveCamera(42,110/160,0.1,50);
+  cam.position.set(0,1.1,4.2);cam.lookAt(0,0.9,0);
+  canvases.forEach(cv=>{
+    const skin=RICHARD_SKINS.find(s=>s.id===cv.dataset.skin);
+    if(!skin) return;
+    const char=makeCharModel(skin.custo);
+    char.rotation.y=0.4;
+    sc.add(char);
+    _shopPrevRdr.render(sc,cam);
+    sc.remove(char);
+    cv.getContext('2d').drawImage(_shopPrevRdr.domElement,0,0,110,160);
+  });
+}
+
+let _shopModalRdr=null,_shopModalSc=null,_shopModalCam=null,_shopModalChar=null,_shopModalRaf=null,_shopModalT=0;
+
+function _startShopModalPreview(skinId){
+  if(typeof makeCharModel!=='function') return;
+  const cv=document.getElementById('is2ModalCanvas');
+  if(!cv) return;
+  if(_shopModalRaf){cancelAnimationFrame(_shopModalRaf);_shopModalRaf=null;}
+  const w=320,h=220;
+  cv.width=w;cv.height=h;
+  if(!_shopModalRdr){
+    _shopModalRdr=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+    _shopModalSc=_buildShopScene();
+    _shopModalCam=new THREE.PerspectiveCamera(42,w/h,0.1,50);
+    _shopModalCam.position.set(0,1.1,3.8);_shopModalCam.lookAt(0,0.9,0);
+  }
+  _shopModalRdr.setSize(w,h,false);
+  _shopModalCam.aspect=w/h;_shopModalCam.updateProjectionMatrix();
+  if(_shopModalChar){_shopModalSc.remove(_shopModalChar);_shopModalChar=null;}
+  const skin=RICHARD_SKINS.find(s=>s.id===skinId);
+  if(skin){_shopModalChar=makeCharModel(skin.custo);_shopModalSc.add(_shopModalChar);}
+  _shopModalT=0;
+  (function _loop(){
+    _shopModalT+=0.016;
+    if(_shopModalChar) _shopModalChar.rotation.y=_shopModalT*0.6;
+    _shopModalRdr.render(_shopModalSc,_shopModalCam);
+    const m=document.getElementById('is2Modal');
+    if(!m||m.style.display==='none'){_shopModalRaf=null;return;}
+    _shopModalRaf=requestAnimationFrame(_loop);
+  })();
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  ITEM SHOP — Fortnite-style two-column layout
 // ═══════════════════════════════════════════════════════════════
 let _shopTimerIv=null;
@@ -272,6 +319,7 @@ function buildItemShop(){
 
   fg.innerHTML=featured.map(_featCardHtml).join('');
   dg.innerHTML=daily.map(_dailyCardHtml).join('');
+  requestAnimationFrame(_renderShopPreviews);
 
   const tick=()=>{
     const t='Resets in '+_shopCountdown();
@@ -353,14 +401,8 @@ function openShopModal(itemId){
   if(prev){
     if(item.rewardType==='skin'){
       const col=_skinColor(item.id);
-      const vc=_skinVisorColor(item.id);
-      prev.innerHTML=`<div style="width:100%;height:100%;background:linear-gradient(180deg,${col}44,${r.bg});display:flex;align-items:center;justify-content:center;">
-        <div class="is2-char-preview" style="transform:scale(1.1);">
-          <div class="is2-cp-head" style="background:${col};border-bottom:4px solid ${vc};box-shadow:0 0 12px ${vc}66;"></div>
-          <div class="is2-cp-body" style="background:${col};box-shadow:inset 0 -6px 10px rgba(0,0,0,.45);"></div>
-          <div class="is2-cp-legs" style="background:${col};opacity:.75;"></div>
-        </div>
-      </div>`;
+      prev.innerHTML=`<canvas id="is2ModalCanvas" style="display:block;width:100%;height:100%;background:linear-gradient(180deg,${col}44,${r.bg});"></canvas>`;
+      requestAnimationFrame(()=>_startShopModalPreview(item.id));
     } else if(item.rewardType==='weaponCamo'){
       const hex=_camoHex(item);
       prev.innerHTML=`<div style="width:100%;height:100%;background:${r.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
@@ -395,6 +437,7 @@ function openShopModal(itemId){
 function closeShopModal(){
   const m=document.getElementById('is2Modal');
   if(m) m.style.display='none';
+  if(_shopModalRaf){cancelAnimationFrame(_shopModalRaf);_shopModalRaf=null;}
 }
 
 // ─────────────────────────────────────────────────────────────────

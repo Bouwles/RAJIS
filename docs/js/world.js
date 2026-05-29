@@ -5,30 +5,42 @@
 const LOCS = {
   sweden:{
     name:'Sweden', flag:'🇸🇪',
-    sky:0x8BBCCC, fogColor:new THREE.Color(0xAAC8DD), fogDensity:.016,
-    ground:0xDAE8EF, ambColor:0x6688AA, ambInt:.55,
-    sunColor:0xCCDDEE, sunInt:.7, sunPos:[-12,22,8],
-    bldColors:[0xDDCCBB,0xCCBBAA,0xBBAA99,0x998877,0xCCCCDD,0xBBCCCC],
-    roofColor:0xBB3333, maxH:13,minH:4, bldW:{min:4,max:10},
-    hasTrees:true, treeColor:0x2A5A22, snowCaps:true,
+    sky:0x6E8FA8,
+    fogColor:new THREE.Color(0x8AAABB), fogDensity:.022,
+    ground:0xC6D0D4,
+    ambColor:0x4A6888, ambInt:.52,
+    sunColor:0xB8CCDE, sunInt:.60, sunPos:[-10,18,14],
+    bldColors:[0xBEB09A,0xB2A48C,0xCEC0AE,0x9E8C76,0xBEC2C2,0xB0B8B8,0x8A3A2C,0x963C30,0x7A4E38,0xC8BCA8],
+    roofColor:0x881C1C,
+    maxH:14,minH:5,bldW:{min:5,max:11},
+    hasTrees:true, treeColor:0x254A1C, snowCaps:true,
+    roadColor:0x46484C, sidewalkColor:0x84888C,
   },
   beirut:{
     name:'Beirut', flag:'🇱🇧',
-    sky:0x4488BB, fogColor:new THREE.Color(0x88AACC), fogDensity:.007,
-    ground:0xC5B586, ambColor:0x995522, ambInt:.75,
-    sunColor:0xFFDD77, sunInt:1.2, sunPos:[16,32,-6],
-    bldColors:[0xDDB860,0xCC9944,0xBB8833,0xAA7722,0xCCAA66,0xDDCC99],
-    roofColor:0xCCAA88, maxH:22,minH:6, bldW:{min:5,max:13},
-    hasTrees:false, hasPalms:true,
+    sky:0x3582C4,
+    fogColor:new THREE.Color(0x74A0BC), fogDensity:.006,
+    ground:0xB8A478,
+    ambColor:0xA86010, ambInt:.82,
+    sunColor:0xFFD04A, sunInt:1.40, sunPos:[22,42,-4],
+    bldColors:[0xCCAE60,0xC09A48,0xB88C36,0xD2B67C,0xC8AC6C,0xDCC488,0xA28850,0xB09464,0xD8C080,0xBCA86A],
+    roofColor:0xBC9E60,
+    maxH:24,minH:6,bldW:{min:6,max:14},
+    hasPalms:true,
+    roadColor:0x36342C, sidewalkColor:0x6E665C,
   },
   dubai:{
     name:'Dubai', flag:'🇦🇪',
-    sky:0x7799CC, fogColor:new THREE.Color(0xD4C090), fogDensity:.011,
-    ground:0xE5D29A, ambColor:0xAA8822, ambInt:.85,
-    sunColor:0xFFEE88, sunInt:1.5, sunPos:[22,45,0],
-    bldColors:[0xCCBB88,0xDDCC99,0xBBAA77,0xCCCC99,0xEEDDAA,0x99AACC],
-    roofColor:0x88AACC, maxH:55,minH:10, bldW:{min:6,max:16},
+    sky:0x4080CC,
+    fogColor:new THREE.Color(0xBEA86E), fogDensity:.009,
+    ground:0xD4C07C,
+    ambColor:0xA88210, ambInt:.92,
+    sunColor:0xFFEC62, sunInt:1.72, sunPos:[28,56,0],
+    bldColors:[0xBEB09A,0xD0C8B4,0xACA49A,0x90A6B8,0x9EB4C8,0xC2C2C2,0xDCD0BC,0xCAC0AC,0xE0D8C8,0x8899AA],
+    roofColor:0x7EA4B6,
+    maxH:62,minH:12,bldW:{min:8,max:18},
     hasSkyscrapers:true,
+    roadColor:0x28261E, sidewalkColor:0xACA49A,
   },
 };
 
@@ -272,16 +284,27 @@ function buildWorld(locId){
   ground.receiveShadow=true;
   addToWorld(ground);
 
-  // Ground detail tiles
+  // Ground detail
   if(locId==='sweden') buildSnowGround();
   if(locId==='dubai') buildSandDetails();
 
-  // Buildings
+  // Roads + sidewalks
+  buildRoads(locId);
+
+  // Buildings (hand-laid layouts)
   buildBuildings(loc,locId);
 
-  // Decoration
-  if(loc.hasTrees) buildPineTrees(loc);
-  if(loc.hasPalms) buildPalmTrees(loc);
+  // Background skyline depth
+  buildBackgroundSkyline(loc,locId);
+
+  // Street props + cars
+  buildStreetlights(locId);
+  buildStreetCars(locId);
+  buildStreetProps(locId);
+
+  // Vegetation
+  if(loc.hasTrees) buildPineTrees(loc,locId);
+  if(loc.hasPalms) buildPalmTrees(loc,locId);
   if(loc.hasSkyscrapers) buildSkyscraperDetails(loc);
 
   // Weapon in camera
@@ -295,199 +318,677 @@ function buildWorld(locId){
 }
 
 function buildSnowGround(){
-  const mat=new THREE.MeshLambertMaterial({color:0xEEEEF5});
-  for(let i=0;i<30;i++){
-    const r=3+Math.random()*6;
-    const geo=new THREE.CylinderGeometry(r,r+1,.25,8);
-    const m=new THREE.Mesh(geo,mat);
-    m.position.set((Math.random()-.5)*180,(-.12),(Math.random()-.5)*180);
+  // Snow patches near curbs and open areas
+  const mat=new THREE.MeshLambertMaterial({color:0xE8EEF2});
+  const snowPositions=[
+    [-36,14],[-22,13],[12,15],[38,16],[46,13],
+    [-38,-14],[-24,-13],[14,-16],[36,-14],[44,-15],
+    [-50,0],[50,0],[-12,48],[12,-48],[-60,30],[60,-30],
+    [-55,-50],[55,50],[-40,60],[40,-60],
+  ];
+  snowPositions.forEach(([x,z])=>{
+    const r=2+Math.random()*4;
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r+0.8,.18,8),mat);
+    m.position.set(x+(Math.random()-.5)*4,-.05,z+(Math.random()-.5)*4);
     addToWorld(m);
-  }
+  });
+  // Thin snow layer over whole ground
+  const coverMat=new THREE.MeshLambertMaterial({color:0xD8E0E4,transparent:true,opacity:.55});
+  const cover=new THREE.Mesh(new THREE.PlaneGeometry(400,400),coverMat);
+  cover.rotation.x=-Math.PI/2;cover.position.y=.005;
+  addToWorld(cover);
 }
 function buildSandDetails(){
-  const mat=new THREE.MeshLambertMaterial({color:0xD4B87A});
-  for(let i=0;i<20;i++){
-    const r=4+Math.random()*10;
-    const geo=new THREE.ConeGeometry(r,.8+Math.random()*.6,8);
-    const m=new THREE.Mesh(geo,mat);
-    m.position.set((Math.random()-.5)*180,0,(Math.random()-.5)*180);
+  // Desert sand ripples and dunes at map edges
+  const mat=new THREE.MeshLambertMaterial({color:0xC8AA6A});
+  for(let i=0;i<16;i++){
+    const angle=Math.random()*Math.PI*2;
+    const dist=80+Math.random()*60;
+    const r=6+Math.random()*12;
+    const m=new THREE.Mesh(new THREE.ConeGeometry(r,.6+Math.random()*.5,8),mat);
+    m.position.set(Math.cos(angle)*dist,.05,Math.sin(angle)*dist);
     addToWorld(m);
   }
+  // Subtle sand tone overlay on ground near edges
+  const edgeMat=new THREE.MeshLambertMaterial({color:0xD8BB80,transparent:true,opacity:.4});
+  const edge=new THREE.Mesh(new THREE.PlaneGeometry(400,400),edgeMat);
+  edge.rotation.x=-Math.PI/2;edge.position.y=.004;
+  addToWorld(edge);
 }
 
 function buildBuildings(loc,locId){
-  // Grid 5 cols x 4 rows, skip center for player start
-  const cols=5, rows=4, sp=22;
-  const ox=-(cols-1)*sp/2, oz=-(rows-1)*sp/2;
+  if(locId==='sweden') buildSwedenLayout(loc);
+  else if(locId==='beirut') buildBeirutLayout(loc);
+  else buildDubaiLayout(loc);
+}
 
-  for(let c=0;c<cols;c++){
-    for(let r=0;r<rows;r++){
-      if(c===2&&(r===1||r===2)) continue; // player start area
-      const bx=ox+c*sp+(Math.random()-.5)*5;
-      const bz=oz+r*sp+(Math.random()-.5)*5;
-      const bw=loc.bldW.min+Math.random()*(loc.bldW.max-loc.bldW.min);
-      const bd=loc.bldW.min+Math.random()*(loc.bldW.max-loc.bldW.min);
-      const bh=loc.minH+Math.random()*(loc.maxH-loc.minH);
-      const col=loc.bldColors[Math.floor(Math.random()*loc.bldColors.length)];
-      const bld=makeBuilding(bx,bz,bw,bd,bh,col,loc,locId);
-      buildings.push(bld);
-    }
-  }
-
-  // Extra random buildings
-  for(let i=0;i<6;i++){
-    const bx=(Math.random()-.5)*100;
-    const bz=(Math.random()-.5)*100;
-    const dist=Math.sqrt(bx*bx+bz*bz);
-    if(dist<15||dist>80) continue;
-    const bw=loc.bldW.min+Math.random()*(loc.bldW.max-loc.bldW.min);
-    const bd=loc.bldW.min+Math.random()*(loc.bldW.max-loc.bldW.min);
-    const bh=loc.minH+Math.random()*(loc.maxH-loc.minH);
+function _mkB(loc,locId,plots){
+  plots.forEach(([x,z,w,d,hMin,hMax])=>{
+    const h=hMin+Math.random()*(hMax-hMin);
     const col=loc.bldColors[Math.floor(Math.random()*loc.bldColors.length)];
-    buildings.push(makeBuilding(bx,bz,bw,bd,bh,col,loc,locId));
-  }
+    buildings.push(makeBuilding(x,z,w,d,h,col,loc,locId));
+  });
+}
+
+function buildSwedenLayout(loc){
+  _mkB(loc,'sweden',[
+    // NW block — brick apartments
+    [-42,18,10,8,10,13],[-30,15,9,7,7,10],[-20,17,8,9,9,12],
+    [-43,30,11,8,6,9], [-30,32,9,10,11,14],[-20,30,7,7,5,8],
+    [-42,44,9,8,7,10], [-28,44,10,9,8,11],
+    // NE block
+    [20,18,9,8,8,11],  [33,16,8,9,11,14], [45,18,10,7,6,9],
+    [21,31,8,8,8,11],  [35,33,11,9,10,13],[47,29,7,7,5,8],
+    [22,44,9,8,7,10],  [38,44,8,9,6,9],
+    // SW block
+    [-42,-18,10,8,8,11],[-30,-16,8,7,6,9],[-19,-19,7,8,10,13],
+    [-42,-32,9,9,5,8], [-30,-33,10,8,7,10],[-19,-31,8,7,9,12],
+    [-41,-44,9,8,6,9], [-27,-44,8,9,8,11],
+    // SE block
+    [20,-18,9,8,8,10], [33,-18,8,9,9,12], [45,-20,10,7,6,9],
+    [21,-33,7,8,7,10], [35,-32,11,9,11,14],[47,-34,8,8,5,8],
+    [22,-44,9,8,6,9],  [38,-44,8,9,7,10],
+    // Outer depth
+    [-65,0,13,10,8,11],[65,0,12,10,9,12],
+    [0,-62,11,12,7,10],[0,62,12,11,10,13],
+    [-58,-50,9,8,6,9], [58,-50,8,9,7,10],
+    [-58,50,10,9,8,11],[58,50,9,8,6,9],
+  ]);
+  // Civic landmark — church/town hall silhouette at north edge
+  _buildSwedenLandmark();
+}
+
+function _buildSwedenLandmark(){
+  const g=new THREE.Group();
+  const mat=new THREE.MeshLambertMaterial({color:0xCCBBAA});
+  const stoneMat=new THREE.MeshLambertMaterial({color:0xA89880});
+  const roofMat=new THREE.MeshLambertMaterial({color:0x3A1010});
+  // Main nave
+  const nave=new THREE.Mesh(new THREE.BoxGeometry(14,10,22),mat);
+  nave.position.y=5;g.add(nave);
+  // Tower
+  const tower=new THREE.Mesh(new THREE.BoxGeometry(7,16,7),stoneMat);
+  tower.position.set(0,8,13);g.add(tower);
+  // Spire
+  const spire=new THREE.Mesh(new THREE.ConeGeometry(3.5,10,4),roofMat);
+  spire.position.set(0,21,13);spire.rotation.y=Math.PI/4;g.add(spire);
+  // Pitched nave roof
+  const naveRoof=new THREE.Mesh(new THREE.ConeGeometry(8,5,4),roofMat);
+  naveRoof.position.set(0,12.5,-2);naveRoof.rotation.y=Math.PI/4;
+  naveRoof.scale.set(1,1,2.4);g.add(naveRoof);
+  // Windows
+  const winMat=new THREE.MeshLambertMaterial({color:0xFFEEAA,emissive:new THREE.Color(0xFFCC66),emissiveIntensity:.4});
+  [-4,0,4].forEach(wx=>{
+    const w=new THREE.Mesh(new THREE.BoxGeometry(.6,2.4,.1),winMat);
+    w.position.set(wx,5.5,11.1);g.add(w);
+  });
+  g.position.set(-2,0,-68);
+  addToWorld(g);
+}
+
+function buildBeirutLayout(loc){
+  _mkB(loc,'beirut',[
+    // NW dense block
+    [-40,18,12,9,12,18],[-26,15,10,8,8,14],[-14,17,9,11,14,20],
+    [-40,32,11,10,10,16],[-26,34,12,9,14,22],[-14,32,8,12,8,13],
+    [-38,46,13,8,7,11], [-24,46,9,11,12,18],
+    // NE dense block
+    [14,17,9,11,14,22], [28,15,10,8,8,14], [42,18,12,9,10,16],
+    [14,32,8,12,8,13],  [28,34,12,9,14,22],[42,32,11,10,10,16],
+    [26,46,9,11,12,18], [40,46,13,8,7,11],
+    // SW dense block
+    [-40,-18,12,9,10,16],[-26,-15,10,8,8,14],[-14,-17,9,11,14,22],
+    [-40,-32,11,10,8,12],[-26,-34,12,9,14,22],[-14,-32,8,12,8,14],
+    [-38,-46,13,8,6,10],[-24,-46,9,11,11,18],
+    // SE dense block
+    [14,-17,9,11,14,22],[28,-15,10,8,8,14],[42,-18,12,9,10,16],
+    [14,-32,8,12,8,14], [28,-34,12,9,14,22],[42,-32,11,10,8,12],
+    [26,-46,9,11,11,18],[40,-46,13,8,6,10],
+    // Outer depth
+    [-68,0,14,11,10,16],[68,0,14,11,10,16],
+    [0,-65,12,14,8,14], [0,65,13,12,12,18],
+    [-60,-55,11,9,8,13],[60,-55,9,11,9,14],
+    [-60,55,10,10,10,16],[60,55,10,10,8,13],
+  ]);
+}
+
+function buildDubaiLayout(loc){
+  _mkB(loc,'dubai',[
+    // Central tower cluster
+    [-8,-34,14,14,48,62],  [12,-24,12,12,38,52],
+    [-6,-50,10,10,32,46],  [22,-44,11,11,28,40],
+    [-20,-44,10,10,25,38],
+    // Mid-rise luxury ring
+    [-38,-18,14,12,18,26],[38,-18,14,12,18,26],
+    [-38,-40,12,12,16,24],[38,-40,12,12,16,24],
+    [-20,-62,16,13,14,20],[22,-62,16,13,14,20],
+    [0,-66,18,14,12,18],
+    // North side
+    [-38,18,14,12,16,24],[38,18,14,12,16,24],
+    [-20,30,12,11,20,32],[20,30,12,11,20,32],
+    [-38,40,11,12,14,20],[38,40,11,12,14,20],
+    [0,44,14,14,22,35],
+    // Outer depth
+    [-66,-20,12,10,20,35],[66,-20,12,10,20,35],
+    [-66,20,11,11,18,28],[66,20,11,11,18,28],
+    [0,-82,16,14,15,25],
+    [-55,-56,10,10,18,30],[55,-56,10,10,18,30],
+    [-55,56,10,10,15,25],[55,56,10,10,15,25],
+  ]);
 }
 
 function makeBuilding(x,z,w,d,h,colorHex,loc,locId){
-  const group=new THREE.Group();
-  group.position.set(x,0,z);
+  const g=new THREE.Group();
+  g.position.set(x,0,z);
+
+  const bodyMat=new THREE.MeshLambertMaterial({color:colorHex});
+
+  // Dubai tall towers: glass tint
+  if(locId==='dubai'&&h>28){
+    bodyMat.color.setHex(0x9AB4C8);
+    bodyMat.emissive=new THREE.Color(0x001830);
+    bodyMat.emissiveIntensity=.18;
+  }
 
   // Main body
-  const bodyGeo=new THREE.BoxGeometry(w,h,d);
-  const bodyMat=new THREE.MeshLambertMaterial({color:colorHex});
-  const bodyMesh=new THREE.Mesh(bodyGeo,bodyMat);
+  const bodyMesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),bodyMat);
   bodyMesh.position.y=h/2;
-  bodyMesh.castShadow=true;
-  bodyMesh.receiveShadow=true;
-  group.add(bodyMesh);
+  bodyMesh.castShadow=true;bodyMesh.receiveShadow=true;
+  g.add(bodyMesh);
 
-  // Roof
-  const roofGeo=new THREE.BoxGeometry(w+.3,0.4,d+.3);
-  const roofMat=new THREE.MeshLambertMaterial({color:loc.roofColor});
-  const roofMesh=new THREE.Mesh(roofGeo,roofMat);
-  roofMesh.position.y=h+.2;
-  group.add(roofMesh);
+  // Horizontal floor-band trim
+  const trimC=new THREE.Color(colorHex).offsetHSL(0,0,-.09);
+  const trimMat=new THREE.MeshLambertMaterial({color:trimC});
+  const floors=Math.max(1,Math.floor(h/3.0));
+  for(let f=1;f<floors;f++){
+    const trim=new THREE.Mesh(new THREE.BoxGeometry(w+.12,.1,d+.12),trimMat);
+    trim.position.y=f*3.0;g.add(trim);
+  }
 
-  // Pointed roof for Sweden
+  // Windows — front, back, left, right
+  const wLitMat=new THREE.MeshLambertMaterial({color:0xFFEE99,emissive:new THREE.Color(0xFFCC44),emissiveIntensity:.28});
+  const wDarkMat=new THREE.MeshLambertMaterial({color:0x1A2C3A});
+  const wpcX=Math.max(1,Math.floor(w/2.8));
+  const wpcZ=Math.max(1,Math.floor(d/2.8));
+  for(let f=0;f<floors;f++){
+    const y=1.5+f*3.0;
+    // Front + back
+    for(let wi=0;wi<wpcX;wi++){
+      const wx=-w/2+(wi+.5)*(w/wpcX);
+      const lit=Math.random()>.3;
+      const wg=new THREE.BoxGeometry(.72,.9,.07);
+      const mf=new THREE.Mesh(wg,lit?wLitMat:wDarkMat);
+      mf.position.set(wx,y,d/2+.04);g.add(mf);
+      const mb=mf.clone();mb.position.z=-(d/2+.04);g.add(mb);
+    }
+    // Left + right
+    for(let wi=0;wi<wpcZ;wi++){
+      const wz=-d/2+(wi+.5)*(d/wpcZ);
+      const lit=Math.random()>.3;
+      const wg=new THREE.BoxGeometry(.07,.9,.72);
+      const ml=new THREE.Mesh(wg,lit?wLitMat:wDarkMat);
+      ml.position.set(w/2+.04,y,wz);g.add(ml);
+      const mr=ml.clone();mr.position.x=-(w/2+.04);g.add(mr);
+    }
+  }
+
+  // Parapet walls around rooftop
+  const parMat=new THREE.MeshLambertMaterial({color:locId==='sweden'?loc.roofColor:new THREE.Color(colorHex).offsetHSL(0,0,-.06)});
+  const parH=.55;
+  [[w,.3,0,d/2+.15],[w,.3,0,-(d/2+.15)],[.3,d,w/2+.15,0],[.3,d,-(w/2+.15),0]].forEach(([pw,pd,px,pz])=>{
+    const p=new THREE.Mesh(new THREE.BoxGeometry(pw,parH,pd),parMat);
+    p.position.set(px,h+parH/2,pz);g.add(p);
+  });
+
+  // === SWEDEN roof + detail ===
   if(locId==='sweden'){
-    const roofTip=new THREE.ConeGeometry(Math.min(w,d)*.6,h*.4,4);
-    const tipMesh=new THREE.Mesh(roofTip,roofMat);
-    tipMesh.position.y=h+.4+h*.2;
-    tipMesh.rotation.y=Math.PI/4;
-    group.add(tipMesh);
+    const roofMat=new THREE.MeshLambertMaterial({color:loc.roofColor});
+    if(Math.random()>.38){
+      // Pitched roof
+      const cone=new THREE.ConeGeometry(Math.min(w,d)*.62,h*.36,4);
+      const tip=new THREE.Mesh(cone,roofMat);
+      tip.position.y=h+h*.18;tip.rotation.y=Math.PI/4;g.add(tip);
+      // Chimney
+      const chiM=new THREE.MeshLambertMaterial({color:0x7A3220});
+      const ch=new THREE.Mesh(new THREE.BoxGeometry(.52,1.6,.52),chiM);
+      ch.position.set((Math.random()-.5)*w*.3,h+h*.28,(Math.random()-.5)*d*.3);g.add(ch);
+      // Chimney cap
+      const cap=new THREE.Mesh(new THREE.BoxGeometry(.78,.15,.78),chiM);
+      cap.position.set(ch.position.x,ch.position.y+.85,ch.position.z);g.add(cap);
+    } else {
+      const flat=new THREE.Mesh(new THREE.BoxGeometry(w+.18,.22,d+.18),roofMat);
+      flat.position.y=h+.11;g.add(flat);
+    }
+    if(loc.snowCaps){
+      const snowM=new THREE.MeshLambertMaterial({color:0xE8EEF2});
+      const snow=new THREE.Mesh(new THREE.BoxGeometry(w+.1,.16,d+.1),snowM);
+      snow.position.y=h+.32;g.add(snow);
+    }
+  } else {
+    // Flat roof slab
+    const flatM=new THREE.MeshLambertMaterial({color:loc.roofColor});
+    const flat=new THREE.Mesh(new THREE.BoxGeometry(w+.16,.28,d+.16),flatM);
+    flat.position.y=h+.14;g.add(flat);
   }
 
-  // Snow cap for Sweden
-  if(locId==='sweden'&&loc.snowCaps){
-    const snowGeo=new THREE.BoxGeometry(w+.1,.3,d+.1);
-    const snowMat=new THREE.MeshLambertMaterial({color:0xF0F4F8});
-    const snow=new THREE.Mesh(snowGeo,snowMat);
-    snow.position.y=h+.55;
-    group.add(snow);
-  }
-
-  // Windows
-  if(h>6){
-    const winMat=new THREE.MeshLambertMaterial({color:0xFFEE88,emissive:0xFFCC44,emissiveIntensity:.25});
-    const floors=Math.floor(h/3.2);
-    const wpc=Math.max(1,Math.floor(w/2.5));
-    for(let f=1;f<floors;f++){
-      for(let ww=0;ww<wpc;ww++){
-        if(Math.random()>.65) continue;
-        const wGeo=new THREE.BoxGeometry(.35,.5,.08);
-        const wMesh=new THREE.Mesh(wGeo,winMat);
-        wMesh.position.set(-w/2+.6+ww*(w/wpc),f*3.2+1,d/2+.05);
-        group.add(wMesh);
-        // back face too
-        const wMesh2=wMesh.clone();
-        wMesh2.position.z=-(d/2+.05);
-        group.add(wMesh2);
+  // === BEIRUT rooftop detail ===
+  if(locId==='beirut'){
+    // Water tank (50% chance)
+    if(Math.random()>.45){
+      const tkM=new THREE.MeshLambertMaterial({color:0x8A6840});
+      const tank=new THREE.Mesh(new THREE.CylinderGeometry(.72,.72,1.5,8),tkM);
+      const tx=(Math.random()-.5)*(w-2),tz=(Math.random()-.5)*(d-2);
+      tank.position.set(tx,h+1.1,tz);g.add(tank);
+      const legM=new THREE.MeshLambertMaterial({color:0x505050});
+      for(let ti=0;ti<4;ti++){
+        const lx=Math.cos(ti*Math.PI/2)*.5,lz=Math.sin(ti*Math.PI/2)*.5;
+        const leg=new THREE.Mesh(new THREE.BoxGeometry(.08,.55,.08),legM);
+        leg.position.set(tx+lx,h+.4,tz+lz);g.add(leg);
+      }
+    }
+    // Satellite dish (40% chance)
+    if(Math.random()>.55){
+      const dishM=new THREE.MeshLambertMaterial({color:0xCCCCCC});
+      const dish=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.06,10),dishM);
+      dish.rotation.x=Math.PI/4;
+      dish.position.set((Math.random()-.5)*(w-1.5),h+.6,(Math.random()-.5)*(d-1.5));g.add(dish);
+    }
+    // Balconies
+    if(h>10){
+      const balM=new THREE.MeshLambertMaterial({color:new THREE.Color(colorHex).offsetHSL(0,0,-.04)});
+      const railM=new THREE.MeshLambertMaterial({color:0x777777});
+      const nbBal=Math.floor(Math.random()*3)+1;
+      for(let bi=0;bi<nbBal;bi++){
+        const bf=Math.floor(1+Math.random()*(floors-1));
+        const slab=new THREE.Mesh(new THREE.BoxGeometry(w*.48,.14,1.3),balM);
+        slab.position.set(0,bf*3.0+.07,d/2+.65);g.add(slab);
+        const rail=new THREE.Mesh(new THREE.BoxGeometry(w*.48,.75,.06),railM);
+        rail.position.set(0,bf*3.0+.45,d/2+1.3);g.add(rail);
       }
     }
   }
 
-  // Dubai glass effect
-  if(locId==='dubai'&&h>25){
-    bodyMat.color.setHex(0xAABBCC);
-    bodyMat.emissive=new THREE.Color(0x002244);
-    bodyMat.emissiveIntensity=.15;
+  // === DUBAI rooftop detail ===
+  if(locId==='dubai'){
+    if(h>30){
+      // Tower setback near top
+      const sbH=h*.14;
+      const sbMat=bodyMat.clone();sbMat.color.offsetHSL(0,0,.06);
+      const sb=new THREE.Mesh(new THREE.BoxGeometry(w*.72,sbH,d*.72),sbMat);
+      sb.position.y=h-sbH/2;g.add(sb);
+      // Antenna spire
+      const antM=new THREE.MeshLambertMaterial({color:0xCCCCCC});
+      const ant=new THREE.Mesh(new THREE.CylinderGeometry(.1,.25,h*.18,6),antM);
+      ant.position.y=h+h*.09;g.add(ant);
+    }
+    // Balconies on mid-high floors
+    if(h>16&&Math.random()>.38){
+      const balM=new THREE.MeshLambertMaterial({color:0x7A9488});
+      const nbBal=Math.floor(Math.random()*4)+2;
+      for(let bi=0;bi<nbBal;bi++){
+        const bf=2+bi*Math.floor((floors-2)/(nbBal));
+        const slab=new THREE.Mesh(new THREE.BoxGeometry(w*.62,.18,1.4),balM);
+        slab.position.set(0,bf*3.0+.09,d/2+.7);g.add(slab);
+      }
+    }
   }
 
-  addToWorld(group);
-  return{group,bodyMesh,bodyMat,health:3,maxHealth:3,isDestroyed:false,
+  // AC units (all maps)
+  if(Math.random()>.44){
+    const acM=new THREE.MeshLambertMaterial({color:0x848484});
+    const nAC=Math.floor(Math.random()*3)+1;
+    for(let ai=0;ai<nAC;ai++){
+      const ac=new THREE.Mesh(new THREE.BoxGeometry(.95,.52,.62),acM);
+      ac.position.set((Math.random()-.5)*(w-1.8),h+.56,(Math.random()-.5)*(d-1.8));g.add(ac);
+    }
+  }
+
+  addToWorld(g);
+  return{group:g,bodyMesh,bodyMat,health:3,maxHealth:3,isDestroyed:false,
     h,pos:{x,z},originalColor:colorHex,w,d};
 }
 
-function buildPineTrees(loc){
-  const trunkMat=new THREE.MeshLambertMaterial({color:0x5A3A1A});
+function buildPineTrees(loc,locId){
+  const trunkMat=new THREE.MeshLambertMaterial({color:0x4E3018});
   const leafMat=new THREE.MeshLambertMaterial({color:loc.treeColor});
-  const snowMat=new THREE.MeshLambertMaterial({color:0xEEF2F6});
-  for(let i=0;i<28;i++){
-    const tx=(Math.random()-.5)*150;
-    const tz=(Math.random()-.5)*150;
-    if(Math.sqrt(tx*tx+tz*tz)<20) continue;
+  const snowMat=new THREE.MeshLambertMaterial({color:0xE4EAF0});
+  // Street-side positions + scattered
+  const treePos=[
+    // Along main E-W road sides
+    [-60,9],[-48,9],[-36,9],[-24,9],[24,9],[36,9],[48,9],[60,9],
+    [-60,-9],[-48,-9],[-36,-9],[-24,-9],[24,-9],[36,-9],[48,-9],[60,-9],
+    // Along N-S road
+    [9,40],[9,22],[-9,40],[-9,22],[9,-40],[9,-22],[-9,-40],[-9,-22],
+    // Outer areas
+    [-52,52],[-38,52],[38,52],[52,52],
+    [-52,-52],[-38,-52],[38,-52],[52,-52],
+    [-70,20],[-70,-20],[70,20],[70,-20],
+    [-35,66],[35,66],[-35,-66],[35,-66],
+  ];
+  treePos.forEach(([tx,tz])=>{
     const g=new THREE.Group();
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,1.8,6),trunkMat);
-    trunk.position.y=.9; g.add(trunk);
-    const h=3+Math.random()*3;
-    for(let t=0;t<3;t++){
-      const r=(3-t)*.7;
-      const cone=new THREE.Mesh(new THREE.ConeGeometry(r,r*1.1,7),leafMat);
-      cone.position.y=1.6+t*r*.6; g.add(cone);
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,1.9,6),trunkMat);
+    trunk.position.y=.95;g.add(trunk);
+    const tiers=3;
+    for(let t=0;t<tiers;t++){
+      const r=(tiers-t)*.82;
+      const cone=new THREE.Mesh(new THREE.ConeGeometry(r,r*1.15,7),leafMat);
+      cone.position.y=1.8+t*r*.62;g.add(cone);
+      if(loc.snowCaps){
+        const scr=(tiers-t)*.22;
+        const sc=new THREE.Mesh(new THREE.ConeGeometry(scr,.7,7),snowMat);
+        sc.position.y=1.8+t*r*.62+r*.5;g.add(sc);
+      }
     }
-    // Snow on top
-    const sc=new THREE.Mesh(new THREE.ConeGeometry(.4,1.2,7),snowMat);
-    sc.position.y=1.6+3*.7*2+.6; g.add(sc);
-    g.position.set(tx,0,tz);
+    g.position.set(tx+(Math.random()-.5)*1.5,0,tz+(Math.random()-.5)*1.5);
     addToWorld(g);
-  }
+  });
 }
 
-function buildPalmTrees(loc){
-  const trunkMat=new THREE.MeshLambertMaterial({color:0x8B6914});
-  const leafMat=new THREE.MeshLambertMaterial({color:0x44AA33});
-  for(let i=0;i<18;i++){
-    const tx=(Math.random()-.5)*130;
-    const tz=(Math.random()-.5)*130;
-    if(Math.sqrt(tx*tx+tz*tz)<18) continue;
-    const g=new THREE.Group();
-    const h=4+Math.random()*3;
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.28,h,6),trunkMat);
-    trunk.position.y=h/2; g.add(trunk);
-    for(let l=0;l<6;l++){
-      const leaf=new THREE.Mesh(new THREE.BoxGeometry(.18,1.4,.06),leafMat);
-      const angle=l/6*Math.PI*2;
-      leaf.position.set(Math.cos(angle)*1.1,h+.1,Math.sin(angle)*1.1);
-      leaf.rotation.z=Math.cos(angle)*.6;
-      leaf.rotation.x=Math.sin(angle)*.6;
-      g.add(leaf);
-    }
-    g.position.set(tx,0,tz);
-    addToWorld(g);
+function buildPalmTrees(loc,locId){
+  const trunkMat=new THREE.MeshLambertMaterial({color:0x8C6C1E});
+  const leafMat=new THREE.MeshLambertMaterial({color:0x3CA42E});
+  // Positioned along boulevards and plazas
+  let palmPos=[];
+  if(locId==='beirut'){
+    // Along main roads
+    for(let x=-65;x<=65;x+=14) palmPos.push([x,8.5],[x,-8.5]);
+    // Scattered in blocks
+    [[-48,24],[-34,28],[-20,46],[20,46],[34,28],[48,24],
+     [-48,-24],[-34,-28],[20,-46],[34,-28],[48,-24],[-20,-46],
+     [-68,14],[68,14],[-68,-14],[68,-14]].forEach(p=>palmPos.push(p));
+  } else { // dubai
+    // Along central boulevard median
+    for(let x=-78;x<=78;x+=16) palmPos.push([x,1.5],[x,-1.5]);
+    // Along side roads
+    for(let z=-70;z<=70;z+=18) palmPos.push([11.5,z],[-11.5,z]);
+    // Plazas
+    [[-30,44],[0,44],[30,44],[-30,-65],[0,-66],[30,-65],
+     [-55,0],[55,0]].forEach(p=>palmPos.push(p));
   }
+  palmPos.forEach(([tx,tz])=>{
+    const g=new THREE.Group();
+    const ph=5+Math.random()*3.5;
+    const lean=new THREE.Group();
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.26,ph,7),trunkMat);
+    trunk.position.y=ph/2;lean.add(trunk);
+    // Fronds
+    for(let l=0;l<7;l++){
+      const angle=l/7*Math.PI*2;
+      const frond=new THREE.Mesh(new THREE.BoxGeometry(.14,1.6,.05),leafMat);
+      frond.position.set(Math.cos(angle)*1.2,ph+.2,Math.sin(angle)*1.2);
+      frond.rotation.z=Math.cos(angle)*.55;frond.rotation.x=Math.sin(angle)*.55;
+      lean.add(frond);
+      // Secondary frond tip
+      const tip=new THREE.Mesh(new THREE.BoxGeometry(.08,1.0,.04),leafMat);
+      tip.position.set(Math.cos(angle)*2.1,ph-.4,Math.sin(angle)*2.1);
+      tip.rotation.z=Math.cos(angle)*.8;tip.rotation.x=Math.sin(angle)*.8;
+      lean.add(tip);
+    }
+    lean.rotation.z=(Math.random()-.5)*.12;
+    g.add(lean);
+    g.position.set(tx+(Math.random()-.5)*1.8,0,tz+(Math.random()-.5)*1.8);
+    addToWorld(g);
+  });
 }
 
 function buildSkyscraperDetails(loc){
-  // Extra tall landmark skyscraper
-  const cx=30,cz=-20;
+  // Dubai landmark tower cluster — signature tall tower
+  const cx=-8,cz=-34;
   const h=loc.maxH;
   const g=new THREE.Group();
-  const mat=new THREE.MeshLambertMaterial({color:0x99BBDD,emissive:0x002266,emissiveIntensity:.2});
+  const mat=new THREE.MeshLambertMaterial({color:0x8AAABB,emissive:new THREE.Color(0x001A33),emissiveIntensity:.22});
+  // Base podium
+  const pod=new THREE.Mesh(new THREE.BoxGeometry(20,8,20),
+    new THREE.MeshLambertMaterial({color:0xCCBBA0}));
+  pod.position.y=4;pod.castShadow=true;g.add(pod);
+  // Main tower
   const body=new THREE.Mesh(new THREE.BoxGeometry(14,h,14),mat);
-  body.position.y=h/2; body.castShadow=true;
-  g.add(body);
+  body.position.y=h/2+8;body.castShadow=true;g.add(body);
+  // Mid setback
+  const mid=new THREE.Mesh(new THREE.BoxGeometry(10,h*.3,10),mat.clone());
+  mid.position.y=h*.7+8;g.add(mid);
   // Spire
-  const spire=new THREE.Mesh(new THREE.CylinderGeometry(.3,1.2,h*.25,8),
-    new THREE.MeshLambertMaterial({color:0xCCEEFF}));
-  spire.position.y=h+h*.125; g.add(spire);
-  // Top light
-  const tl=new THREE.PointLight(0xFF4444,.8,30);
-  tl.position.y=h+h*.28; g.add(tl);
+  const spire=new THREE.Mesh(new THREE.CylinderGeometry(.22,1.1,h*.28,8),
+    new THREE.MeshLambertMaterial({color:0xDDEEFF,emissive:new THREE.Color(0x4488AA),emissiveIntensity:.3}));
+  spire.position.y=h*1.14+8;g.add(spire);
+  // Beacon light
+  const tl=new THREE.PointLight(0xFF4444,.9,35);tl.position.y=h*1.3+8;g.add(tl);
+  // Horizontal band details
+  const bandM=new THREE.MeshLambertMaterial({color:0xCCDDEE});
+  for(let f=2;f<Math.floor(h/4);f++){
+    const band=new THREE.Mesh(new THREE.BoxGeometry(14.3,.15,14.3),bandM);
+    band.position.y=f*4+8;g.add(band);
+  }
   g.position.set(cx,0,cz);
   addToWorld(g);
-  // Register as building
   buildings.push({group:g,bodyMesh:body,bodyMat:mat,health:5,maxHealth:5,
-    isDestroyed:false,h,pos:{x:cx,z:cz},originalColor:0x99BBDD,w:14,d:14});
+    isDestroyed:false,h:h+8,pos:{x:cx,z:cz},originalColor:0x8AAABB,w:14,d:14});
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  STREETS & PROPS
+// ═══════════════════════════════════════════════════════════════
+function buildRoads(locId){
+  const loc=LOCS[locId];
+  const roadMat=new THREE.MeshLambertMaterial({color:loc.roadColor||0x484848});
+  const swMat=new THREE.MeshLambertMaterial({color:loc.sidewalkColor||0x888888});
+  const lineM=new THREE.MeshLambertMaterial({color:0xEEEE77});
+  const crossM=new THREE.MeshLambertMaterial({color:0xDDDDCC});
+
+  function road(x,z,w,d){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),roadMat);
+    m.rotation.x=-Math.PI/2;m.position.set(x,.01,z);addToWorld(m);
+  }
+  function sidewalk(x,z,w,d){
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w,.13,d),swMat);
+    m.position.set(x,.065,z);addToWorld(m);
+  }
+  function dashLine(x,z,rot){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(.45,3.8),lineM);
+    m.rotation.x=-Math.PI/2;m.rotation.z=rot||0;m.position.set(x,.02,z);addToWorld(m);
+  }
+
+  if(locId==='sweden'){
+    road(0,0,160,10);road(0,0,10,140);
+    road(-31,24,26,7);road(31,24,26,7);
+    road(-31,-24,26,7);road(31,-24,26,7);
+    sidewalk(0,6.5,160,2.2);sidewalk(0,-6.5,160,2.2);
+    sidewalk(6.5,0,2.2,140);sidewalk(-6.5,0,2.2,140);
+    // Lane dashes on main roads
+    for(let lx=-72;lx<=72;lx+=10) dashLine(lx,0,0);
+    for(let lz=-64;lz<=64;lz+=10) dashLine(0,lz,Math.PI/2);
+  } else if(locId==='beirut'){
+    road(0,0,160,10);road(0,0,8,120);
+    road(-28,20,36,6);road(28,20,36,6);
+    road(-28,-20,36,6);road(28,-20,36,6);
+    road(-28,0,8,40);road(28,0,8,40);
+    sidewalk(0,6.5,160,2.2);sidewalk(0,-6.5,160,2.2);
+    sidewalk(6,0,2.2,120);sidewalk(-6,0,2.2,120);
+    for(let lx=-72;lx<=72;lx+=10) dashLine(lx,0,0);
+    for(let lz=-55;lz<=55;lz+=10) dashLine(0,lz,Math.PI/2);
+  } else { // dubai
+    road(0,0,180,16);road(0,0,16,160);
+    road(0,26,180,8);road(0,-26,180,8);
+    road(-40,0,8,55);road(40,0,8,55);
+    // Landscaped median strips
+    const medMat=new THREE.MeshLambertMaterial({color:0x527A3A});
+    [[0,2.8,180,.14,3],[0,-2.8,180,.14,3]].forEach(([x,z,w,h,d])=>{
+      const med=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),medMat);
+      med.position.set(x,h/2,z);addToWorld(med);
+    });
+    sidewalk(0,11,180,3.5);sidewalk(0,-11,180,3.5);
+    sidewalk(11,0,3.5,160);sidewalk(-11,0,3.5,160);
+    for(let lx=-85;lx<=85;lx+=12) dashLine(lx,0,0);
+    for(let lz=-75;lz<=75;lz+=12) dashLine(0,lz,Math.PI/2);
+  }
+}
+
+function buildStreetlights(locId){
+  const poleMat=new THREE.MeshLambertMaterial({color:0x828282});
+  const bulbMat=new THREE.MeshLambertMaterial({color:0xFFEECC,emissive:new THREE.Color(0xFFDD99),emissiveIntensity:.85});
+
+  function lamp(x,z,armDir){
+    const g=new THREE.Group();
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,6.5,6),poleMat);
+    pole.position.y=3.25;g.add(pole);
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(2,.1,.1),poleMat);
+    arm.position.set(armDir*1,6.6,0);g.add(arm);
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.22,6,4),bulbMat);
+    bulb.position.set(armDir*2,6.4,0);g.add(bulb);
+    g.position.set(x,0,z);addToWorld(g);
+  }
+
+  if(locId==='sweden'){
+    for(let x=-70;x<=70;x+=18){lamp(x,7,1);lamp(x,-7,-1);}
+    for(let z=-62;z<=62;z+=18){lamp(7,z,1);lamp(-7,z,-1);}
+  } else if(locId==='beirut'){
+    for(let x=-72;x<=72;x+=16){lamp(x,7,1);lamp(x,-7,-1);}
+    for(let z=-56;z<=56;z+=16){lamp(7,z,1);lamp(-7,z,-1);}
+  } else {
+    for(let x=-82;x<=82;x+=20){lamp(x,12,1);lamp(x,-12,-1);}
+    for(let z=-72;z<=72;z+=20){lamp(12,z,1);lamp(-12,z,-1);}
+    // Median lights
+    for(let x=-80;x<=80;x+=24){lamp(x,0,1);}
+  }
+}
+
+function buildBackgroundSkyline(loc,locId){
+  const count=28;
+  for(let i=0;i<count;i++){
+    const angle=(i/count)*Math.PI*2+(Math.random()-.5)*.2;
+    const dist=82+Math.random()*28;
+    const bx=Math.cos(angle)*dist,bz=Math.sin(angle)*dist;
+    const bw=10+Math.random()*18,bd=8+Math.random()*14;
+    let bh;
+    if(locId==='dubai') bh=14+Math.random()*38;
+    else if(locId==='beirut') bh=8+Math.random()*18;
+    else bh=5+Math.random()*12;
+    const silCol=locId==='dubai'?0x4E6070:locId==='beirut'?0x7A6848:0x485258;
+    const m=new THREE.MeshLambertMaterial({color:silCol,transparent:true,opacity:.6});
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(bw,bh,bd),m);
+    mesh.position.set(bx,bh/2,bz);addToWorld(mesh);
+  }
+}
+
+function buildStreetCars(locId){
+  const palettes={
+    sweden:[0x22448A,0xAA2020,0x888888,0xEEEECC,0x336633],
+    beirut:[0xBB8833,0x44551E,0x886644,0xCCBB88,0x883333],
+    dubai: [0x1E1E1E,0xCCBB99,0xAA8830,0x334455,0xEEEEEE],
+  };
+  const cols=palettes[locId];
+
+  function car(x,z,ry){
+    const col=cols[Math.floor(Math.random()*cols.length)];
+    const g=new THREE.Group();
+    const bM=new THREE.MeshLambertMaterial({color:col});
+    const body=new THREE.Mesh(new THREE.BoxGeometry(2.2,.88,4.4),bM);
+    body.position.y=.64;g.add(body);
+    const top=new THREE.Mesh(new THREE.BoxGeometry(1.8,.68,2.1),bM);
+    top.position.set(0,1.22,-.25);g.add(top);
+    const wM=new THREE.MeshLambertMaterial({color:0x334455,transparent:true,opacity:.75});
+    const winF=new THREE.Mesh(new THREE.BoxGeometry(1.6,.52,.08),wM);
+    winF.position.set(0,1.24,.85);g.add(winF);
+    const whM=new THREE.MeshLambertMaterial({color:0x181818});
+    [[-0.88,1.4],[-0.88,-1.4],[0.88,1.4],[0.88,-1.4]].forEach(([wx,wz])=>{
+      const wh=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.2,8),whM);
+      wh.rotation.z=Math.PI/2;wh.position.set(wx,.28,wz);g.add(wh);
+    });
+    g.position.set(x,.0,z);g.rotation.y=ry;addToWorld(g);
+  }
+
+  const carData={
+    sweden:[[-16,7.5,0],[6,7.5,.1],[32,-7.5,Math.PI],[-10,-7.5,Math.PI],
+            [22,6.5,0],[-42,6.5,0],[7,22,Math.PI/2],[7,-32,-Math.PI/2],
+            [-28,7.5,0],[44,-7.5,Math.PI]],
+    beirut:[[-18,6.5,0],[8,6.5,.05],[-5,-7,Math.PI],[28,-7,Math.PI],
+            [-30,6.5,0],[15,28,Math.PI/2],[-10,-28,-Math.PI/2],[7,-30,-Math.PI/2],
+            [42,6.5,0],[-44,-7,Math.PI]],
+    dubai: [[-30,12,0],[0,12,0],[30,12,0],[-15,-12,Math.PI],[15,-12,Math.PI],
+            [10,29,Math.PI/2],[-10,-27,-Math.PI/2],[42,12,0],[-42,12,0],
+            [0,-27,-Math.PI/2],[55,12,0],[-55,12,0]],
+  };
+  (carData[locId]||[]).forEach(([x,z,ry])=>car(x,z,ry));
+}
+
+function buildStreetProps(locId){
+  const darkMat=new THREE.MeshLambertMaterial({color:0x222222});
+
+  function barrier(x,z,ry){
+    const m=new THREE.MeshLambertMaterial({color:locId==='dubai'?0xCCCCCC:0xCC8800});
+    const g=new THREE.Group();
+    const b=new THREE.Mesh(new THREE.BoxGeometry(2.8,.7,.4),m);
+    b.position.y=.35;g.add(b);
+    g.position.set(x,0,z);g.rotation.y=ry||0;addToWorld(g);
+  }
+  function bench(x,z,ry){
+    const woodM=new THREE.MeshLambertMaterial({color:0x8B5E2A});
+    const metalM=new THREE.MeshLambertMaterial({color:0x445566});
+    const g=new THREE.Group();
+    const seat=new THREE.Mesh(new THREE.BoxGeometry(2,.12,0.52),woodM);
+    seat.position.y=.52;g.add(seat);
+    [-0.8,0.8].forEach(lx=>{
+      const leg=new THREE.Mesh(new THREE.BoxGeometry(.08,.5,.08),metalM);
+      leg.position.set(lx,.25,0);g.add(leg);
+    });
+    const back=new THREE.Mesh(new THREE.BoxGeometry(2,.55,.08),woodM);
+    back.position.set(0,.88,.22);g.add(back);
+    g.position.set(x,0,z);g.rotation.y=ry||0;addToWorld(g);
+  }
+  function trashBin(x,z){
+    const m=new THREE.MeshLambertMaterial({color:0x336633});
+    const b=new THREE.Mesh(new THREE.CylinderGeometry(.24,.2,.72,8),m);
+    b.position.set(x,.36,z);addToWorld(b);
+  }
+  function bollard(x,z){
+    const m=new THREE.MeshLambertMaterial({color:0x333344});
+    const b=new THREE.Mesh(new THREE.CylinderGeometry(.15,.18,.8,7),m);
+    b.position.set(x,.4,z);addToWorld(b);
+  }
+
+  if(locId==='sweden'){
+    bench(-8,7.8,0);bench(8,7.8,Math.PI);bench(-8,-7.8,0);bench(8,-7.8,Math.PI);
+    trashBin(-14,7.5);trashBin(14,7.5);trashBin(-14,-7.5);trashBin(14,-7.5);
+    barrier(-12,6.5,0);barrier(12,-6.5,0);
+    [-5,-3,3,5].forEach(x=>bollard(x,6.5));
+    [-5,-3,3,5].forEach(x=>bollard(x,-6.5));
+    // Snow piles at curbs
+    const snowM=new THREE.MeshLambertMaterial({color:0xDEE6EC});
+    [[-20,7.5],[20,7.5],[-40,7.5],[40,7.5],[-20,-7.5],[20,-7.5],[-40,-7.5],[40,-7.5]].forEach(([x,z])=>{
+      const pile=new THREE.Mesh(new THREE.SphereGeometry(1.2+Math.random()*.5,7,4),snowM);
+      pile.scale.y=.38;pile.position.set(x+Math.random()-.5,.05,z);addToWorld(pile);
+    });
+  } else if(locId==='beirut'){
+    bench(-10,7.5,0);bench(10,7.5,Math.PI);bench(-10,-7.5,0);bench(10,-7.5,Math.PI);
+    trashBin(-16,7);trashBin(16,7);trashBin(-16,-7);trashBin(16,-7);
+    barrier(-8,6.5,0);barrier(8,-6.5,0);barrier(-30,6.5,.1);barrier(30,-6.5,.1);
+    [-6,-4,4,6].forEach(x=>bollard(x,6.8));
+    [-6,-4,4,6].forEach(x=>bollard(x,-6.8));
+    // Concrete dividers
+    const concM=new THREE.MeshLambertMaterial({color:0xAA9966});
+    [[-22,0],[22,0],[-22,20],[22,20],[-22,-20],[22,-20]].forEach(([x,z])=>{
+      const div=new THREE.Mesh(new THREE.BoxGeometry(.5,1.0,3.5),concM);
+      div.position.set(x,.5,z);addToWorld(div);
+    });
+  } else { // dubai
+    bench(-12,12,0);bench(12,12,Math.PI);bench(-12,-12,0);bench(12,-12,Math.PI);
+    trashBin(-18,11.5);trashBin(18,11.5);trashBin(-18,-11.5);trashBin(18,-11.5);
+    // Luxury bollards along boulevard
+    for(let x=-78;x<=78;x+=12){bollard(x,11.5);bollard(x,-11.5);}
+    barrier(-45,11,0);barrier(45,-11,0);
+    // Open plaza tiles near tower cluster
+    const tileM=new THREE.MeshLambertMaterial({color:0xD8D0C0});
+    const plaza=new THREE.Mesh(new THREE.PlaneGeometry(28,28),tileM);
+    plaza.rotation.x=-Math.PI/2;plaza.position.set(0,-56,.02);addToWorld(plaza);
+    // Plaza grid lines
+    const lineM2=new THREE.MeshLambertMaterial({color:0xC0B8A8});
+    for(let lx=-12;lx<=12;lx+=4){
+      const ln=new THREE.Mesh(new THREE.PlaneGeometry(.1,28),lineM2);
+      ln.rotation.x=-Math.PI/2;ln.position.set(lx,-56,.03);addToWorld(ln);
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════

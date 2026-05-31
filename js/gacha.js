@@ -539,13 +539,13 @@ function _sgLerpAngle(a,b,t){let d=b-a;while(d>Math.PI)d-=Math.PI*2;while(d<-Mat
 
 // Camera keyframes: [{t, pos:[x,y,z], look:[x,y,z]}]
 const _SG_CAM_PATH=[
-  {t:0,   pos:[0,  18, 28],  look:[0, 5,  0]},
-  {t:1.5, pos:[12, 24, 12],  look:[4, 24,-5]},
-  {t:2.8, pos:[4,  2.5,7],   look:[0, 1.2,0]},
-  {t:4.0, pos:[-1.5,2.2,4],  look:[4, 22,-5]},
-  {t:5.0, pos:[1,  1.5,3.5], look:[3, 14,-4]},
-  {t:5.7, pos:[9,  8, 14],   look:[3, 14,-4]},
-  {t:7.0, pos:[0,  6, 12],   look:[0, 2,  0]},
+  {t:0,    pos:[0,  18, 28],  look:[0, 5,  0]},
+  {t:2.2,  pos:[12, 24, 12],  look:[4, 24,-5]},
+  {t:4.2,  pos:[4,  2.5,7],   look:[0, 1.2,0]},
+  {t:5.8,  pos:[-1.5,2.2,4],  look:[4, 22,-5]},
+  {t:7.2,  pos:[1,  1.5,3.5], look:[3, 14,-4]},
+  {t:8.5,  pos:[9,  8, 14],   look:[3, 14,-4]},
+  {t:10.5, pos:[0,  6, 12],   look:[0, 2,  0]},
 ];
 
 function _sgGetCamFrame(elapsed){
@@ -709,11 +709,11 @@ function _sgPlayAnimation(profile,results){
 
     const stageLabels=[
       {t:0,   text:'📍 '+profile.map},
-      {t:1.5, text:'⚠ INCOMING — '+profile.missile},
-      {t:2.8, text:''},
-      {t:4.0, text:'◉ TARGET LOCKED'},
-      {t:4.8, text:'▶ INTERCEPTOR DEPLOYED'},
-      {t:5.7, text:''},
+      {t:2.2, text:'⚠ INCOMING — '+profile.missile},
+      {t:4.2, text:''},
+      {t:5.8, text:'◉ TARGET LOCKED'},
+      {t:7.2, text:'▶ INTERCEPTOR DEPLOYED'},
+      {t:8.5, text:''},
     ];
 
     function tick(time){
@@ -731,12 +731,12 @@ function _sgPlayAnimation(profile,results){
       // Camera
       const frame=_sgGetCamFrame(elapsed);
       tmpPos.set(...frame.pos);tmpLook.set(...frame.look);
-      camPos.lerp(tmpPos,0.07);camLook.lerp(tmpLook,0.07);
+      camPos.lerp(tmpPos,0.05);camLook.lerp(tmpLook,0.05);
       camera.position.copy(camPos);camera.lookAt(camLook);
 
       // Missile fall
-      if(!missileHit&&elapsed<5.5){
-        const mt=_sgEaseIn(Math.max(0,(elapsed-0.3)/4.8));
+      if(!missileHit&&elapsed<8.0){
+        const mt=_sgEaseIn(Math.max(0,(elapsed-0.3)/7.0));
         missileGroup.position.lerpVectors(missileStart,missileEnd,mt);
         missileGroup.rotation.y+=dt*0.6;
         if(richardGroup){
@@ -749,10 +749,10 @@ function _sgPlayAnimation(profile,results){
       if(richardGroup) richardGroup.position.y=0.25+Math.sin(elapsed*1.8)*0.025;
 
       // Rim light intensifies as missile approaches
-      if(elapsed>2.5&&!missileHit) rimLight.intensity=Math.min(2.5,(elapsed-2.5)*0.8);
+      if(elapsed>3.5&&!missileHit) rimLight.intensity=Math.min(2.5,(elapsed-3.5)*0.6);
 
       // Fire projectile
-      if(elapsed>4.7&&!projFired){
+      if(elapsed>7.0&&!projFired){
         projFired=true;projGroup.visible=true;
         const startPos=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);
         projGroup.position.copy(startPos);
@@ -785,7 +785,7 @@ function _sgPlayAnimation(profile,results){
         if(profile.special&&expT<0.5) camera.rotation.z=Math.sin(expT*40)*0.008*(0.5-expT);
       }
 
-      if(elapsed>7.5||(missileHit&&expT>1.8)){cleanup();showResults();}
+      if(elapsed>12.0||(missileHit&&expT>2.8)){cleanup();showResults();}
       renderer.render(sc,camera);
     }
 
@@ -830,16 +830,16 @@ function _sgCssFallbackAnim(overlay,profile,results,resolve){
   (async()=>{
     stage.className='sg-anim-stage sg-stage-alert';
     stage.innerHTML=`<div class="sg-anim-alert-ring"></div><div class="sg-anim-alert-txt">⚠ INCOMING THREAT</div><div class="sg-anim-loc">📍 ${profile.map}</div>`;
-    await wait(900);
+    await wait(1800);
     stage.className='sg-anim-stage sg-stage-lock';
     stage.innerHTML=`<div class="sg-anim-lock-outer"></div><div class="sg-anim-lock-inner"></div><div class="sg-anim-lock-txt">◉ TARGET LOCKED</div>`;
-    await wait(900);
+    await wait(1800);
     stage.className='sg-anim-stage sg-stage-fire';
     stage.innerHTML=`<div class="sg-anim-fire-burst" style="--ec:${profile.expCol}"></div><div class="sg-anim-fire-txt">INTERCEPTOR DEPLOYED</div>`;
-    await wait(700);
+    await wait(1400);
     stage.className='sg-anim-stage sg-stage-exp';
     stage.innerHTML=`<div class="sg-anim-exp-ring1" style="--ec:${profile.expCol}"></div><div class="sg-anim-exp-ring2" style="--ec:${profile.expCol}"></div><div class="sg-anim-exp-txt" style="color:${profile.expCol}">INTERCEPT CONFIRMED</div>${profile.special?'<div class="sg-anim-special">✦ ANOMALY DETECTED ✦</div>':''}<div class="sg-anim-rar-flash" style="color:${profile.flashCol}">${profile.label}</div>`;
-    await wait(1100);
+    await wait(2500);
     // Show results inline
     overlay.innerHTML='';overlay.className='sg-summon-overlay';
     const hdr=document.createElement('div');hdr.className='sg-res-hdr';

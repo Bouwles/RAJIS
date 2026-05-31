@@ -553,16 +553,7 @@ function deployFromLobby(){
   } else {
     const loc=saveData.locId||'beirut';
     showDeployOverlay(loc,'solo',1,()=>{
-      saveData=Object.assign(defaultSave(),{locId:loc,
-        currency:saveData.currency, unlocks:saveData.unlocks,
-        equippedWeapons:saveData.equippedWeapons,
-        upgrades:saveData.upgrades, gadgets:saveData.gadgets,
-        hasCyberBullet:saveData.hasCyberBullet, hasRajpnFist:saveData.hasRajpnFist,
-        bpXP:saveData.bpXP, bpLevel:saveData.bpLevel,
-        customization:saveData.customization,
-        waveRecord:saveData.waveRecord, totalScore:saveData.totalScore,
-        totalIntercepted:saveData.totalIntercepted, totalShotsFired:saveData.totalShotsFired,
-        totalWaves:saveData.totalWaves, totalBossKills:saveData.totalBossKills});
+      saveData.locId=loc;
       saveSave();
       startGame(loc,1);
     });

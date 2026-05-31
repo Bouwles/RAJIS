@@ -113,6 +113,7 @@
     <button class="rl-tab" data-screen="friendsScreen" onclick="renderFriendsScreen();showScreen('friendsScreen')">FRIENDS <span id="rlFriendBadge" class="nav-badge" style="display:none"></span></button>
     <button class="rl-tab" data-screen="lockerScreen" onclick="buildLockerScreen('skins');showScreen('lockerScreen')">LOCKER</button>
     <button class="rl-tab" data-screen="itemShopScreen" onclick="buildItemShop();showScreen('itemShopScreen')">ITEM SHOP</button>
+    <button class="rl-tab" data-screen="summonScreen" onclick="buildSummonScreen();showScreen('summonScreen')">✦ SUMMON</button>
     <button class="rl-tab" data-screen="weaponsScreen" onclick="renderWeaponsScreen();showScreen('weaponsScreen')">WEAPONS</button>
     <button class="rl-tab" data-screen="shopScreen" onclick="buildShop();showScreen('shopScreen')">ARMORY</button>
     <button class="rl-tab" data-screen="statsScreen" onclick="buildStatsScreen();showScreen('statsScreen')">PROFILE</button>
@@ -394,25 +395,6 @@
   <div id="coopLbRows"></div>
 </div>
 <canvas id="minimap" width="160" height="160"></canvas>
-<div id="modMenu">
-  <div class="mod-title">// LLOYD MOD MENU //</div>
-  <div class="mod-opt" id="modOptAimbot">
-    <span class="mod-opt-name">Aimbot (nearest target)</span>
-    <div class="mod-toggle" id="togAimbot"></div>
-  </div>
-  <div class="mod-opt" id="modOptInfAmmo">
-    <span class="mod-opt-name">Infinite Ammo</span>
-    <div class="mod-toggle" id="togInfAmmo"></div>
-  </div>
-  <div class="mod-opt" id="modOptGod">
-    <span class="mod-opt-name">God Mode</span>
-    <div class="mod-toggle" id="togGod"></div>
-  </div>
-  <div style="display:flex;justify-content:center;padding:10px 0 2px;">
-    <button class="mod-btn" id="btnModCurrency">+999,999 CREDITS</button>
-  </div>
-  <div class="mod-close-hint">ESC to close</div>
-</div>
 
 <!-- PAUSE -->
 <div id="pauseMenu" class="screen">
@@ -438,6 +420,32 @@
       </div>
       <button class="menu-btn btn-secondary" id="btnChangeCallsign" style="width:100%;margin:0 0 8px;font-size:.88em;" onclick="showUsernamePickerForChange()">Change Callsign</button>
       <button class="menu-btn settings-logout-btn" id="btnLogout">Log Out</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-label">Codes</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="settingsCodeInput" type="text" placeholder="ENTER CODE…"
+          style="flex:1;background:rgba(255,255,255,.07);border:1px solid #334;border-radius:6px;
+          color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.92em;padding:9px 12px;
+          outline:none;letter-spacing:.1em;text-transform:uppercase" />
+        <button class="menu-btn btn-secondary" onclick="redeemCode()" style="margin:0;padding:10px 20px;font-size:.88em;flex-shrink:0">REDEEM</button>
+      </div>
+      <div id="settingsCodeFeedback" style="font-size:.8em;margin-top:6px;min-height:1.2em;color:#888;font-family:'Rajdhani',sans-serif;letter-spacing:.07em;text-transform:uppercase"></div>
+    </div>
+    <div class="settings-section save-diag-panel" id="saveDiagPanel">
+      <div class="settings-section-label">Save Diagnostics</div>
+      <div class="save-diag-row"><span>Firebase</span><span id="diagFirebase">—</span></div>
+      <div class="save-diag-row"><span>UID</span><span id="diagUID">—</span></div>
+      <div class="save-diag-row"><span>Outfits owned</span><span id="diagOutfits">—</span></div>
+      <div class="save-diag-row"><span>Weapon camos</span><span id="diagCamos" style="font-size:.75em;word-break:break-all;">—</span></div>
+      <div class="save-diag-row"><span>Equipped outfit</span><span id="diagEquipped">—</span></div>
+      <div class="save-diag-row"><span>Equipped camos</span><span id="diagEquipCamos" style="font-size:.75em;word-break:break-all;">—</span></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;justify-content:center;">
+        <button class="menu-btn btn-secondary" onclick="diagRefreshSave()" style="margin:0;padding:8px 16px;font-size:.78em;">Sync Firebase</button>
+        <button class="menu-btn btn-secondary" onclick="diagNormalize()" style="margin:0;padding:8px 16px;font-size:.78em;">Normalize</button>
+        <button class="menu-btn btn-secondary" onclick="console.log('saveData:',JSON.parse(JSON.stringify(saveData)));diagFeedback('Printed to console.')" style="margin:0;padding:8px 16px;font-size:.78em;">Print to Console</button>
+      </div>
+      <div id="saveDiagFeedback" style="font-size:.78em;margin-top:6px;min-height:1.2em;color:#8af;text-align:center;font-family:'Rajdhani',sans-serif;letter-spacing:.07em;text-transform:uppercase"></div>
     </div>
     <button class="menu-btn btn-secondary" id="btnSettingsBack" style="font-size:.85em;padding:10px 28px;margin-top:6px;">← Back</button>
   </div>
@@ -618,6 +626,7 @@
     <div class="lkr-right">
       <div class="lkr-preview-area">
         <canvas id="lockerPreviewCanvas"></canvas>
+        <div id="lkrCamoPv" class="lkr-camo-pv-panel" style="display:none;"></div>
         <div class="lkr-platform-glow"></div>
       </div>
       <div class="lkr-info-panel">
@@ -687,6 +696,31 @@
   </div>
 </div>
 
+<!-- SUMMON SCREEN -->
+<div id="summonScreen" class="screen sg-screen">
+  <div class="sg-topbar">
+    <div class="sg-brand">✦ SUMMON</div>
+    <div id="sgCurrencies" class="sg-currencies"></div>
+    <button class="back-btn" style="margin:0;flex-shrink:0" onclick="if(window._sgAnimRaf){cancelAnimationFrame(window._sgAnimRaf);window._sgAnimRaf=null;}showScreen('mainMenu');renderLobby()">← BACK</button>
+  </div>
+  <div id="sgBannerSwitcher" class="sg-banner-switcher"></div>
+  <div id="sgBannerBody" class="sg-banner-body"></div>
+  <!-- Details modal -->
+  <div id="sgDetailsModal" class="sg-overlay-modal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="sg-om-inner" id="sgDetailsInner"></div>
+  </div>
+  <!-- Rates modal -->
+  <div id="sgRatesModal" class="sg-overlay-modal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="sg-om-inner" id="sgRatesInner"></div>
+  </div>
+  <!-- History modal -->
+  <div id="sgHistoryModal" class="sg-overlay-modal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="sg-om-inner" id="sgHistoryInner"></div>
+  </div>
+  <!-- Summon animation + results overlay -->
+  <div id="sgSummonOverlay" class="sg-summon-overlay" style="display:none"></div>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/save.js"></script>
 <script src="js/audio.js"></script>
@@ -698,6 +732,7 @@
 <script src="js/social.js"></script>
 <script src="js/lobbyScene.js"></script>
 <script src="js/skins.js"></script>
+<script src="js/gacha.js"></script>
 <script src="js/main.js"></script>
 <script src="js/multiplayer.js"></script>
 

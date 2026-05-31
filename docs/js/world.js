@@ -118,6 +118,7 @@ let projectiles=[];
 let particles=[];
 let soldiers=[];
 let soldierBullets=[];
+let propColliders=[];
 let ammoPacks=[];
 let debris=[];
 let weaponMesh=null;
@@ -873,6 +874,7 @@ function buildBackgroundSkyline(loc,locId){
 }
 
 function buildStreetCars(locId){
+  propColliders=propColliders.filter(p=>!p._isCar&&!p._isProp);
   const palettes={
     sweden:[0x22448A,0xAA2020,0x888888,0xEEEECC,0x336633],
     beirut:[0xBB8833,0x44551E,0x886644,0xCCBB88,0x883333],
@@ -881,6 +883,8 @@ function buildStreetCars(locId){
   const cols=palettes[locId];
 
   function car(x,z,ry){
+    const transverse=Math.abs(Math.sin(ry))>.7;
+    propColliders.push({x,z,w:transverse?5.2:2.8,d:transverse?2.8:5.2,_isCar:true});
     const col=cols[Math.floor(Math.random()*cols.length)];
     const g=new THREE.Group();
     const bM=new THREE.MeshLambertMaterial({color:col});
@@ -917,6 +921,8 @@ function buildStreetProps(locId){
   const darkMat=new THREE.MeshLambertMaterial({color:0x222222});
 
   function barrier(x,z,ry){
+    const transverse=Math.abs(Math.sin(ry||0))>.7;
+    propColliders.push({x,z,w:transverse?.9:3.2,d:transverse?3.2:.9,_isProp:true});
     const m=new THREE.MeshLambertMaterial({color:locId==='dubai'?0xCCCCCC:0xCC8800});
     const g=new THREE.Group();
     const b=new THREE.Mesh(new THREE.BoxGeometry(2.8,.7,.4),m);
@@ -969,6 +975,7 @@ function buildStreetProps(locId){
     // Concrete dividers
     const concM=new THREE.MeshLambertMaterial({color:0xAA9966});
     [[-22,0],[22,0],[-22,20],[22,20],[-22,-20],[22,-20]].forEach(([x,z])=>{
+      propColliders.push({x,z,w:.9,d:4.0,_isProp:true});
       const div=new THREE.Mesh(new THREE.BoxGeometry(.5,1.0,3.5),concM);
       div.position.set(x,.5,z);addToWorld(div);
     });
@@ -1123,7 +1130,7 @@ function rebuildCharPreview(){
 //  WEAPON MESH (FPS view)
 // ═══════════════════════════════════════════════════════════════
 function _getWeaponCamoColor(weaponId){
-  const def={launcher:0x1E1E1E,pistol:0x222222,shotgun:0x1A1A1A,sniper:0x1A1A1A,smg:0x1C1C1C};
+  const def={launcher:0x1E1E1E,pistol:0x222222,shotgun:0x1A1A1A,sniper:0x1A1A1A,smg:0x1C1C1C,railgun:0x1A2030,cluster:0x2A1A0A,shock:0x1A1030};
   const camoId=saveData&&saveData.equippedWeaponCamos?saveData.equippedWeaponCamos[weaponId]:'default';
   if(!camoId||camoId==='default') return def[weaponId]||0x1E1E1E;
   const camos=typeof WEAPON_CAMOS!=='undefined'?WEAPON_CAMOS[weaponId]:null;

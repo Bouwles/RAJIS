@@ -443,15 +443,37 @@ function closeShopModal(){
 // ─────────────────────────────────────────────────────────────────
 //  PURCHASE
 // ─────────────────────────────────────────────────────────────────
-function buyShopItem(itemId){
+async function buyShopItem(itemId){
   const item=SHOP_CATALOG.find(i=>i.id===itemId);
   if(!item) return;
   if((saveData.currency||0)<item.price){showNotif('Not enough credits!');return;}
   if(_isOwned(item)){showNotif('Already owned!');return;}
+
+  // Build Firebase update with atomic arrayUnion — committed BEFORE local state changes
+  if(_fbUser&&_fbDb){
+    try{
+      const upd={'saveData.currency': saveData.currency-item.price};
+      if(item.rewardType==='skin'){
+        upd['saveData.ownedSkins']=firebase.firestore.FieldValue.arrayUnion(item.id);
+        upd['saveData.equippedSkin']=item.id;
+        const sk=RICHARD_SKINS.find(s=>s.id===item.id);
+        if(sk) upd['saveData.customization']=Object.assign({},saveData.customization,sk.custo);
+      } else if(item.rewardType==='weaponCamo'){
+        upd[`saveData.ownedWeaponCamos.${item.weaponId}`]=firebase.firestore.FieldValue.arrayUnion(item.camoId);
+        upd[`saveData.equippedWeaponCamos.${item.weaponId}`]=item.camoId;
+      }
+      await _fbDb.collection('users').doc(_fbUser.uid).update(upd);
+      console.log('[Shop] Purchase committed to Firebase:', item.id);
+    }catch(e){
+      console.warn('[Shop] Firebase write failed, saving locally:', e.message);
+    }
+  }
+
+  // Update in-memory state
   saveData.currency-=item.price;
   if(item.rewardType==='skin'){
     if(!saveData.ownedSkins) saveData.ownedSkins=['richard_default'];
-    saveData.ownedSkins.push(item.id);
+    if(!saveData.ownedSkins.includes(item.id)) saveData.ownedSkins.push(item.id);
     saveData.equippedSkin=item.id;
     const skin=RICHARD_SKINS.find(s=>s.id===item.id);
     if(skin) Object.assign(saveData.customization,skin.custo);
@@ -460,11 +482,13 @@ function buyShopItem(itemId){
   } else if(item.rewardType==='weaponCamo'){
     if(!saveData.ownedWeaponCamos) saveData.ownedWeaponCamos={};
     if(!saveData.ownedWeaponCamos[item.weaponId]) saveData.ownedWeaponCamos[item.weaponId]=[];
-    saveData.ownedWeaponCamos[item.weaponId].push(item.camoId);
+    if(!saveData.ownedWeaponCamos[item.weaponId].includes(item.camoId))
+      saveData.ownedWeaponCamos[item.weaponId].push(item.camoId);
     if(!saveData.equippedWeaponCamos) saveData.equippedWeaponCamos={};
     saveData.equippedWeaponCamos[item.weaponId]=item.camoId;
   }
-  saveSave();
+  // Sync localStorage (Firebase already updated above)
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
   if(typeof updateSaveUI==='function') updateSaveUI();
   showNotif(item.name+' purchased!');
   openShopModal(itemId);
@@ -476,8 +500,9 @@ function equipWeaponCamo(weaponId,camoId){
   saveData.equippedWeaponCamos[weaponId]=camoId;
   saveSave();
   showNotif(camoId+' camo equipped!');
-  if(typeof switchWeapon==='function'&&typeof currentWeapon!=='undefined'&&currentWeapon===weaponId)
-    switchWeapon(currentWeapon);
+  if(typeof refreshWeaponMesh==='function'&&typeof gameActive!=='undefined'&&gameActive&&
+     typeof currentWeapon!=='undefined'&&currentWeapon===weaponId) refreshWeaponMesh();
+  if(typeof currentScreen!=='undefined'&&currentScreen==='lockerScreen') buildLockerScreen();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -486,6 +511,9 @@ function equipWeaponCamo(weaponId,camoId){
 let _lockerTab='skins';
 let _lkrSel=null;
 let _lkrRenderer=null,_lkrScene=null,_lkrCamera=null,_lkrChar=null,_lkrT=0,_lkrRafId=null;
+let _lkrCamoWeapon='pistol';
+let _lkrCamoSel=null;
+const _LKR_WEAPON_LABELS={pistol:'PISTOL',launcher:'LAUNCHER',sniper:'SNIPER',smg:'SMG',shotgun:'SHOTGUN',railgun:'RAILGUN',cluster:'CLUSTER',shock:'SHOCK'};
 
 function _initLkrRenderer(){
   const canvas=document.getElementById('lockerPreviewCanvas');
@@ -548,9 +576,46 @@ function _lkrSelectItem(item,el){
   }
 }
 function _lkrEquip(){
-  if(!_lkrSel) return;
-  if(_lkrSel._type==='skin') equipSkin(_lkrSel.id);
-  else equipWeaponCamo(_lkrSel.weaponId,_lkrSel.camoId);
+  if(_lockerTab==='camos'){
+    if(!_lkrCamoSel) return;
+    const owned=(saveData.ownedWeaponCamos||{})[_lkrCamoWeapon]||[];
+    if(_lkrCamoSel!=='default'&&!owned.includes(_lkrCamoSel)) return;
+    equipWeaponCamo(_lkrCamoWeapon,_lkrCamoSel);
+  } else {
+    if(!_lkrSel) return;
+    equipSkin(_lkrSel.id);
+  }
+}
+
+function _lkrSetCamoWeapon(wid){
+  _lkrCamoWeapon=wid;
+  _lkrCamoSel=null;
+  buildLockerScreen();
+}
+function _lkrCamoPvUpdate(camoId){
+  const pv=document.getElementById('lkrCamoPv');
+  const btn=document.getElementById('lkrEquipBtn');
+  const nameEl=document.getElementById('lkrInfoName');
+  const subEl=document.getElementById('lkrInfoSub');
+  const rarEl=document.getElementById('lkrInfoRarity');
+  const camos=WEAPON_CAMOS[_lkrCamoWeapon]||[];
+  const cm=camos.find(c=>c.id===camoId);
+  if(!cm) return;
+  const owned=(saveData.ownedWeaponCamos||{})[_lkrCamoWeapon]||[];
+  const locked=cm.id!=='default'&&!owned.includes(cm.id);
+  const curEq=(saveData.equippedWeaponCamos||{})[_lkrCamoWeapon]||'default';
+  const equipped=curEq===cm.id;
+  if(nameEl) nameEl.textContent=cm.name;
+  if(subEl) subEl.textContent=(_LKR_WEAPON_LABELS[_lkrCamoWeapon]||_lkrCamoWeapon)+' CAMO'+(locked?' — NOT OWNED':'');
+  if(rarEl){const rc=_rarity(cm.rarity||'common');rarEl.textContent=rc.label;rarEl.style.color=rc.color;}
+  if(btn){btn.textContent=equipped?'EQUIPPED':locked?'LOCKED':'EQUIP';btn.disabled=equipped||locked;}
+  if(pv) pv.innerHTML=`<div class="lkr-cpv-gun">${_camoGunPreview(cm.hexStr||'#303030')}</div><div class="lkr-cpv-swatch" style="background:${cm.hexStr||'#303030'};box-shadow:0 0 18px ${cm.hexStr||'#303030'}88;"></div>`;
+}
+function _lkrSelectCamo(camoId,el){
+  _lkrCamoSel=camoId;
+  document.querySelectorAll('.lkr-camo-tile').forEach(t=>t.classList.remove('lkr-camo-selected'));
+  if(el) el.classList.add('lkr-camo-selected');
+  _lkrCamoPvUpdate(camoId);
 }
 
 function buildLockerScreen(tab){
@@ -580,6 +645,10 @@ function buildLockerScreen(tab){
   _lkrSel=null;
 
   if(_lockerTab==='skins'){
+    const cvs=document.getElementById('lockerPreviewCanvas');
+    const pv=document.getElementById('lkrCamoPv');
+    if(cvs) cvs.style.display='';
+    if(pv) pv.style.display='none';
     const owned=saveData.ownedSkins||['richard_default'];
     const equippedSkin=saveData.equippedSkin||'richard_default';
     const skins=RICHARD_SKINS.filter(s=>owned.includes(s.id));
@@ -605,34 +674,48 @@ function buildLockerScreen(tab){
       grid.appendChild(div);
     });
   } else {
-    const ownedWC=saveData.ownedWeaponCamos||{};
-    const equippedWC=saveData.equippedWeaponCamos||{};
-    let hasAny=false;
-    Object.entries(WEAPON_CAMOS).forEach(([wid,camos])=>{
-      const owned=ownedWC[wid]||[];
-      const visible=camos.filter(c=>c.id==='default'||owned.includes(c.id));
-      if(!visible.length) return;
-      hasAny=true;
-      const hd=document.createElement('div');
-      hd.className='lkr-weapon-section-hd';
-      hd.textContent=wid.toUpperCase();
-      grid.appendChild(hd);
-      visible.forEach(cm=>{
-        const isEq=(equippedWC[wid]||'default')===cm.id;
-        const item={...cm,_type:'camo',_subtype:wid.toUpperCase()+' CAMO',weaponId:wid,camoId:cm.id};
-        const div=document.createElement('div');
-        div.className='lkr-item'+(isEq?' lkr-item-equipped':'');
-        div.innerHTML=`<div class="lkr-item-preview">
-          <div class="lkr-item-camo-swatch" style="background:${cm.hexStr||'#303030'};"></div>
-        </div>
-        ${isEq?'<div class="lkr-item-eq-badge">ON</div>':''}
-        <div class="lkr-rarity-bar" style="background:${_rarity(cm.rarity||'common').color};"></div>
-        <div class="lkr-item-footer">${cm.name}</div>`;
-        div.onclick=()=>_lkrSelectItem(item,div);
-        grid.appendChild(div);
-      });
+    const cvs=document.getElementById('lockerPreviewCanvas');
+    const pv=document.getElementById('lkrCamoPv');
+    if(cvs) cvs.style.display='none';
+    if(pv) pv.style.display='flex';
+    // Weapon filter bar
+    const wfRow=document.createElement('div');
+    wfRow.className='lkr-wf-row';
+    const weaponOrder=['pistol','launcher','shotgun','sniper','smg','railgun','cluster','shock'];
+    weaponOrder.forEach(wid=>{
+      const b=document.createElement('button');
+      b.className='lkr-wf-btn'+(wid===_lkrCamoWeapon?' lkr-wf-active':'');
+      b.textContent=_LKR_WEAPON_LABELS[wid]||wid.toUpperCase();
+      b.onclick=()=>_lkrSetCamoWeapon(wid);
+      wfRow.appendChild(b);
     });
-    if(!hasAny) grid.innerHTML='<div class="lkr-empty">No camos owned — visit Item Shop</div>';
+    grid.appendChild(wfRow);
+    // Camo tiles for selected weapon — ALL camos shown, locked ones dimmed
+    const camos=WEAPON_CAMOS[_lkrCamoWeapon]||[];
+    const ownedList=(saveData.ownedWeaponCamos||{})[_lkrCamoWeapon]||[];
+    const equippedId=(saveData.equippedWeaponCamos||{})[_lkrCamoWeapon]||'default';
+    const inner=document.createElement('div');
+    inner.className='lkr-camo-grid-inner';
+    camos.forEach(cm=>{
+      const locked=cm.id!=='default'&&!ownedList.includes(cm.id);
+      const equipped=equippedId===cm.id;
+      const tile=document.createElement('div');
+      tile.className='lkr-camo-tile'+(equipped?' lkr-camo-equipped':'')+(locked?' lkr-camo-locked':' lkr-camo-owned');
+      tile.innerHTML=`<div class="lkr-camo-swatch" style="background:${cm.hexStr||'#303030'};${locked?'filter:grayscale(.7) brightness(.45);':''}"></div>
+        <div class="lkr-camo-name">${cm.name}</div>
+        <div class="lkr-camo-rar" style="color:${locked?'#555':_rarity(cm.rarity||'common').color}">${_rarity(cm.rarity||'common').label}</div>
+        ${equipped?'<div class="lkr-camo-eq-badge">ON</div>':''}
+        ${locked?'<div class="lkr-camo-lock-ico">🔒</div>':''}`;
+      if(!locked) tile.onclick=()=>_lkrSelectCamo(cm.id,tile);
+      inner.appendChild(tile);
+    });
+    grid.appendChild(inner);
+    // Auto-select equipped camo (or keep prior selection if still valid)
+    const autoId=(_lkrCamoSel&&camos.find(c=>c.id===_lkrCamoSel))?_lkrCamoSel:equippedId;
+    _lkrCamoSel=autoId;
+    const tiles=inner.querySelectorAll('.lkr-camo-tile');
+    camos.forEach((cm,i)=>{if(cm.id===autoId&&tiles[i]) tiles[i].classList.add('lkr-camo-selected');});
+    _lkrCamoPvUpdate(autoId);
   }
 }
 
@@ -654,29 +737,29 @@ function equipSkin(skinId){
 const BP_TIERS=[
   {tier:1,  label:'100 CR',       icon:'💰', credits:100},
   {tier:2,  label:'Recon',        icon:'🪖', skin:'richard_recon'},
-  {tier:3,  label:'200 CR',       icon:'💰', credits:200},
-  {tier:4,  label:'Flashbang ×2', icon:'💥'},
-  {tier:5,  label:'Arctic',       icon:'🪖', skin:'richard_arctic'},
-  {tier:6,  label:'300 CR',       icon:'💰', credits:300},
-  {tier:7,  label:'Desert Storm', icon:'🪖', skin:'richard_desert'},
-  {tier:8,  label:'400 CR',       icon:'💰', credits:400},
-  {tier:9,  label:'The Medic',    icon:'🪖', skin:'richard_medic'},
-  {tier:10, label:'500 CR',       icon:'💰', credits:500},
-  {tier:11, label:'Veteran',      icon:'🪖', skin:'richard_veteran'},
-  {tier:12, label:'600 CR',       icon:'💰', credits:600},
-  {tier:13, label:'Commander',    icon:'🪖', skin:'richard_commander'},
-  {tier:14, label:'700 CR',       icon:'💰', credits:700},
-  {tier:15, label:'Neon',         icon:'🪖', skin:'richard_neon'},
-  {tier:16, label:'800 CR',       icon:'💰', credits:800},
-  {tier:17, label:'Blizzard',     icon:'🪖', skin:'richard_blizzard'},
-  {tier:18, label:'900 CR',       icon:'💰', credits:900},
-  {tier:19, label:'Sunset',       icon:'🪖', skin:'richard_sunset'},
-  {tier:20, label:'1000 CR',      icon:'💰', credits:1000},
-  {tier:21, label:'Shadow',       icon:'🪖', skin:'richard_shadow'},
-  {tier:22, label:'1100 CR',      icon:'💰', credits:1100},
-  {tier:23, label:'Phantom',      icon:'🪖', skin:'richard_phantom'},
-  {tier:24, label:'1200 CR',      icon:'💰', credits:1200},
-  {tier:25, label:'THE RICHARD',  icon:'🏆', skin:'richard_gold'},
+  {tier:3,  label:'200 CR + 100 Shards', icon:'💰', credits:200, chronoShards:100},
+  {tier:4,  label:'Flashbang ×2',       icon:'💥'},
+  {tier:5,  label:'Arctic',             icon:'🪖', skin:'richard_arctic'},
+  {tier:6,  label:'300 CR',             icon:'💰', credits:300},
+  {tier:7,  label:'Desert Storm + 1 Ticket', icon:'🪖', skin:'richard_desert', summonTickets:1},
+  {tier:8,  label:'400 CR',             icon:'💰', credits:400},
+  {tier:9,  label:'The Medic',          icon:'🪖', skin:'richard_medic'},
+  {tier:10, label:'500 CR',             icon:'💰', credits:500},
+  {tier:11, label:'Veteran',            icon:'🪖', skin:'richard_veteran'},
+  {tier:12, label:'600 CR + 200 Shards',icon:'💰', credits:600, chronoShards:200},
+  {tier:13, label:'Commander',          icon:'🪖', skin:'richard_commander'},
+  {tier:14, label:'700 CR',             icon:'💰', credits:700},
+  {tier:15, label:'Neon',               icon:'🪖', skin:'richard_neon'},
+  {tier:16, label:'800 CR',             icon:'💰', credits:800},
+  {tier:17, label:'Blizzard',           icon:'🪖', skin:'richard_blizzard'},
+  {tier:18, label:'900 CR + Featured Ticket', icon:'💰', credits:900, featuredTickets:1},
+  {tier:19, label:'Sunset',             icon:'🪖', skin:'richard_sunset'},
+  {tier:20, label:'1000 CR',            icon:'💰', credits:1000},
+  {tier:21, label:'Shadow',             icon:'🪖', skin:'richard_shadow'},
+  {tier:22, label:'1100 CR',            icon:'💰', credits:1100},
+  {tier:23, label:'Phantom',            icon:'🪖', skin:'richard_phantom'},
+  {tier:24, label:'1200 CR + 3 Tickets',icon:'💰', credits:1200, summonTickets:3},
+  {tier:25, label:'THE RICHARD + 5 Featured', icon:'🏆', skin:'richard_gold', featuredTickets:5},
 ];
 
 function buildBPScreen(){
@@ -699,8 +782,22 @@ function buildBPScreen(){
       if(t.skin){
         if(!saveData.ownedSkins) saveData.ownedSkins=['richard_default'];
         if(!saveData.ownedSkins.includes(t.skin)) saveData.ownedSkins.push(t.skin);
-        showNotif('BP Tier '+t.tier+': '+t.label+' unlocked!');
       }
+      if(!saveData.summonCurrency) saveData.summonCurrency={chronoShards:0,summonTickets:0,featuredTickets:0};
+      if(t.chronoShards){saveData.summonCurrency.chronoShards=(saveData.summonCurrency.chronoShards||0)+t.chronoShards;showNotif('BP Tier '+t.tier+': +'+t.chronoShards+' Chrono Shards!');}
+      if(t.summonTickets){saveData.summonCurrency.summonTickets=(saveData.summonCurrency.summonTickets||0)+t.summonTickets;showNotif('BP Tier '+t.tier+': +'+t.summonTickets+' Summon Ticket(s)!');}
+      if(t.featuredTickets){saveData.summonCurrency.featuredTickets=(saveData.summonCurrency.featuredTickets||0)+t.featuredTickets;showNotif('BP Tier '+t.tier+': +'+t.featuredTickets+' Featured Ticket(s)!');}
+      // Atomic Firebase write for BP rewards
+      if(_fbUser&&_fbDb){
+        const _bpUpd={'saveData.bpClaimedTiers':firebase.firestore.FieldValue.arrayUnion(t.tier)};
+        if(t.skin) _bpUpd['saveData.ownedSkins']=firebase.firestore.FieldValue.arrayUnion(t.skin);
+        if(t.credits) _bpUpd['saveData.currency']=firebase.firestore.FieldValue.increment(t.credits);
+        if(t.chronoShards) _bpUpd['saveData.summonCurrency.chronoShards']=firebase.firestore.FieldValue.increment(t.chronoShards);
+        if(t.summonTickets) _bpUpd['saveData.summonCurrency.summonTickets']=firebase.firestore.FieldValue.increment(t.summonTickets);
+        if(t.featuredTickets) _bpUpd['saveData.summonCurrency.featuredTickets']=firebase.firestore.FieldValue.increment(t.featuredTickets);
+        _fbDb.collection('users').doc(_fbUser.uid).update(_bpUpd).catch(e=>console.warn('[BP] Firebase write failed:',e.message));
+      }
+      if(t.skin) showNotif('BP Tier '+t.tier+': '+t.label+' unlocked!');
       claimed=true;
     }
   });

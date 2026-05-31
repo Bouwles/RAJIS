@@ -35,9 +35,9 @@ function spawnMissile(isBoss){
   const group=new THREE.Group();
   group.position.set(sx,SPAWN_H,sz);
 
-  const bodyColor=isBoss?0xFF2200:0x445566;
-  const bodyM=new THREE.MeshLambertMaterial({color:bodyColor});
-  const finM=new THREE.MeshLambertMaterial({color:isBoss?0xCC1100:0x334455});
+  const bodyColor=isBoss?0xFF2200:0xFF8800;
+  const bodyM=new THREE.MeshLambertMaterial({color:bodyColor,emissive:new THREE.Color(isBoss?0xFF1100:0xFF6600),emissiveIntensity:isBoss?.6:.4});
+  const finM=new THREE.MeshLambertMaterial({color:isBoss?0xCC1100:0xCC6600});
 
   // Body
   const bodyGeo=new THREE.CylinderGeometry(radius*.35,radius*.5,radius*3.5,8);
@@ -46,7 +46,7 @@ function spawnMissile(isBoss){
 
   // Nose cone
   const noseGeo=new THREE.ConeGeometry(radius*.35,radius*1.5,8);
-  const nose=new THREE.Mesh(noseGeo,new THREE.MeshLambertMaterial({color:isBoss?0xFF4400:0x778899}));
+  const nose=new THREE.Mesh(noseGeo,new THREE.MeshLambertMaterial({color:isBoss?0xFF4400:0xFFAA22,emissive:new THREE.Color(isBoss?0xFF2200:0xFF8800),emissiveIntensity:.35}));
   nose.position.y=radius*2.5; group.add(nose);
 
   // Fins
@@ -59,10 +59,13 @@ function spawnMissile(isBoss){
     group.add(fin);
   }
 
-  // Boss glow
+  // Glow light for all missiles (boss brighter)
   if(isBoss){
     const glowLight=new THREE.PointLight(0xFF4400,1.5,15);
     group.add(glowLight);
+  } else {
+    const glow=new THREE.PointLight(0xFF8800,.9,10);
+    group.add(glow);
   }
 
   // Trail
@@ -70,7 +73,7 @@ function spawnMissile(isBoss){
   for(let i=0;i<30;i++) trailPts.push(new THREE.Vector3(sx,SPAWN_H,sz));
   const trailGeo=new THREE.BufferGeometry().setFromPoints(trailPts);
   const trailMat=new THREE.LineBasicMaterial({
-    color:isBoss?0xFF6600:0x88AAFF, transparent:true, opacity:.7
+    color:isBoss?0xFF6600:0xFF8800, transparent:true, opacity:.85
   });
   const trailLine=new THREE.Line(trailGeo,trailMat);
   scene.add(trailLine);

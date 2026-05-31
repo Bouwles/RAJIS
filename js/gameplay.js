@@ -25,7 +25,7 @@ function startWave(){
     showNotif(`WAVE ${waveNum} — Intercept all missiles!`);
     showWaveAnnounce(`WAVE ${waveNum} — ${waveMissileTotal} missiles inbound`);
   }
-  if(selectedLoc) spawnSoldiers(selectedLoc, Math.min(2+waveNum, 8));
+  if(selectedLoc) spawnSoldiers(selectedLoc, Math.min(1+Math.floor(waveNum/2), 4));
 }
 
 function updateWave(dt){
@@ -48,6 +48,10 @@ function updateWave(dt){
 
 function endWave(){
   waveActive=false;
+  for(const s of soldiers){scene.remove(s.group);if(s.barEl)s.barEl.remove();}
+  soldiers.length=0;
+  for(const b of soldierBullets) scene.remove(b.mesh);
+  soldierBullets.length=0;
   sfxWaveComplete();
   _suppressPauseLock=true;
   if(document.pointerLockElement) document.exitPointerLock();
@@ -58,6 +62,7 @@ function endWave(){
   const cleanBonus=waveMissed===0?200+waveNum*50:0;
   const earned=Math.round((baseEarned+cleanBonus)*(window._creditMult||1));
   saveData.currency+=earned;
+  if(typeof _gachaEarnShards==='function') _gachaEarnShards(50+waveNum*10);
   saveData.totalScore+=waveScore;
   saveData.waveRecord=Math.max(saveData.waveRecord,waveNum);
   saveData.totalIntercepted+=waveIntercepted;
@@ -180,6 +185,16 @@ function updatePlayer(dt){
         else{pz=b.pos.z+(bdz>=0?hd:-hd);vz=0;}
       }
     }
+    // Prop collision (cars, barriers, dividers)
+    for(const p of propColliders){
+      const hw=p.w/2+R, hd=p.d/2+R;
+      const pdx=px-p.x, pdz=pz-p.z;
+      if(Math.abs(pdx)<hw&&Math.abs(pdz)<hd){
+        const ox=hw-Math.abs(pdx), oz=hd-Math.abs(pdz);
+        if(ox<oz){px=p.x+(pdx>=0?hw:-hw);vx=0;}
+        else{pz=p.z+(pdz>=0?hd:-hd);vz=0;}
+      }
+    }
   }
   // Gulag: push player out of cover objects
   if(battleActive) _resolveGulagCollisions();
@@ -266,8 +281,17 @@ function switchWeapon(id){
   scoped=false;scopeT=0;
   if(weaponMesh){camera.remove(weaponMesh);}
   weaponMesh=makeWeaponMesh();camera.add(weaponMesh);
+  console.log('[Weapon] Rendering',id,'with camo:',saveData?.equippedWeaponCamos?.[id]||'default');
   showNotif(WEAPONS[id].name);
   updateWeaponBar();
+}
+// Force-rebuilds the FPS weapon mesh in place — used after equipping a camo from the Locker
+function refreshWeaponMesh(){
+  if(!gameActive||!currentWeapon) return;
+  if(weaponMesh) camera.remove(weaponMesh);
+  weaponMesh=makeWeaponMesh();
+  camera.add(weaponMesh);
+  console.log('[Weapon] refreshWeaponMesh → applied camo:',saveData?.equippedWeaponCamos?.[currentWeapon]||'default');
 }
 
 function updateWeaponBar(){

@@ -813,20 +813,35 @@ function _renderSeasonPanel(){
     {id:2,name:'ELIMINATE 10 ENEMIES',prog:Math.min(Math.max(0,(saveData.totalSoldierKills||0)-(base.totalSoldierKills||0)),10),total:10,xp:500},
     {id:3,name:'FIRE 200 SHOTS',prog:Math.min(Math.max(0,(saveData.totalShotsFired||0)-base.totalShotsFired),200),total:200,xp:300},
   ];
+  const baseChallengesAllDone=[0,1,2,3].every(cid=>claimed.includes(cid));
+  challenges.push({id:4,name:'COMPLETE ALL DAILY CHALLENGES',prog:baseChallengesAllDone?1:0,total:1,xp:0,rewardType:'summonTicket',rewardLabel:'+1 Summon Ticket'});
 
-  // Award XP for newly completed challenges
+  // Award XP / bonus for newly completed challenges
   let didSave=false;
   challenges.forEach(c=>{
     if(c.prog>=c.total&&!claimed.includes(c.id)){
       claimed.push(c.id);
       saveData.claimedChallenges=claimed;
-      saveData.bpXP=(saveData.bpXP||0)+c.xp;
-      const newLevel=Math.floor(saveData.bpXP/500);
-      if(newLevel>(saveData.bpLevel||0)){
-        saveData.bpLevel=newLevel;
-        if(typeof showNotif==='function') showNotif('★ BP TIER '+newLevel+' UNLOCKED!');
+      if(c.xp){
+        saveData.bpXP=(saveData.bpXP||0)+c.xp;
+        const newLevel=Math.floor(saveData.bpXP/500);
+        if(newLevel>(saveData.bpLevel||0)){
+          saveData.bpLevel=newLevel;
+          if(typeof showNotif==='function') showNotif('★ BP TIER '+newLevel+' UNLOCKED!');
+        }
+        if(typeof showNotif==='function') showNotif(c.name+' COMPLETE! +'+c.xp+' XP');
       }
-      if(typeof showNotif==='function') showNotif(c.name+' COMPLETE! +'+c.xp+' XP');
+      if(c.rewardType==='summonTicket'){
+        if(!saveData.summonCurrency) saveData.summonCurrency={chronoShards:0,summonTickets:0,featuredTickets:0};
+        saveData.summonCurrency.summonTickets=(saveData.summonCurrency.summonTickets||0)+1;
+        if(_fbUser&&_fbDb){
+          _fbDb.collection('users').doc(_fbUser.uid).update({
+            'saveData.summonCurrency.summonTickets':firebase.firestore.FieldValue.increment(1),
+            'saveData.claimedChallenges':firebase.firestore.FieldValue.arrayUnion(c.id)
+          }).catch(()=>{});
+        }
+        if(typeof showNotif==='function') showNotif('ALL CHALLENGES COMPLETE! +1 Summon Ticket!');
+      }
       didSave=true;
     }
   });
@@ -850,7 +865,7 @@ function _renderSeasonPanel(){
       return`<div class="rll-challenge${isClaimed?' rll-ch-done':''}">
         <div class="rll-ch-header">
           <div class="rll-ch-name">${c.name}</div>
-          <div class="rll-ch-xp">${isClaimed?'✓ CLAIMED':'+'+c.xp+' XP'}</div>
+          <div class="rll-ch-xp">${isClaimed?'✓ CLAIMED':c.rewardLabel||'+'+c.xp+' XP'}</div>
         </div>
         <div class="rll-ch-track">
           <div class="rll-ch-fill" style="width:${Math.round((isClaimed?c.total:c.prog)/c.total*100)}%"></div>

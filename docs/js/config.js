@@ -18,7 +18,23 @@ const FIREBASE_CONFIG = {
   appId:             "1:767111161348:web:8e7a16fc6291e3201bb751"
 };
 
-let _fbAuth = null, _fbDb = null, _fbUser = null;
+let _fbAuth = null, _fbDb = null, _fbUser = null, _fbSaveListener = null;
+
+// Keep saveData in sync with Firebase while in lobby — never overwrites mid-game
+function _startSaveListener(uid){
+  if(_fbSaveListener){_fbSaveListener();_fbSaveListener=null;}
+  if(!_fbDb||!uid) return;
+  _fbSaveListener=_fbDb.collection('users').doc(uid).onSnapshot(snap=>{
+    if(!snap.exists||!_fbUser) return;
+    const remote=snap.data()?.saveData;
+    if(!remote) return;
+    if(typeof gameActive!=='undefined'&&gameActive) return;
+    const merged=_normalizeInventory(Object.assign({},remote,saveData));
+    saveData=merged;
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
+    if(typeof updateSaveUI==='function') updateSaveUI();
+  },()=>{});
+}
 try {
   firebase.initializeApp(FIREBASE_CONFIG);
   _fbAuth = firebase.auth();
@@ -54,7 +70,7 @@ async function fbLogin(username, password){
   const cred  = await _fbAuth.signInWithEmailAndPassword(email, password);
   const doc   = await _fbDb.collection('users').doc(cred.user.uid).get();
   const data  = doc.data();
-  const sd    = data?.saveData ? Object.assign(defaultSave(), data.saveData) : defaultSave();
+  const sd    = _normalizeInventory(data?.saveData ? Object.assign(defaultSave(), data.saveData) : defaultSave());
   return {user: cred.user, username: data?.username||username, saveData: sd};
 }
 
@@ -75,7 +91,7 @@ async function fbGoogleSignIn(){
     const snap = await docRef.get();
     if(snap.exists && snap.data()?.username){
       const username = snap.data().username;
-      const sd = Object.assign(defaultSave(), snap.data().saveData||{});
+      const sd = _normalizeInventory(Object.assign(defaultSave(), snap.data().saveData||{}));
       _acctFinishLogin({user, username, saveData: sd});
     } else {
       // New Google user — show username picker
@@ -111,9 +127,9 @@ async function doPickUsername(){
     const sd = defaultSave(); sd.username = raw;
     const docRef = _fbDb.collection('users').doc(user.uid);
     const existing = await docRef.get();
-    const mergedSd = existing.exists && existing.data()?.saveData
+    const mergedSd = _normalizeInventory(existing.exists && existing.data()?.saveData
       ? Object.assign(sd, existing.data().saveData, {username: raw})
-      : sd;
+      : sd);
     await docRef.set({username: raw, saveData: mergedSd});
     await _fbDb.collection('usernames').doc(raw.toLowerCase()).set({uid: user.uid});
     document.getElementById('usernamePickerModal').style.display='none';
@@ -133,10 +149,12 @@ async function showUsernamePickerForChange(){
 
 async function fbSave(sd){
   if(!_fbUser||!_fbDb) return;
-  try{ await _fbDb.collection('users').doc(_fbUser.uid).set({saveData: sd},{merge:true}); }catch(e){}
+  try{ await _fbDb.collection('users').doc(_fbUser.uid).set({saveData: sd},{merge:true}); }
+  catch(e){ console.warn('[fbSave] Write failed:',e.message); }
 }
 
 function fbLogout(){
+  if(_fbSaveListener){_fbSaveListener();_fbSaveListener=null;}
   if(typeof stopSocialListeners==='function') stopSocialListeners();
   if(_fbAuth) _fbAuth.signOut();
   _fbUser = null; mpUser = null;
@@ -166,6 +184,7 @@ function _acctFinishLogin(result){
   _fbUser = result.user;
   saveData = result.saveData;
   try{ localStorage.setItem(SAVE_KEY,JSON.stringify(saveData)); }catch(e){}
+  _startSaveListener(_fbUser.uid);
   mpUser = {username: result.username};
   localStorage.setItem('raj_callsign', result.username);
   document.getElementById('lobbyUser').textContent = 'Callsign: '+result.username;

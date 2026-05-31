@@ -884,8 +884,38 @@ document.addEventListener('DOMContentLoaded',()=>{
         try{
           const doc=await _fbDb.collection('users').doc(user.uid).get();
           const data=doc.data();
-          if(data?.saveData) saveData=Object.assign(defaultSave(),data.saveData);
+          if(data?.saveData){
+            const fbSd=_normalizeInventory(Object.assign(defaultSave(),data.saveData));
+            // Merge with localStorage — localStorage is written synchronously so it's always >= Firebase freshness
+            try{
+              const lsRaw=localStorage.getItem(SAVE_KEY);
+              if(lsRaw){
+                const lsSd=JSON.parse(lsRaw);
+                // Union-merge owned arrays (items only ever grow)
+                if(Array.isArray(lsSd.ownedSkins))
+                  fbSd.ownedSkins=[...new Set([...(fbSd.ownedSkins||[]),...lsSd.ownedSkins])];
+                if(lsSd.ownedWeaponCamos) ALL_WEAPON_IDS.forEach(w=>{
+                  fbSd.ownedWeaponCamos[w]=[...new Set([...(fbSd.ownedWeaponCamos[w]||[]),...(lsSd.ownedWeaponCamos[w]||[])])];
+                });
+                if(Array.isArray(lsSd.unlocks)) fbSd.unlocks=[...new Set([...(fbSd.unlocks||[]),...lsSd.unlocks])];
+                // Prefer local for equipped state (localStorage always written before Firebase)
+                if(typeof lsSd.currency==='number') fbSd.currency=Math.max(fbSd.currency||0,lsSd.currency);
+                if(lsSd.equippedSkin) fbSd.equippedSkin=lsSd.equippedSkin;
+                if(lsSd.equippedWeaponCamos) ALL_WEAPON_IDS.forEach(w=>{
+                  if(lsSd.equippedWeaponCamos[w]) fbSd.equippedWeaponCamos[w]=lsSd.equippedWeaponCamos[w];
+                });
+                if(Array.isArray(lsSd.equippedWeapons)&&lsSd.equippedWeapons.length)
+                  fbSd.equippedWeapons=lsSd.equippedWeapons;
+                if((lsSd.bpXP||0)>(fbSd.bpXP||0)) fbSd.bpXP=lsSd.bpXP;
+                if((lsSd.bpLevel||0)>(fbSd.bpLevel||0)) fbSd.bpLevel=lsSd.bpLevel;
+                if(Array.isArray(lsSd.bpClaimedTiers)&&(lsSd.bpClaimedTiers.length||0)>(fbSd.bpClaimedTiers.length||0))
+                  fbSd.bpClaimedTiers=lsSd.bpClaimedTiers;
+              }
+            }catch(e){}
+            saveData=_normalizeInventory(fbSd);
+          }
           try{ localStorage.setItem(SAVE_KEY,JSON.stringify(saveData)); }catch(e){}
+          if(typeof _startSaveListener==='function') _startSaveListener(user.uid);
           const uname=data?.username||user.displayName||'PLAYER';
           mpUser={username:uname};
           localStorage.setItem('raj_callsign',uname);

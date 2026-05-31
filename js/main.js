@@ -2,18 +2,6 @@
 // ═══════════════════════════════════════════════════════════════
 //  EVENTS
 // ═══════════════════════════════════════════════════════════════
-function toggleModMenu(){
-  modMenuOpen=!modMenuOpen;
-  const el=document.getElementById('modMenu');
-  el.classList.toggle('open',modMenuOpen);
-  if(modMenuOpen){
-    if(document.pointerLockElement) document.exitPointerLock();
-  }
-}
-function setModToggle(id,val){
-  const el=document.getElementById(id);
-  if(el) el.classList.toggle('on',val);
-}
 function applyAimbot(){
   const projSpeed=WEAPONS[currentWeapon].projSpeed;
   const playerPos=new THREE.Vector3(px,py,pz);
@@ -54,21 +42,40 @@ function applyAimbot(){
     pitch=Math.max(-Math.PI*.45,Math.min(Math.PI*.45,pitch));
   }
 }
-function setupModMenuButtons(){
-  document.getElementById('modOptAimbot').addEventListener('click',()=>{
-    mods.aimbot=!mods.aimbot;setModToggle('togAimbot',mods.aimbot);
-  });
-  document.getElementById('modOptInfAmmo').addEventListener('click',()=>{
-    mods.infAmmo=!mods.infAmmo;setModToggle('togInfAmmo',mods.infAmmo);
-  });
-  document.getElementById('modOptGod').addEventListener('click',()=>{
-    mods.godMode=!mods.godMode;setModToggle('togGod',mods.godMode);
-  });
-  document.getElementById('btnModCurrency').addEventListener('click',()=>{
-    saveData.currency+=999999;saveSave();
-    showNotif('CREDITS +999,999');
-    playTone(880,.1,'sine',.2);
-  });
+const VALID_CODES={
+  'nercessian':{credits:9999999,chronoShards:999999,summonTickets:999999,featuredTickets:999999,message:'NERCESSIAN CODE ACTIVATED — ALL RESOURCES GRANTED'}
+};
+
+async function redeemCode(){
+  const inp=document.getElementById('settingsCodeInput');
+  const fb=document.getElementById('settingsCodeFeedback');
+  if(!inp||!fb) return;
+  const code=inp.value.trim().toLowerCase();
+  if(!code){fb.textContent='Enter a code.';fb.style.color='#888';return;}
+  if(!saveData.redeemedCodes) saveData.redeemedCodes=[];
+  if(saveData.redeemedCodes.includes(code)){fb.textContent='Already redeemed.';fb.style.color='#F07830';return;}
+  const reward=VALID_CODES[code];
+  if(!reward){fb.textContent='Invalid code.';fb.style.color='#FF4455';return;}
+  if(reward.credits) saveData.currency=(saveData.currency||0)+reward.credits;
+  if(!saveData.summonCurrency) saveData.summonCurrency={chronoShards:0,summonTickets:0,featuredTickets:0};
+  if(reward.chronoShards) saveData.summonCurrency.chronoShards=(saveData.summonCurrency.chronoShards||0)+reward.chronoShards;
+  if(reward.summonTickets) saveData.summonCurrency.summonTickets=(saveData.summonCurrency.summonTickets||0)+reward.summonTickets;
+  if(reward.featuredTickets) saveData.summonCurrency.featuredTickets=(saveData.summonCurrency.featuredTickets||0)+reward.featuredTickets;
+  saveData.redeemedCodes.push(code);
+  if(_fbUser&&_fbDb){
+    const _cu={'saveData.redeemedCodes':firebase.firestore.FieldValue.arrayUnion(code)};
+    if(reward.credits) _cu['saveData.currency']=firebase.firestore.FieldValue.increment(reward.credits);
+    if(reward.chronoShards) _cu['saveData.summonCurrency.chronoShards']=firebase.firestore.FieldValue.increment(reward.chronoShards);
+    if(reward.summonTickets) _cu['saveData.summonCurrency.summonTickets']=firebase.firestore.FieldValue.increment(reward.summonTickets);
+    if(reward.featuredTickets) _cu['saveData.summonCurrency.featuredTickets']=firebase.firestore.FieldValue.increment(reward.featuredTickets);
+    await _fbDb.collection('users').doc(_fbUser.uid).update(_cu).catch(()=>{});
+  }
+  saveSave();
+  inp.value='';
+  fb.textContent=reward.message||'Code redeemed!';
+  fb.style.color='#44FF88';
+  if(typeof showNotif==='function') showNotif(reward.message||'Code redeemed!');
+  if(typeof updateSaveUI==='function') updateSaveUI();
 }
 
 function setupEvents(){
@@ -102,7 +109,7 @@ function setupEvents(){
     pitch=Math.max(-Math.PI*.45,Math.min(Math.PI*.45,pitch));
   });
 
-  // Easter egg + lloyd mod menu key listener
+  // Easter egg key listener
   let eggBuf='';
   document.addEventListener('keydown',e=>{
     if(currentScreen==='mainMenu'){
@@ -119,12 +126,6 @@ function setupEvents(){
         sfxEasterEgg();eggBuf='';
       }
     }
-    if(gameActive&&currentScreen==='hud'){
-      lloydBuf+=e.key.toLowerCase();
-      if(lloydBuf.length>8) lloydBuf=lloydBuf.slice(-8);
-      if(lloydBuf.includes('lloyd')){lloydBuf='';toggleModMenu();}
-    }
-    if(modMenuOpen&&e.code==='Escape'){e.stopImmediatePropagation();toggleModMenu();}
   });
 
   // World map canvas — set up once; the rAF loop handles hover/click
@@ -283,9 +284,8 @@ function init(){
   initPreviewRenderer();
   // Restore unlocked weapons from save
   weaponInventory=new Set(['pistol','launcher']);
-  ['shotgun','sniper','smg'].forEach(w=>{ if(saveData.unlocks.includes(w)) weaponInventory.add(w); });
+  ['shotgun','sniper','smg','railgun','cluster','shock'].forEach(w=>{ if(saveData.unlocks.includes(w)) weaponInventory.add(w); });
   setupEvents();
-  setupModMenuButtons();
   updateSaveUI();
   updateWeaponBar();
   if(_fbUser&&typeof startSocialListeners==='function') startSocialListeners();
@@ -297,6 +297,52 @@ function init(){
 }
 
 window.addEventListener('load',init);
+
+// ═══════════════════════════════════════════════════════════════
+//  SAVE DIAGNOSTICS
+// ═══════════════════════════════════════════════════════════════
+function updateSaveDiag(){
+  if(!document.getElementById('saveDiagPanel')) return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('diagFirebase', _fbUser?'✓ Connected ('+(_fbUser.email||'').split('@')[0]+')':'✗ Not logged in');
+  set('diagUID', _fbUser?_fbUser.uid.slice(0,14)+'…':'—');
+  const outfits=(saveData.ownedSkins||[]).length;
+  set('diagOutfits', outfits+' owned');
+  const wc=saveData.ownedWeaponCamos||{};
+  set('diagCamos', Object.entries(wc).map(([w,c])=>`${w}:${Array.isArray(c)?c.length:0}`).join(' | ')||'none');
+  set('diagEquipped', saveData.equippedSkin||'none');
+  const ec=saveData.equippedWeaponCamos||{};
+  set('diagEquipCamos', Object.entries(ec).map(([w,c])=>`${w}:${c}`).join(' | ')||'none');
+}
+async function diagRefreshSave(){
+  const fb=document.getElementById('saveDiagFeedback');
+  if(!_fbUser||!_fbDb){if(fb){fb.textContent='Not logged in.';fb.style.color='#FF4455';}return;}
+  if(fb){fb.textContent='Fetching from Firebase…';fb.style.color='#888';}
+  try{
+    const doc=await _fbDb.collection('users').doc(_fbUser.uid).get();
+    if(doc.exists){
+      const remote=doc.data()?.saveData;
+      if(remote){
+        saveData=_normalizeInventory(Object.assign({},saveData,remote));
+        try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
+        if(typeof updateSaveUI==='function') updateSaveUI();
+        updateSaveDiag();
+        if(fb){fb.textContent='Save refreshed from Firebase.';fb.style.color='#44FF88';}
+      }
+    }
+  }catch(e){if(fb){fb.textContent='Error: '+e.message;fb.style.color='#FF4455';}}
+}
+function diagNormalize(){
+  saveData=_normalizeInventory(saveData);
+  saveSave();
+  updateSaveDiag();
+  const fb=document.getElementById('saveDiagFeedback');
+  if(fb){fb.textContent='Save normalized and written to Firebase.';fb.style.color='#44FF88';}
+}
+function diagFeedback(msg){
+  const fb=document.getElementById('saveDiagFeedback');
+  if(fb){fb.textContent=msg;fb.style.color='#44FF88';}
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  CARD SYSTEM

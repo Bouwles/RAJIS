@@ -199,83 +199,184 @@ function _buildLobbyEnv(locId){
 }
 
 function _buildBeirutLobEnv(){
-  const winMat=new THREE.MeshLambertMaterial({color:0xFFCC44,emissive:new THREE.Color(0xFFAA00),emissiveIntensity:.45});
-  const bldDefs=[
-    [-7, -5,  2.0, 3.6, 1.8, 0x3A3228],
-    [-4.5,-4.5,1.8, 2.4, 1.6, 0x464038],
-    [-2,  -5.5,1.4, 5.0, 1.4, 0x504840],
-    [1.5, -4.2,2.0, 3.2, 1.6, 0x403830],
-    [3.8, -5,  2.4, 4.2, 1.8, 0x383028],
-    [6.5, -4.5,1.8, 2.8, 1.6, 0x3C3428],
-  ];
-  bldDefs.forEach(([x,z,w,h,d,col])=>{
+  const winMat=new THREE.MeshLambertMaterial({color:0xFFCC44,emissive:new THREE.Color(0xFFAA00),emissiveIntensity:.55});
+  const tankMat=new THREE.MeshLambertMaterial({color:0x3A3228});
+  const parMat=new THREE.MeshLambertMaterial({color:0x6A5E50});
+  // Dense Mediterranean apartment cluster — tan/ochre stone, varied heights
+  [
+    [-8.5,-5.2, 2.2,4.4,1.8, 0x5A4E3C],
+    [-6.0,-4.6, 1.8,6.8,1.5, 0x50463A],
+    [-3.5,-5.6, 2.4,3.8,2.0, 0x5C5044],
+    [-1.0,-4.8, 2.0,7.6,1.6, 0x483E34],
+    [1.8, -5.4, 2.2,5.0,1.9, 0x544840],
+    [4.5, -4.6, 1.8,8.2,1.5, 0x4E4438],
+    [7.0, -5.2, 2.4,4.2,2.0, 0x5A4E3E],
+    [9.5, -4.8, 1.8,5.8,1.6, 0x484038],
+  ].forEach(([x,z,w,h,d,col])=>{
     const mat=new THREE.MeshLambertMaterial({color:col});
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-    mesh.position.set(x,h/2,z);
-    _lobScene.add(mesh); _lobEnvObjs.push(mesh);
-    const floors=Math.floor(h/1.5);
-    for(let f=1;f<floors;f++){
-      const ww=new THREE.Mesh(new THREE.BoxGeometry(w*.65,.18,.06),winMat);
-      ww.position.set(x,f*1.5+.4,z+d/2+.04);
+    const bld=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    bld.position.set(x,h/2,z);
+    _lobScene.add(bld); _lobEnvObjs.push(bld);
+    // Rooftop parapet
+    const par=new THREE.Mesh(new THREE.BoxGeometry(w+.12,.3,d+.12),parMat);
+    par.position.set(x,h+.15,z);
+    _lobScene.add(par); _lobEnvObjs.push(par);
+    // Window strips per floor
+    const floors=Math.max(1,Math.floor(h/1.28));
+    for(let f=0;f<floors;f++){
+      const ww=new THREE.Mesh(new THREE.BoxGeometry(w*.7,.2,.05),winMat);
+      ww.position.set(x,.65+f*1.28,z+d/2+.03);
       _lobScene.add(ww); _lobEnvObjs.push(ww);
     }
+    // Water tank on taller buildings
+    if(h>5){
+      const tank=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.55,8),tankMat);
+      tank.position.set(x+w*.22,h+.43,z);
+      _lobScene.add(tank); _lobEnvObjs.push(tank);
+    }
   });
-  const pl=new THREE.PointLight(0xFF9944,.7,20);
-  pl.position.set(0,4,-4);
+  // Warm stone ground
+  const gndMat=new THREE.MeshLambertMaterial({color:0x8A7860});
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(40,18),gndMat);
+  gnd.rotation.x=-Math.PI/2; gnd.position.set(0,.002,-1.5);
+  _lobScene.add(gnd); _lobEnvObjs.push(gnd);
+  const pl=new THREE.PointLight(0xFF9944,.9,30);
+  pl.position.set(0,5,-4);
   _lobScene.add(pl); _lobEnvObjs.push(pl);
 }
 
 function _buildSwedenLobEnv(){
   const trunkMat=new THREE.MeshLambertMaterial({color:0x5A3A1A});
-  const leafMat=new THREE.MeshLambertMaterial({color:0x2A6B3A});
-  const snowMat=new THREE.MeshLambertMaterial({color:0xECF2F8});
-  const treeXZ=[[-7,-4.5],[-5,-5],[-3,-4.2],[-1,-5.5],[1.5,-4],[4,-5.2],[6.5,-4.5]];
-  treeXZ.forEach(([x,z])=>{
+  const leafMat=new THREE.MeshLambertMaterial({color:0x1E5A2A});
+  const snowMat=new THREE.MeshLambertMaterial({color:0xDDE6EC});
+  const roofMat=new THREE.MeshLambertMaterial({color:0x7A3A2A});
+  const winMat=new THREE.MeshLambertMaterial({color:0xFFDD88,emissive:new THREE.Color(0xFFAA33),emissiveIntensity:.45});
+  // Nordic stone buildings with pitched roofs + snow
+  [
+    [-8.5,-5.5, 2.4,3.2,2.0, 0x5E5A54],
+    [-5.5,-5.0, 1.8,4.8,1.6, 0x4E4A44],
+    [-2.5,-5.8, 2.6,2.8,2.2, 0x5A5650],
+    [0.8, -5.2, 2.0,6.0,1.8, 0x484440],
+    [4.0, -5.6, 2.4,3.8,2.0, 0x545048],
+    [7.0, -5.0, 1.8,5.2,1.6, 0x4E4A44],
+    [10.0,-5.5, 2.2,3.0,1.8, 0x585450],
+  ].forEach(([x,z,w,h,d,col])=>{
+    const mat=new THREE.MeshLambertMaterial({color:col});
+    const bld=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    bld.position.set(x,h/2,z);
+    _lobScene.add(bld); _lobEnvObjs.push(bld);
+    // Pitched roof (cone scaled to box footprint)
+    const roof=new THREE.Mesh(new THREE.ConeGeometry(w*.62,h*.24,4),roofMat);
+    roof.scale.set(1,.72,d/(w*.62*2)*1.05);
+    roof.rotation.y=Math.PI/4;
+    roof.position.set(x,h+h*.24*.72*.5,z);
+    _lobScene.add(roof); _lobEnvObjs.push(roof);
+    // Snow lip on roof edge
+    const snowLip=new THREE.Mesh(new THREE.BoxGeometry(w+.16,.1,d+.16),snowMat);
+    snowLip.position.set(x,h+.05,z);
+    _lobScene.add(snowLip); _lobEnvObjs.push(snowLip);
+    // Lit window strips
+    const floors=Math.max(1,Math.floor(h/1.4));
+    for(let f=0;f<floors;f++){
+      const ww=new THREE.Mesh(new THREE.BoxGeometry(w*.65,.18,.05),winMat);
+      ww.position.set(x,.7+f*1.35,z+d/2+.03);
+      _lobScene.add(ww); _lobEnvObjs.push(ww);
+    }
+  });
+  // Pine trees flanking buildings
+  [[-10.5,-4.5],[-9,-5.8],[11.5,-4.8],[12.5,-5.5],[-11.8,-3.8],[13,-3.5]].forEach(([x,z])=>{
     const g=new THREE.Group();
-    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.07,.12,1.1,5),trunkMat);
-    tr.position.y=.55; g.add(tr);
-    [[.32,0],[.22,1],[.14,2]].forEach(([r,t])=>{
-      const cone=new THREE.Mesh(new THREE.ConeGeometry(r,r*1.4,6),leafMat);
-      cone.position.y=1.1+t*r; g.add(cone);
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.07,.13,1.2,5),trunkMat);
+    tr.position.y=.6; g.add(tr);
+    [[.36,0],[.24,1],[.15,2]].forEach(([r,t])=>{
+      const cone=new THREE.Mesh(new THREE.ConeGeometry(r,r*1.5,6),leafMat);
+      cone.position.y=1.2+t*r*1.3; g.add(cone);
+      const sc=new THREE.Mesh(new THREE.ConeGeometry(r*.52,.38,6),snowMat);
+      sc.position.y=cone.position.y+r*.55; g.add(sc);
     });
-    const sc=new THREE.Mesh(new THREE.ConeGeometry(.1,.45,6),snowMat);
-    sc.position.y=1.1+2*.14+.28; g.add(sc);
     g.position.set(x,0,z);
     _lobScene.add(g); _lobEnvObjs.push(g);
   });
-  const snowFloor=new THREE.Mesh(new THREE.PlaneGeometry(26,11),snowMat);
+  // Snow ground
+  const snowFloor=new THREE.Mesh(new THREE.PlaneGeometry(42,18),snowMat);
   snowFloor.rotation.x=-Math.PI/2; snowFloor.position.set(0,.005,-1.5);
   _lobScene.add(snowFloor); _lobEnvObjs.push(snowFloor);
-  const pl=new THREE.PointLight(0x8899CC,.55,22);
-  pl.position.set(0,5,-4);
+  // Snow piles at base
+  [[-9.2,-4.8],[10.5,-5.2],[0.5,-2.8],[-4,-2.5],[5,-3.2]].forEach(([x,z])=>{
+    const pile=new THREE.Mesh(new THREE.SphereGeometry(.7,6,4),snowMat);
+    pile.scale.y=.32; pile.position.set(x,.02,z);
+    _lobScene.add(pile); _lobEnvObjs.push(pile);
+  });
+  const pl=new THREE.PointLight(0x8899CC,.6,30);
+  pl.position.set(0,6,-4);
   _lobScene.add(pl); _lobEnvObjs.push(pl);
 }
 
 function _buildDubaiLobEnv(){
-  const towerDefs=[
-    [-7,  -6,  1.4, 8,  0x88AACC],
-    [-4.2,-5.5, 1.2, 13, 0x99BBDD],
-    [0,   -7,  1.6, 18, 0xAABBCC],
-    [3.5, -5.5, 1.2, 11, 0x99AACC],
-    [6.5, -6,  1.4, 8,  0x8899BB],
-  ];
-  towerDefs.forEach(([x,z,w,h,col])=>{
-    const mat=new THREE.MeshLambertMaterial({color:col,emissive:new THREE.Color(0x001133),emissiveIntensity:.18});
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,w),mat);
-    mesh.position.set(x,h/2,z);
-    _lobScene.add(mesh); _lobEnvObjs.push(mesh);
-    const sp=new THREE.Mesh(new THREE.ConeGeometry(w*.16,h*.22,4),mat);
-    sp.position.set(x,h+h*.11,z);
+  const bandMat=new THREE.MeshLambertMaterial({color:0x335577});
+  // Glass tower cluster — mirror the ingame Dubai map silhouette
+  [
+    [-9.0,-6.2, 1.4, 7,  0x88AACC],
+    [-6.5,-5.6, 1.2,14,  0x99BBDD],
+    [-3.5,-6.5, 1.8,10,  0x8AAABB],
+    [-0.5,-5.8, 1.6,24,  0xAABBCC],  // central landmark tower
+    [2.5, -6.2, 1.4,16,  0x8899BB],
+    [5.5, -5.6, 1.2,11,  0x99AACC],
+    [8.5, -6.0, 1.5, 8,  0x8AABBB],
+    [11.0,-5.8, 1.2,13,  0x7898AA],
+  ].forEach(([x,z,w,h,col])=>{
+    const mat=new THREE.MeshLambertMaterial({color:col,emissive:new THREE.Color(0x001133),emissiveIntensity:.22});
+    const bld=new THREE.Mesh(new THREE.BoxGeometry(w,h,w),mat);
+    bld.position.set(x,h/2,z);
+    _lobScene.add(bld); _lobEnvObjs.push(bld);
+    // Horizontal glass bands every 3 units
+    for(let fy=2;fy<h;fy+=3){
+      const band=new THREE.Mesh(new THREE.BoxGeometry(w+.18,.09,w+.18),bandMat);
+      band.position.set(x,fy,z);
+      _lobScene.add(band); _lobEnvObjs.push(band);
+    }
+    // Spire
+    const sp=new THREE.Mesh(new THREE.ConeGeometry(w*.15,h*.26,4),mat);
+    sp.position.set(x,h+h*.13,z);
     _lobScene.add(sp); _lobEnvObjs.push(sp);
+    // Lit window rows
+    const winM=new THREE.MeshLambertMaterial({color:0x88CCFF,emissive:new THREE.Color(0x4488CC),emissiveIntensity:.3,transparent:true,opacity:.85});
+    const floors=Math.floor(h/1.5);
+    for(let f=1;f<floors;f+=2){
+      const ww=new THREE.Mesh(new THREE.BoxGeometry(w*.72,.26,.04),winM);
+      ww.position.set(x,.8+f*1.5,z+w*.5+.04);
+      _lobScene.add(ww); _lobEnvObjs.push(ww);
+    }
   });
-  const sandMat=new THREE.MeshLambertMaterial({color:0xC8A86A});
-  [[-5,-3.2],[3,-3.6],[-1,-2.6],[5.5,-3]].forEach(([x,z])=>{
-    const d=new THREE.Mesh(new THREE.ConeGeometry(1.4,.38,8),sandMat);
-    d.position.set(x,.19,z);
+  // Sand ground
+  const sandMat=new THREE.MeshLambertMaterial({color:0xC8A870});
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(44,18),sandMat);
+  gnd.rotation.x=-Math.PI/2; gnd.position.set(0,.002,-1.5);
+  _lobScene.add(gnd); _lobEnvObjs.push(gnd);
+  // Sand dune mounds
+  [[-10,-3.5],[9.5,-3.2],[0,-2.0],[5,-3.8],[-5,-2.8]].forEach(([x,z])=>{
+    const d=new THREE.Mesh(new THREE.SphereGeometry(1.0+Math.random()*.4,8,5),sandMat);
+    d.scale.y=.28; d.position.set(x,.05,z);
     _lobScene.add(d); _lobEnvObjs.push(d);
   });
-  const pl=new THREE.PointLight(0xFFBB66,.9,24);
-  pl.position.set(2,6,-4);
+  // Palm trees near edges
+  const palmTrunk=new THREE.MeshLambertMaterial({color:0x8A6A3A});
+  const frondMat=new THREE.MeshLambertMaterial({color:0x3A6A28});
+  [[-8,-2.5],[10,-2.8]].forEach(([x,z])=>{
+    const g=new THREE.Group();
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.1,.16,3.8,6),palmTrunk);
+    tr.position.y=1.9; g.add(tr);
+    for(let i=0;i<7;i++){
+      const fa=i/7*Math.PI*2;
+      const f=new THREE.Mesh(new THREE.BoxGeometry(.1,.05,2.0),frondMat);
+      f.position.set(Math.cos(fa)*.3,3.8,Math.sin(fa)*.3);
+      f.rotation.set(.5,fa,0); g.add(f);
+    }
+    g.position.set(x,0,z);
+    _lobScene.add(g); _lobEnvObjs.push(g);
+  });
+  const pl=new THREE.PointLight(0xFFBB55,1.0,32);
+  pl.position.set(2,8,-4);
   _lobScene.add(pl); _lobEnvObjs.push(pl);
 }
 

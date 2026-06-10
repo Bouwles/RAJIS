@@ -644,6 +644,23 @@ function makeBuilding(x,z,w,d,h,colorHex,loc,locId){
     }
   }
 
+  // Street-level entrance: recessed door + frame + canopy (front face)
+  {
+    const doorM=new THREE.MeshLambertMaterial({color:locId==='dubai'?0x223844:0x2A1E12});
+    const frameM=new THREE.MeshLambertMaterial({color:new THREE.Color(colorHex).offsetHSL(0,0,-.14)});
+    const dx=(Math.random()-.5)*(w*.4);
+    const frame=new THREE.Mesh(new THREE.BoxGeometry(1.7,2.5,.14),frameM);
+    frame.position.set(dx,1.25,d/2+.06);g.add(frame);
+    const door=new THREE.Mesh(new THREE.BoxGeometry(1.25,2.2,.08),doorM);
+    door.position.set(dx,1.1,d/2+.13);g.add(door);
+    // canopy slab over entrance
+    const can=new THREE.Mesh(new THREE.BoxGeometry(2.2,.12,1.0),frameM);
+    can.position.set(dx,2.62,d/2+.5);g.add(can);
+    // step
+    const step=new THREE.Mesh(new THREE.BoxGeometry(2.0,.14,.7),frameM);
+    step.position.set(dx,.07,d/2+.35);g.add(step);
+  }
+
   addToWorld(g);
   return{group:g,bodyMesh,bodyMat,health:3,maxHealth:3,isDestroyed:false,
     h,pos:{x,z},originalColor:colorHex,w,d};

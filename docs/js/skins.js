@@ -51,53 +51,53 @@ function _rarity(r){
 // ═══════════════════════════════════════════════════════════════
 const WEAPON_CAMOS={
   pistol:[
-    {id:'default', name:'Default',  hexStr:'#303030', price:0},
-    {id:'sand',    name:'Sandline', hexStr:'#C8A874', price:500,  rarity:'rare'},
-    {id:'black',   name:'Blackout', hexStr:'#0A0A0A', price:800,  rarity:'epic'},
-    {id:'arctic',  name:'Arctic',   hexStr:'#D0E8F0', price:400,  rarity:'uncommon'},
-    {id:'neon',    name:'Neon',     hexStr:'#00CC44', price:900,  rarity:'epic'},
+    {id:'default', name:'Default',  hexStr:'#303030', accentStr:'#1A1A1E', price:0},
+    {id:'sand',    name:'Sandline', hexStr:'#C8A874', accentStr:'#6B4F2A', price:500,  rarity:'rare'},
+    {id:'black',   name:'Blackout', hexStr:'#0E0E10', accentStr:'#34363C', price:800,  rarity:'epic'},
+    {id:'arctic',  name:'Arctic',   hexStr:'#D0E8F0', accentStr:'#4A88B0', price:400,  rarity:'uncommon'},
+    {id:'neon',    name:'Neon',     hexStr:'#00CC44', accentStr:'#0A2A14', price:900,  rarity:'epic'},
   ],
   launcher:[
-    {id:'default', name:'Default',  hexStr:'#303030', price:0},
-    {id:'desert',  name:'Desert',   hexStr:'#C8A874', price:500,  rarity:'rare'},
-    {id:'redline', name:'Redline',  hexStr:'#8A0A0A', price:1200, rarity:'legendary'},
-    {id:'arctic',  name:'Arctic',   hexStr:'#D0E8F0', price:800,  rarity:'epic'},
-    {id:'gold',    name:'Gold',     hexStr:'#DDB040', price:2000, rarity:'legendary'},
+    {id:'default', name:'Default',  hexStr:'#303030', accentStr:'#1A1A1E', price:0},
+    {id:'desert',  name:'Desert',   hexStr:'#C8A874', accentStr:'#7A5A30', price:500,  rarity:'rare'},
+    {id:'redline', name:'Redline',  hexStr:'#1A1A1E', accentStr:'#C2342A', price:1200, rarity:'legendary'},
+    {id:'arctic',  name:'Arctic',   hexStr:'#D0E8F0', accentStr:'#4A88B0', price:800,  rarity:'epic'},
+    {id:'gold',    name:'Gold',     hexStr:'#DDB040', accentStr:'#6A4A14', price:2000, rarity:'legendary'},
   ],
   sniper:[
-    {id:'default',  name:'Default',  hexStr:'#303030', price:0},
-    {id:'midnight', name:'Midnight', hexStr:'#0A1A3A', price:600, rarity:'rare'},
-    {id:'ember',    name:'Ember',    hexStr:'#CC4400', price:900, rarity:'epic'},
-    {id:'chrome',   name:'Chrome',   hexStr:'#B0B0B0', price:700, rarity:'rare'},
+    {id:'default',  name:'Default',  hexStr:'#303030', accentStr:'#1A1A1E', price:0},
+    {id:'midnight', name:'Midnight', hexStr:'#0A1A3A', accentStr:'#2A4A7A', price:600, rarity:'rare'},
+    {id:'ember',    name:'Ember',    hexStr:'#CC4400', accentStr:'#3A1208', price:900, rarity:'epic'},
+    {id:'chrome',   name:'Chrome',   hexStr:'#B0B0B0', accentStr:'#50525A', price:700, rarity:'rare'},
   ],
   smg:[
-    {id:'default', name:'Default',  hexStr:'#303030', price:0},
-    {id:'neon',    name:'Neon',     hexStr:'#00CC44', price:500, rarity:'uncommon'},
-    {id:'frost',   name:'Frost',    hexStr:'#8888CC', price:600, rarity:'rare'},
-    {id:'tiger',   name:'Tiger',    hexStr:'#8A4A1A', price:800, rarity:'rare'},
+    {id:'default', name:'Default',  hexStr:'#303030', accentStr:'#1A1A1E', price:0},
+    {id:'neon',    name:'Neon',     hexStr:'#00CC44', accentStr:'#0A2A14', price:500, rarity:'uncommon'},
+    {id:'frost',   name:'Frost',    hexStr:'#8888CC', accentStr:'#3A3A6E', price:600, rarity:'rare'},
+    {id:'tiger',   name:'Tiger',    hexStr:'#8A4A1A', accentStr:'#1A1208', price:800, rarity:'rare'},
   ],
   shotgun:[
-    {id:'default',  name:'Default',  hexStr:'#303030', price:0},
-    {id:'woodland', name:'Woodland', hexStr:'#3A4A2A', price:600, rarity:'rare'},
-    {id:'urban',    name:'Urban',    hexStr:'#5A5A5A', price:500, rarity:'uncommon'},
+    {id:'default',  name:'Default',  hexStr:'#303030', accentStr:'#1A1A1E', price:0},
+    {id:'woodland', name:'Woodland', hexStr:'#3A4A2A', accentStr:'#1C2414', price:600, rarity:'rare'},
+    {id:'urban',    name:'Urban',    hexStr:'#5A5A5A', accentStr:'#2A2A2E', price:500, rarity:'uncommon'},
   ],
   railgun:[
-    {id:'default', name:'Default', hexStr:'#303030', price:0},
-    {id:'plasma',  name:'Plasma',  hexStr:'#00FFCC', price:800,  rarity:'epic'},
-    {id:'void',    name:'Void',    hexStr:'#220044', price:1000, rarity:'legendary'},
-    {id:'solar',   name:'Solar',   hexStr:'#FFCC00', price:700,  rarity:'rare'},
+    {id:'default', name:'Default', hexStr:'#303030', accentStr:'#1A1A1E', price:0},
+    {id:'plasma',  name:'Plasma',  hexStr:'#00FFCC', accentStr:'#045A4A', price:800,  rarity:'epic'},
+    {id:'void',    name:'Void',    hexStr:'#220044', accentStr:'#6A22CC', price:1000, rarity:'legendary'},
+    {id:'solar',   name:'Solar',   hexStr:'#FFCC00', accentStr:'#7A5200', price:700,  rarity:'rare'},
   ],
   cluster:[
-    {id:'default', name:'Default', hexStr:'#303030', price:0},
-    {id:'hazard',  name:'Hazard',  hexStr:'#FF6600', price:600,  rarity:'rare'},
-    {id:'olive',   name:'Olive',   hexStr:'#4A5A1A', price:500,  rarity:'uncommon'},
-    {id:'inferno', name:'Inferno', hexStr:'#CC2200', price:900,  rarity:'epic'},
+    {id:'default', name:'Default', hexStr:'#303030', accentStr:'#1A1A1E', price:0},
+    {id:'hazard',  name:'Hazard',  hexStr:'#FF6600', accentStr:'#16161A', price:600,  rarity:'rare'},
+    {id:'olive',   name:'Olive',   hexStr:'#4A5A1A', accentStr:'#23290D', price:500,  rarity:'uncommon'},
+    {id:'inferno', name:'Inferno', hexStr:'#CC2200', accentStr:'#2A0A04', price:900,  rarity:'epic'},
   ],
   shock:[
-    {id:'default', name:'Default', hexStr:'#303030', price:0},
-    {id:'violet',  name:'Violet',  hexStr:'#8833FF', price:700,  rarity:'rare'},
-    {id:'thunder', name:'Thunder', hexStr:'#FFFF00', price:800,  rarity:'epic'},
-    {id:'ghost',   name:'Ghost',   hexStr:'#CCCCFF', price:600,  rarity:'uncommon'},
+    {id:'default', name:'Default', hexStr:'#303030', accentStr:'#1A1A1E', price:0},
+    {id:'violet',  name:'Violet',  hexStr:'#8833FF', accentStr:'#2A0A5A', price:700,  rarity:'rare'},
+    {id:'thunder', name:'Thunder', hexStr:'#FFFF00', accentStr:'#2A2A04', price:800,  rarity:'epic'},
+    {id:'ghost',   name:'Ghost',   hexStr:'#CCCCFF', accentStr:'#5A5A8A', price:600,  rarity:'uncommon'},
   ],
 };
 
@@ -199,14 +199,15 @@ function _skinTone(skinId){
 function _skinCharPreview(skinId){
   return`<canvas class="is2-skin-canvas" data-skin="${skinId}" width="110" height="160" style="display:block;width:110px;height:160px;"></canvas>`;
 }
-function _camoGunPreview(hex){
+function _camoGunPreview(hex,accent){
+  const acc=accent||'rgba(0,0,0,.55)';
   return`<div style="position:relative;width:130px;height:80px;margin:4px auto;">
-    <div style="position:absolute;top:18px;left:4px;width:122px;height:14px;background:${hex};border-radius:3px 6px 6px 2px;box-shadow:0 0 16px ${hex}AA,inset 0 2px 4px rgba(255,255,255,.15);"></div>
-    <div style="position:absolute;top:10px;left:8px;width:30px;height:10px;background:${hex};border-radius:3px 3px 0 0;opacity:.8;box-shadow:inset 0 2px 3px rgba(0,0,0,.4);"></div>
+    <div style="position:absolute;top:18px;left:4px;width:122px;height:14px;background:${hex};border-radius:3px 6px 6px 2px;box-shadow:0 0 12px ${hex}66,inset 0 2px 4px rgba(255,255,255,.15);"></div>
+    <div style="position:absolute;top:10px;left:8px;width:30px;height:10px;background:${acc};border-radius:3px 3px 0 0;box-shadow:inset 0 2px 3px rgba(0,0,0,.4);"></div>
     <div style="position:absolute;top:8px;left:14px;width:18px;height:4px;background:rgba(0,0,0,.5);border-radius:1px;"></div>
-    <div style="position:absolute;top:32px;left:50px;width:24px;height:22px;background:${hex};border-radius:2px 2px 5px 5px;opacity:.85;box-shadow:inset 0 -3px 6px rgba(0,0,0,.5);"></div>
+    <div style="position:absolute;top:32px;left:50px;width:24px;height:22px;background:${acc};border-radius:2px 2px 5px 5px;box-shadow:inset 0 -3px 6px rgba(0,0,0,.5);"></div>
     <div style="position:absolute;top:32px;left:28px;width:18px;height:6px;background:${hex};opacity:.6;border-radius:1px;"></div>
-    <div style="position:absolute;top:24px;right:2px;width:10px;height:8px;background:${hex};border-radius:0 4px 4px 0;opacity:.7;"></div>
+    <div style="position:absolute;top:24px;right:2px;width:10px;height:8px;background:${acc};border-radius:0 4px 4px 0;"></div>
     <div style="position:absolute;top:26px;left:50%;margin-left:-22px;width:44px;height:2px;background:rgba(255,255,255,.18);border-radius:1px;"></div>
   </div>`;
 }
@@ -609,7 +610,7 @@ function _lkrCamoPvUpdate(camoId){
   if(subEl) subEl.textContent=(_LKR_WEAPON_LABELS[_lkrCamoWeapon]||_lkrCamoWeapon)+' CAMO'+(locked?' — NOT OWNED':'');
   if(rarEl){const rc=_rarity(cm.rarity||'common');rarEl.textContent=rc.label;rarEl.style.color=rc.color;}
   if(btn){btn.textContent=equipped?'EQUIPPED':locked?'LOCKED':'EQUIP';btn.disabled=equipped||locked;}
-  if(pv) pv.innerHTML=`<div class="lkr-cpv-gun">${_camoGunPreview(cm.hexStr||'#303030')}</div><div class="lkr-cpv-swatch" style="background:${cm.hexStr||'#303030'};box-shadow:0 0 18px ${cm.hexStr||'#303030'}88;"></div>`;
+  if(pv) pv.innerHTML=`<div class="lkr-cpv-gun">${_camoGunPreview(cm.hexStr||'#303030',cm.accentStr)}</div><div class="lkr-cpv-swatch" style="background:linear-gradient(135deg,${cm.hexStr||'#303030'} 55%,${cm.accentStr||'#1A1A1E'} 55%);box-shadow:0 0 18px ${cm.hexStr||'#303030'}88;"></div>`;
 }
 function _lkrSelectCamo(camoId,el){
   _lkrCamoSel=camoId;
@@ -701,7 +702,7 @@ function buildLockerScreen(tab){
       const equipped=equippedId===cm.id;
       const tile=document.createElement('div');
       tile.className='lkr-camo-tile'+(equipped?' lkr-camo-equipped':'')+(locked?' lkr-camo-locked':' lkr-camo-owned');
-      tile.innerHTML=`<div class="lkr-camo-swatch" style="background:${cm.hexStr||'#303030'};${locked?'filter:grayscale(.7) brightness(.45);':''}"></div>
+      tile.innerHTML=`<div class="lkr-camo-swatch" style="background:linear-gradient(135deg,${cm.hexStr||'#303030'} 55%,${cm.accentStr||'#1A1A1E'} 55%);${locked?'filter:grayscale(.7) brightness(.45);':''}"></div>
         <div class="lkr-camo-name">${cm.name}</div>
         <div class="lkr-camo-rar" style="color:${locked?'#555':_rarity(cm.rarity||'common').color}">${_rarity(cm.rarity||'common').label}</div>
         ${equipped?'<div class="lkr-camo-eq-badge">ON</div>':''}

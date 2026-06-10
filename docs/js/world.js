@@ -1006,113 +1006,200 @@ function makeCharModel(c){
   const armorC=new THREE.Color(c.outfitColor);
   const visorC=new THREE.Color(c.visorColor);
   const skinHex=c.skinTone||'#E8C49A';
-  const darkM=new THREE.MeshLambertMaterial({color:0x1A1A2A});
-  const skinM=new THREE.MeshLambertMaterial({color:new THREE.Color(skinHex)});
-  const armorM=new THREE.MeshLambertMaterial({color:armorC});
-  const visorM=new THREE.MeshLambertMaterial({color:visorC,emissive:visorC,emissiveIntensity:.3});
-  const bootM=new THREE.MeshLambertMaterial({color:0x1A120A});
-  const beltM=new THREE.MeshLambertMaterial({color:0x111111});
+  // Derived shades — undersuit is a darkened outfit tone, trim slightly lighter
+  const underC=armorC.clone().multiplyScalar(.42);
+  const plateC=armorC.clone();
+  const trimC =armorC.clone().multiplyScalar(1.25);
+  const style=c.armorStyle||'standard';
+  const heavy=style==='heavy', stealth=style==='stealth', light=style==='light';
 
-  const tW=c.armorStyle==='heavy'?.56:c.armorStyle==='stealth'?.38:.46;
-  const tH=c.armorStyle==='heavy'?.76:.62;
+  const darkM =new THREE.MeshLambertMaterial({color:0x14161C});
+  const gearM =new THREE.MeshLambertMaterial({color:0x1E222A});
+  const skinM =new THREE.MeshLambertMaterial({color:new THREE.Color(skinHex)});
+  const underM=new THREE.MeshLambertMaterial({color:underC});
+  const plateM=new THREE.MeshLambertMaterial({color:plateC});
+  const trimM =new THREE.MeshLambertMaterial({color:trimC});
+  const visorM=new THREE.MeshLambertMaterial({color:visorC,emissive:visorC,emissiveIntensity:.45});
+  const bootM =new THREE.MeshLambertMaterial({color:0x17130E});
+  const strapM=new THREE.MeshLambertMaterial({color:0x101114});
 
-  // Boots
+  const tW=heavy?.56:stealth?.36:light?.42:.46;       // torso width
+  const tH=heavy?.62:.58;                              // torso height
+  const limb=heavy?1.18:stealth?.88:1;                 // limb thickness mult
+
+  // ── Boots: sole + upper + cuff
   [-1,1].forEach(s=>{
-    const boot=new THREE.Mesh(new THREE.BoxGeometry(.18,.24,.22),bootM);
-    boot.position.set(s*.12,.12,0);g.add(boot);
+    const sole=new THREE.Mesh(new THREE.BoxGeometry(.19*limb,.05,.26),darkM);
+    sole.position.set(s*.125,.025,.02);g.add(sole);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.17*limb,.16,.22),bootM);
+    boot.position.set(s*.125,.13,.01);g.add(boot);
+    const cuff=new THREE.Mesh(new THREE.BoxGeometry(.18*limb,.06,.21),gearM);
+    cuff.position.set(s*.125,.235,0);g.add(cuff);
   });
-  // Upper legs + knee pads (lowered so bottom meets boot top at y=0.24)
-  const legM=new THREE.MeshLambertMaterial({color:armorC});
+  // ── Legs: shin (undersuit) + thigh (outfit) + knee pad
   [-1,1].forEach(s=>{
-    const leg=new THREE.Mesh(new THREE.BoxGeometry(.17,.42,.19),legM);
-    leg.position.set(s*.12,.46,0);g.add(leg);
-    const kp=new THREE.Mesh(new THREE.BoxGeometry(.19,.09,.08),darkM);
-    kp.position.set(s*.12,.36,.1);g.add(kp);
+    const shin=new THREE.Mesh(new THREE.BoxGeometry(.145*limb,.26,.16),underM);
+    shin.position.set(s*.125,.39,0);g.add(shin);
+    const thigh=new THREE.Mesh(new THREE.BoxGeometry(.165*limb,.30,.185),plateM);
+    thigh.position.set(s*.125,.66,0);g.add(thigh);
+    const kp=new THREE.Mesh(new THREE.BoxGeometry(.15*limb,.10,.06),gearM);
+    kp.position.set(s*.125,.515,.095);g.add(kp);
   });
-  // Belt
-  const belt=new THREE.Mesh(new THREE.BoxGeometry(tW+.04,.06,.28),beltM);
-  belt.position.y=.72;g.add(belt);
+  // ── Pelvis + belt + pouches + holster
+  const pelvis=new THREE.Mesh(new THREE.BoxGeometry(tW-.04,.14,.24),underM);
+  pelvis.position.y=.835;g.add(pelvis);
+  const belt=new THREE.Mesh(new THREE.BoxGeometry(tW+.02,.055,.27),strapM);
+  belt.position.y=.895;g.add(belt);
+  const buckle=new THREE.Mesh(new THREE.BoxGeometry(.07,.045,.02),trimM);
+  buckle.position.set(0,.895,.14);g.add(buckle);
+  // belt pouches front-left + back
+  const pch1=new THREE.Mesh(new THREE.BoxGeometry(.09,.10,.06),gearM);
+  pch1.position.set(-.13,.845,.135);g.add(pch1);
+  const pch2=new THREE.Mesh(new THREE.BoxGeometry(.11,.09,.05),gearM);
+  pch2.position.set(.04,.85,-.145);g.add(pch2);
+  // thigh holster right
+  const hol=new THREE.Mesh(new THREE.BoxGeometry(.07,.16,.11),gearM);
+  hol.position.set(.215,.64,.03);g.add(hol);
+  const holStrap=new THREE.Mesh(new THREE.BoxGeometry(.20,.035,.20),strapM);
+  holStrap.position.set(.125,.72,0);g.add(holStrap);
 
-  // Torso
-  const torso=new THREE.Mesh(new THREE.BoxGeometry(tW,tH,.28),armorM);
-  torso.position.y=tH/2+.76;g.add(torso);
-  const torsoY=tH/2+.76;
-
-  // Shoulder pads (heavy)
-  if(c.armorStyle==='heavy'){
-    [-1,1].forEach(s=>{
-      const pad=new THREE.Mesh(new THREE.BoxGeometry(.15,.12,.3),armorM);
-      pad.position.set(s*(tW/2+.08),torsoY+.12,0);g.add(pad);
-    });
-  }
-
-  // Arms + elbow pads
-  const armM=new THREE.MeshLambertMaterial({color:armorC});
+  // ── Torso: undersuit core + chest plate + back plate + webbing straps
+  const torsoY=.96+tH/2;
+  const core=new THREE.Mesh(new THREE.BoxGeometry(tW-.02,tH,.24),underM);
+  core.position.y=torsoY;g.add(core);
+  const chest=new THREE.Mesh(new THREE.BoxGeometry(tW,tH*.62,.08),plateM);
+  chest.position.set(0,torsoY+tH*.12,.145);g.add(chest);
+  const abdo=new THREE.Mesh(new THREE.BoxGeometry(tW-.08,tH*.30,.05),gearM);
+  abdo.position.set(0,torsoY-tH*.28,.135);g.add(abdo);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(tW-.02,tH*.7,.06),plateM);
+  back.position.set(0,torsoY+tH*.08,-.135);g.add(back);
+  // X webbing straps over chest
   [-1,1].forEach(s=>{
-    const arm=new THREE.Mesh(new THREE.BoxGeometry(.15,.52,.16),armM);
-    arm.position.set(s*(tW/2+.1),torsoY-.02,0);g.add(arm);
-    const ep=new THREE.Mesh(new THREE.BoxGeometry(.17,.08,.07),darkM);
-    ep.position.set(s*(tW/2+.1),torsoY-.2,.06);g.add(ep);
+    const strap=new THREE.Mesh(new THREE.BoxGeometry(.055,tH*.78,.02),strapM);
+    strap.position.set(s*tW*.26,torsoY+tH*.06,.185);strap.rotation.z=s*.18;g.add(strap);
   });
+  // chest admin pouch + radio
+  const cpch=new THREE.Mesh(new THREE.BoxGeometry(.12,.08,.04),gearM);
+  cpch.position.set(-.02,torsoY+tH*.05,.20);g.add(cpch);
+  const radio=new THREE.Mesh(new THREE.BoxGeometry(.05,.09,.035),darkM);
+  radio.position.set(tW*.30,torsoY+tH*.22,.185);g.add(radio);
+  // collar
+  const collar=new THREE.Mesh(new THREE.BoxGeometry(tW*.62,.06,.20),gearM);
+  collar.position.set(0,torsoY+tH/2+.01,0);g.add(collar);
 
-  // Mini weapon
-  const wGrp=new THREE.Group();
-  const wBarrel=new THREE.Mesh(new THREE.BoxGeometry(.05,.05,.4),darkM);
-  wBarrel.position.z=-.2;wGrp.add(wBarrel);
-  const wBody=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,.2),darkM);
-  wGrp.add(wBody);
-  wGrp.position.set(tW/2+.12,torsoY-.1,-.18);wGrp.rotation.x=.2;g.add(wGrp);
+  // ── Shoulders + arms: pauldron(outfit) + upper(under) + forearm guard(outfit) + glove
+  const shY=torsoY+tH/2-.05;
+  [-1,1].forEach(s=>{
+    const padW=heavy?.20:light?.14:stealth?.12:.17;
+    const pad=new THREE.Mesh(new THREE.BoxGeometry(padW,heavy?.16:.12,heavy?.30:.24),plateM);
+    pad.position.set(s*(tW/2+.075),shY+.03,0);g.add(pad);
+    if(heavy){ // layered pauldron rim
+      const rim=new THREE.Mesh(new THREE.BoxGeometry(padW+.03,.05,.32),trimM);
+      rim.position.set(s*(tW/2+.075),shY+.11,0);g.add(rim);
+    }
+    const upper=new THREE.Mesh(new THREE.BoxGeometry(.125*limb,.26,.14),underM);
+    upper.position.set(s*(tW/2+.085),shY-.18,0);upper.rotation.z=s*.06;g.add(upper);
+    const fore=new THREE.Mesh(new THREE.BoxGeometry(.135*limb,.22,.15),plateM);
+    fore.position.set(s*(tW/2+.10),shY-.41,.01);fore.rotation.z=s*.08;g.add(fore);
+    const glove=new THREE.Mesh(new THREE.BoxGeometry(.11,.10,.12),darkM);
+    glove.position.set(s*(tW/2+.115),shY-.55,.02);g.add(glove);
+  });
+  // left arm armband (squad marker, visor color)
+  const band=new THREE.Mesh(new THREE.BoxGeometry(.135*limb+.015,.05,.155),visorM);
+  band.position.set(-(tW/2+.085),shY-.10,0);band.rotation.z=-.06;g.add(band);
 
-  // Head
-  const headY=torsoY+tH/2+.16;
-  const head=new THREE.Mesh(new THREE.BoxGeometry(.27,.3,.27),skinM);
+  // ── Neck + head
+  const headY=torsoY+tH/2+.20;
+  const neck=new THREE.Mesh(new THREE.BoxGeometry(.10,.10,.10),skinM);
+  neck.position.y=torsoY+tH/2+.05;g.add(neck);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.25,.27,.25),skinM);
   head.position.y=headY;g.add(head);
 
   if(c.helmet){
-    const helm=new THREE.Mesh(new THREE.BoxGeometry(.32,.24,.32),armorM);
-    helm.position.y=headY+.04;g.add(helm);
-    const visor=new THREE.Mesh(new THREE.BoxGeometry(.26,.1,.06),visorM);
-    visor.position.set(0,headY-.01,.17);g.add(visor);
-    const strap=new THREE.Mesh(new THREE.BoxGeometry(.28,.04,.04),darkM);
-    strap.position.set(0,headY-.1,.14);g.add(strap);
-  } else {
-    // Face detail
-    const eyeM=new THREE.MeshLambertMaterial({color:0x112233});
+    // Helmet shell: dome + brim + ear cups + back guard
+    const dome=new THREE.Mesh(new THREE.BoxGeometry(.31,.17,.31),plateM);
+    dome.position.y=headY+.11;g.add(dome);
+    const brim=new THREE.Mesh(new THREE.BoxGeometry(.32,.045,.10),plateM);
+    brim.position.set(0,headY+.045,.15);g.add(brim);
     [-1,1].forEach(s=>{
-      const eye=new THREE.Mesh(new THREE.BoxGeometry(.04,.04,.02),eyeM);
-      eye.position.set(s*.07,headY+.04,.135);g.add(eye);
+      const ear=new THREE.Mesh(new THREE.BoxGeometry(.045,.12,.14),gearM);
+      ear.position.set(s*.15,headY-.01,0);g.add(ear);
     });
-    // Mouth (narrow dark strip)
-    const mouthM=new THREE.MeshLambertMaterial({color:0x2A0A0A});
-    const mouth=new THREE.Mesh(new THREE.BoxGeometry(.09,.03,.02),mouthM);
-    mouth.position.set(0,headY-.04,.138);g.add(mouth);
-    // Hair cap (sits on top of head, not inside it)
-    const hairM=new THREE.MeshLambertMaterial({color:0x2A1A08});
-    const hair=new THREE.Mesh(new THREE.BoxGeometry(.29,.09,.29),hairM);
-    hair.position.set(0,headY+.20,0);g.add(hair);
+    const backG=new THREE.Mesh(new THREE.BoxGeometry(.28,.10,.05),plateM);
+    backG.position.set(0,headY+.01,-.145);g.add(backG);
+    // Visor band
+    const visor=new THREE.Mesh(new THREE.BoxGeometry(.24,.085,.05),visorM);
+    visor.position.set(0,headY+.005,.14);g.add(visor);
+    // Chin strap
+    const strap=new THREE.Mesh(new THREE.BoxGeometry(.26,.035,.035),strapM);
+    strap.position.set(0,headY-.105,.10);g.add(strap);
+    // NVG mount stub (standard/heavy) or antenna (stealth)
+    if(!stealth&&!light){
+      const nvg=new THREE.Mesh(new THREE.BoxGeometry(.06,.05,.05),darkM);
+      nvg.position.set(0,headY+.13,.16);g.add(nvg);
+    }
+    const ant=new THREE.Mesh(new THREE.BoxGeometry(.012,.18,.012),darkM);
+    ant.position.set(-.14,headY+.24,-.10);g.add(ant);
+  } else {
+    // Bare head: eyes, brow, mouth, hair, headset
+    const eyeM=new THREE.MeshLambertMaterial({color:0x18222E});
+    [-1,1].forEach(s=>{
+      const eye=new THREE.Mesh(new THREE.BoxGeometry(.04,.035,.02),eyeM);
+      eye.position.set(s*.065,headY+.03,.125);g.add(eye);
+    });
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(.17,.025,.02),new THREE.MeshLambertMaterial({color:0x2A1A08}));
+    brow.position.set(0,headY+.065,.125);g.add(brow);
+    const mouth=new THREE.Mesh(new THREE.BoxGeometry(.08,.022,.02),new THREE.MeshLambertMaterial({color:0x7A4A3A}));
+    mouth.position.set(0,headY-.055,.127);g.add(mouth);
+    const hair=new THREE.Mesh(new THREE.BoxGeometry(.27,.08,.27),new THREE.MeshLambertMaterial({color:0x2A1A08}));
+    hair.position.set(0,headY+.155,-.01);g.add(hair);
+    // comms headset
+    const hsBand=new THREE.Mesh(new THREE.BoxGeometry(.28,.02,.02),darkM);
+    hsBand.position.set(0,headY+.115,0);g.add(hsBand);
+    const hsCup=new THREE.Mesh(new THREE.BoxGeometry(.03,.07,.07),darkM);
+    hsCup.position.set(-.135,headY+.01,0);g.add(hsCup);
   }
 
-  // Backpack
+  // ── Backpack
   if(c.backpack!=='none'){
-    const bpH=c.backpack==='missile'?.48:.32;
-    const bp=new THREE.Mesh(new THREE.BoxGeometry(.22,bpH,.14),darkM);
-    bp.position.set(0,torsoY+.08,-.22);g.add(bp);
+    const bpH=c.backpack==='missile'?.40:.30;
+    const bp=new THREE.Mesh(new THREE.BoxGeometry(.26,bpH,.13),gearM);
+    bp.position.set(0,torsoY+.04,-.235);g.add(bp);
+    const bpLid=new THREE.Mesh(new THREE.BoxGeometry(.22,.06,.10),darkM);
+    bpLid.position.set(0,torsoY+.04+bpH/2,-.235);g.add(bpLid);
+    // shoulder straps over the top
+    [-1,1].forEach(s=>{
+      const st=new THREE.Mesh(new THREE.BoxGeometry(.05,.03,.30),strapM);
+      st.position.set(s*tW*.26,torsoY+tH/2-.01,-.06);g.add(st);
+    });
     if(c.backpack==='missile'){
       for(let i=-1;i<=1;i++){
-        const m=new THREE.Mesh(new THREE.CylinderGeometry(.028,.028,.18,6),
-          new THREE.MeshLambertMaterial({color:0x888888}));
-        m.position.set(i*.07,torsoY+.26,-.22);g.add(m);
+        const m=new THREE.Mesh(new THREE.CylinderGeometry(.030,.030,.22,6),
+          new THREE.MeshLambertMaterial({color:0x6A7078}));
+        m.position.set(i*.075,torsoY+.04+bpH/2+.08,-.235);g.add(m);
+        const tip=new THREE.Mesh(new THREE.ConeGeometry(.030,.05,6),
+          new THREE.MeshLambertMaterial({color:0xB04038}));
+        tip.position.set(i*.075,torsoY+.04+bpH/2+.215,-.235);g.add(tip);
       }
     }
   }
 
-  // Stealth lines
-  if(c.armorStyle==='stealth'){
-    const lineMat=new THREE.MeshLambertMaterial({color:0x0088FF,emissive:0x0044FF,emissiveIntensity:.5});
-    const line1=new THREE.Mesh(new THREE.BoxGeometry(tW+.02,.03,.03),lineMat);
-    line1.position.y=torsoY;g.add(line1);
-    const line2=new THREE.Mesh(new THREE.BoxGeometry(.03,.03,tH*.7),lineMat);
-    line2.position.set(0,torsoY,.14);g.add(line2);
+  // ── Stealth energy lines
+  if(stealth){
+    const lineMat=new THREE.MeshLambertMaterial({color:visorC,emissive:visorC,emissiveIntensity:.6});
+    const line1=new THREE.Mesh(new THREE.BoxGeometry(tW+.02,.022,.022),lineMat);
+    line1.position.set(0,torsoY+tH*.18,.19);g.add(line1);
+    [-1,1].forEach(s=>{
+      const line2=new THREE.Mesh(new THREE.BoxGeometry(.022,.34,.022),lineMat);
+      line2.position.set(s*.125,.55,.10);g.add(line2);
+    });
+  }
+  // ── Heavy extra plating
+  if(heavy){
+    const groin=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,.05),plateM);
+    groin.position.set(0,.80,.14);g.add(groin);
+    const spine=new THREE.Mesh(new THREE.BoxGeometry(.10,tH*.8,.04),trimM);
+    spine.position.set(0,torsoY+.02,-.17);g.add(spine);
   }
   return g;
 }
@@ -1129,15 +1216,25 @@ function rebuildCharPreview(){
 // ═══════════════════════════════════════════════════════════════
 //  WEAPON MESH (FPS view)
 // ═══════════════════════════════════════════════════════════════
-function _getWeaponCamoColor(weaponId){
-  const def={launcher:0x1E1E1E,pistol:0x222222,shotgun:0x1A1A1A,sniper:0x1A1A1A,smg:0x1C1C1C,railgun:0x1A2030,cluster:0x2A1A0A,shock:0x1A1030};
+function _getWeaponCamoColors(weaponId){
+  const defBase={launcher:0x23262B,pistol:0x26282E,shotgun:0x222428,sniper:0x23262A,smg:0x24262B,railgun:0x222A36,cluster:0x2E2418,shock:0x241E32};
+  const defAcc ={launcher:0x14151A,pistol:0x15161B,shotgun:0x131418,sniper:0x141519,smg:0x14151A,railgun:0x121822,cluster:0x1A140C,shock:0x14101E};
+  let base=defBase[weaponId]||0x24262B, accent=defAcc[weaponId]||0x14151A;
   const camoId=saveData&&saveData.equippedWeaponCamos?saveData.equippedWeaponCamos[weaponId]:'default';
-  if(!camoId||camoId==='default') return def[weaponId]||0x1E1E1E;
-  const camos=typeof WEAPON_CAMOS!=='undefined'?WEAPON_CAMOS[weaponId]:null;
-  if(!camos) return def[weaponId]||0x1E1E1E;
-  const camo=camos.find(c=>c.id===camoId);
-  return camo?parseInt(camo.hexStr.replace('#',''),16):def[weaponId]||0x1E1E1E;
+  if(camoId&&camoId!=='default'&&typeof WEAPON_CAMOS!=='undefined'&&WEAPON_CAMOS[weaponId]){
+    const camo=WEAPON_CAMOS[weaponId].find(c=>c.id===camoId);
+    if(camo){
+      base=parseInt(camo.hexStr.replace('#',''),16);
+      accent=camo.accentStr?parseInt(camo.accentStr.replace('#',''),16)
+        :new THREE.Color(base).multiplyScalar(.4).getHex();
+    }
+  }
+  return{base,accent};
 }
+function _getWeaponCamoColor(weaponId){return _getWeaponCamoColors(weaponId).base;}
+// Shared weapon material builders — soft emissive lift so camo reads in shadow without glowing
+function _wpnBaseMat(hex){return new THREE.MeshLambertMaterial({color:hex,emissive:new THREE.Color(hex),emissiveIntensity:.14});}
+function _wpnAccMat(hex){return new THREE.MeshLambertMaterial({color:hex,emissive:new THREE.Color(hex),emissiveIntensity:.10});}
 function makeWeaponMesh(){
   if(currentWeapon==='pistol')      return makePistolMesh();
   if(currentWeapon==='shotgun')     return makeShotgunMesh();
@@ -1150,51 +1247,64 @@ function makeWeaponMesh(){
 }
 function makeLauncherMesh(){
   const g=new THREE.Group();
-  const _lc=_getWeaponCamoColor('launcher');
-  const metalM=new THREE.MeshLambertMaterial({color:_lc,emissive:new THREE.Color(_lc),emissiveIntensity:.5});
+  const cc=_getWeaponCamoColors('launcher');
+  const metalM=_wpnBaseMat(cc.base);
+  const accM  =_wpnAccMat(cc.accent);
   const darkM =new THREE.MeshLambertMaterial({color:0x111111});
-  const stockM=new THREE.MeshLambertMaterial({color:saveData.customization.outfitColor});
-  const tube=new THREE.Mesh(new THREE.CylinderGeometry(.062,.062,.70,8),metalM);
+  const tube=new THREE.Mesh(new THREE.CylinderGeometry(.062,.062,.70,10),metalM);
   tube.rotation.x=Math.PI/2;tube.position.z=-.08;g.add(tube);
-  const front=new THREE.Mesh(new THREE.ConeGeometry(.062,.13,8),darkM);
+  // accent wrap bands on tube
+  [-.32,-.02,.22].forEach(z=>{
+    const ring=new THREE.Mesh(new THREE.CylinderGeometry(.066,.066,.035,10),accM);
+    ring.rotation.x=Math.PI/2;ring.position.z=z;g.add(ring);
+  });
+  const front=new THREE.Mesh(new THREE.ConeGeometry(.062,.13,10),accM);
   front.rotation.x=Math.PI/2;front.position.z=-.47;g.add(front);
-  const back=new THREE.Mesh(new THREE.CylinderGeometry(.072,.038,.09,8),darkM);
+  const back=new THREE.Mesh(new THREE.CylinderGeometry(.072,.038,.09,10),darkM);
   back.rotation.x=Math.PI/2;back.position.z=.32;g.add(back);
-  const stock=new THREE.Mesh(new THREE.BoxGeometry(.068,.088,.22),stockM);
+  const stock=new THREE.Mesh(new THREE.BoxGeometry(.068,.088,.22),accM);
   stock.position.set(0,-.08,.15);g.add(stock);
-  const scope=new THREE.Mesh(new THREE.CylinderGeometry(.024,.024,.22,8),new THREE.MeshLambertMaterial({color:0x0A120A}));
+  const scope=new THREE.Mesh(new THREE.CylinderGeometry(.024,.024,.22,8),darkM);
   scope.rotation.x=Math.PI/2;scope.position.set(0,.098,-.04);g.add(scope);
   const lensM=new THREE.MeshLambertMaterial({color:0x112233});lensM.emissive.set(0x001122);lensM.emissiveIntensity=.4;
   const lens=new THREE.Mesh(new THREE.CircleGeometry(.022,8),lensM);
   lens.position.set(0,.098,-.16);g.add(lens);
-  const grip=new THREE.Mesh(new THREE.BoxGeometry(.056,.14,.07),stockM);
+  const grip=new THREE.Mesh(new THREE.BoxGeometry(.056,.14,.07),accM);
   grip.position.set(0,-.11,-.04);g.add(grip);
+  // carry handle
+  const handle=new THREE.Mesh(new THREE.BoxGeometry(.02,.05,.16),darkM);
+  handle.position.set(0,.075,.12);g.add(handle);
   g.position.set(.25,-.22,-.42);return g;
 }
 function makePistolMesh(){
   const g=new THREE.Group();
-  const _pc=_getWeaponCamoColor('pistol');
-  const metalM=new THREE.MeshLambertMaterial({color:_pc,emissive:new THREE.Color(_pc),emissiveIntensity:.5});
+  const cc=_getWeaponCamoColors('pistol');
+  const metalM=_wpnBaseMat(cc.base);
+  const accM  =_wpnAccMat(cc.accent);
   const darkM =new THREE.MeshLambertMaterial({color:0x111111});
-  const gripM =new THREE.MeshLambertMaterial({color:0x2A1A0A});
   const barrel=new THREE.Mesh(new THREE.BoxGeometry(.042,.042,.36),metalM);
   barrel.position.z=-.14;g.add(barrel);
-  const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.026,.032,.04,8),darkM);
+  const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.026,.032,.04,8),accM);
   muzzle.rotation.x=Math.PI/2;muzzle.position.z=-.34;g.add(muzzle);
   const body=new THREE.Mesh(new THREE.BoxGeometry(.072,.09,.18),metalM);
   body.position.set(0,-.01,.04);g.add(body);
-  const grip=new THREE.Mesh(new THREE.BoxGeometry(.062,.16,.08),gripM);
+  const grip=new THREE.Mesh(new THREE.BoxGeometry(.062,.16,.08),accM);
   grip.rotation.x=.18;grip.position.set(0,-.14,.08);g.add(grip);
-  const slide=new THREE.Mesh(new THREE.BoxGeometry(.048,.048,.32),darkM);
+  const slide=new THREE.Mesh(new THREE.BoxGeometry(.048,.048,.32),accM);
   slide.position.set(0,.022,-.04);g.add(slide);
+  // slide serration + front sight
+  const sight=new THREE.Mesh(new THREE.BoxGeometry(.012,.018,.012),darkM);
+  sight.position.set(0,.055,-.19);g.add(sight);
+  const trig=new THREE.Mesh(new THREE.BoxGeometry(.04,.05,.05),darkM);
+  trig.position.set(0,-.065,.02);g.add(trig);
   g.position.set(.22,-.2,-.38);return g;
 }
 function makeShotgunMesh(){
   const g=new THREE.Group();
-  const _sc=_getWeaponCamoColor('shotgun');
-  const metalM=new THREE.MeshLambertMaterial({color:_sc,emissive:new THREE.Color(_sc),emissiveIntensity:.5});
+  const cc=_getWeaponCamoColors('shotgun');
+  const metalM=_wpnBaseMat(cc.base);
+  const woodM =_wpnAccMat(cc.accent);
   const darkM =new THREE.MeshLambertMaterial({color:0x0D0D0D});
-  const woodM =new THREE.MeshLambertMaterial({color:0x3A1A08});
   // Double barrel
   const bL=new THREE.Mesh(new THREE.CylinderGeometry(.028,.028,.58,8),metalM);
   bL.rotation.x=Math.PI/2;bL.position.set(-.038,0,-.14);g.add(bL);
@@ -1229,10 +1339,10 @@ function makeShotgunMesh(){
 }
 function makeSniperMesh(){
   const g=new THREE.Group();
-  const _snc=_getWeaponCamoColor('sniper');
-  const metalM=new THREE.MeshLambertMaterial({color:_snc,emissive:new THREE.Color(_snc),emissiveIntensity:.5});
+  const cc=_getWeaponCamoColors('sniper');
+  const metalM=_wpnBaseMat(cc.base);
+  const woodM =_wpnAccMat(cc.accent);
   const darkM =new THREE.MeshLambertMaterial({color:0x0A0A0A});
-  const woodM =new THREE.MeshLambertMaterial({color:0x2A1A0A});
   const glassM=new THREE.MeshLambertMaterial({color:0x112233,emissive:new THREE.Color(0x001122),emissiveIntensity:.4});
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.82,8),metalM);
   barrel.rotation.x=Math.PI/2;barrel.position.z=-.28;g.add(barrel);
@@ -1260,10 +1370,10 @@ function makeSniperMesh(){
 }
 function makeSmgMesh(){
   const g=new THREE.Group();
-  const _mc=_getWeaponCamoColor('smg');
-  const metalM=new THREE.MeshLambertMaterial({color:_mc,emissive:new THREE.Color(_mc),emissiveIntensity:.5});
+  const cc=_getWeaponCamoColors('smg');
+  const metalM=_wpnBaseMat(cc.base);
+  const polyM =_wpnAccMat(cc.accent);
   const darkM =new THREE.MeshLambertMaterial({color:0x0E0E0E});
-  const polyM =new THREE.MeshLambertMaterial({color:0x2A2A2A});
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.28,8),metalM);
   barrel.rotation.x=Math.PI/2;barrel.position.z=-.1;g.add(barrel);
   const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.03,.022,.06,6),darkM);
@@ -1284,9 +1394,9 @@ function makeSmgMesh(){
 }
 function makeRailgunMesh(){
   const g=new THREE.Group();
-  const _rc=_getWeaponCamoColor('railgun');
-  const metalM=new THREE.MeshLambertMaterial({color:_rc,emissive:new THREE.Color(_rc),emissiveIntensity:.5});
-  const darkM =new THREE.MeshLambertMaterial({color:0x080808});
+  const cc=_getWeaponCamoColors('railgun');
+  const metalM=_wpnBaseMat(cc.base);
+  const darkM =_wpnAccMat(cc.accent);
   const glowM =new THREE.MeshLambertMaterial({color:0x00FFFF,emissive:new THREE.Color(0x00FFFF),emissiveIntensity:1.5});
   // long barrel
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,1.0,8),metalM);
@@ -1312,10 +1422,10 @@ function makeRailgunMesh(){
 }
 function makeClusterMesh(){
   const g=new THREE.Group();
-  const _cc=_getWeaponCamoColor('cluster');
-  const metalM=new THREE.MeshLambertMaterial({color:_cc,emissive:new THREE.Color(_cc),emissiveIntensity:.5});
+  const cc=_getWeaponCamoColors('cluster');
+  const metalM=_wpnBaseMat(cc.base);
+  const drumM =_wpnAccMat(cc.accent);
   const darkM =new THREE.MeshLambertMaterial({color:0x1A1A0A});
-  const drumM =new THREE.MeshLambertMaterial({color:0x2A2A2A});
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.052,.058,.38,8),metalM);
   barrel.rotation.x=Math.PI/2;barrel.position.z=-.08;g.add(barrel);
   const bell=new THREE.Mesh(new THREE.CylinderGeometry(.07,.052,.06,8),darkM);
@@ -1336,9 +1446,9 @@ function makeClusterMesh(){
 }
 function makeShockMesh(){
   const g=new THREE.Group();
-  const _shc=_getWeaponCamoColor('shock');
-  const metalM=new THREE.MeshLambertMaterial({color:_shc,emissive:new THREE.Color(_shc),emissiveIntensity:.5});
-  const darkM =new THREE.MeshLambertMaterial({color:0x0A0A14});
+  const cc=_getWeaponCamoColors('shock');
+  const metalM=_wpnBaseMat(cc.base);
+  const darkM =_wpnAccMat(cc.accent);
   const glowM =new THREE.MeshLambertMaterial({color:0xAA44FF,emissive:new THREE.Color(0xAA44FF),emissiveIntensity:1.2});
   const body=new THREE.Mesh(new THREE.BoxGeometry(.088,.082,.44),metalM);
   body.position.set(0,0,.04);g.add(body);

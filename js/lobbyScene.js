@@ -24,9 +24,11 @@ function initLobbyScene(){
   _lobCam=new THREE.PerspectiveCamera(46,W/H,.1,80);
   _lobCam.position.set(0,2.2,8.4);
   _lobCam.lookAt(0,1.1,0);
-  _lobScene.add(new THREE.AmbientLight(0xffffff,.52));
-  const dl=new THREE.DirectionalLight(0xffffff,.9);dl.position.set(3,8,5);_lobScene.add(dl);
-  const fl=new THREE.DirectionalLight(0x4466bb,.22);fl.position.set(-3,2,-4);_lobScene.add(fl);
+  _lobScene.add(new THREE.AmbientLight(0xffffff,.48));
+  // Key light warm, fill cool, rim from behind for silhouette pop
+  const dl=new THREE.DirectionalLight(0xFFF2E0,.95);dl.position.set(3,8,5);_lobScene.add(dl);
+  const fl=new THREE.DirectionalLight(0x4466bb,.25);fl.position.set(-3,2,-4);_lobScene.add(fl);
+  const rim=new THREE.DirectionalLight(0x8AB8E8,.55);rim.position.set(0,4,-8);_lobScene.add(rim);
   const gr=new THREE.Mesh(new THREE.PlaneGeometry(28,14),new THREE.MeshLambertMaterial({color:0x0D1018}));
   gr.rotation.x=-Math.PI/2;gr.name='lobGround';_lobScene.add(gr);
   _lobScene.fog=new THREE.Fog(0x0A0E14,14,30);
@@ -46,7 +48,7 @@ function _lobLoop(){
   _lobT+=0.016;
   _lobChars.forEach((s,i)=>{
     if(!s?.group) return;
-    s.group.position.y=Math.sin(_lobT*1.3+i*1.1)*0.028;
+    s.group.position.y=.11+Math.sin(_lobT*1.3+i*1.1)*0.028;
     s.group.rotation.y=Math.sin(_lobT*0.45+i*1.3)*0.05;
   });
   _lobR.render(_lobScene,_lobCam);
@@ -102,19 +104,25 @@ function _addLobChar(slot,x,idx,total,scale){
   charGrp.scale.setScalar(scale);
   _lobScene.add(charGrp);
 
-  // Glow ring — green when ready
+  // Glow ring — green when ready, amber idle edge
   const glowMat=new THREE.MeshLambertMaterial({
-    color:slot.ready?0x00AA44:0x141C28,
-    emissive:slot.ready?new THREE.Color(0x004418):new THREE.Color(0x000000),
-    emissiveIntensity:slot.ready?.55:0
+    color:slot.ready?0x00AA44:0x2A3242,
+    emissive:slot.ready?new THREE.Color(0x00642A):new THREE.Color(0x18202E),
+    emissiveIntensity:slot.ready?.65:.35
   });
   const glow=new THREE.Mesh(new THREE.CylinderGeometry(.56,.56,.022,32),glowMat);
   glow.position.set(x,-.01,0);_lobScene.add(glow);
 
-  // Platform disc
-  const platMat=new THREE.MeshLambertMaterial({color:0x111820});
-  const platform=new THREE.Mesh(new THREE.CylinderGeometry(.44,.44,.04,24),platMat);
-  platform.position.set(x,0,0);_lobScene.add(platform);
+  // Platform: beveled pedestal + dark top + emissive edge ring
+  const pedMat=new THREE.MeshLambertMaterial({color:0x161C26});
+  const ped=new THREE.Mesh(new THREE.CylinderGeometry(.46,.52,.09,24),pedMat);
+  ped.position.set(x,.045,0);_lobScene.add(ped);
+  const topMat=new THREE.MeshLambertMaterial({color:0x0E1218});
+  const platform=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.025,24),topMat);
+  platform.position.set(x,.10,0);_lobScene.add(platform);
+  const edgeMat=new THREE.MeshLambertMaterial({color:0x3A4A66,emissive:new THREE.Color(0x2A3A56),emissiveIntensity:.5});
+  const edge=new THREE.Mesh(new THREE.TorusGeometry(.44,.012,6,32),edgeMat);
+  edge.rotation.x=Math.PI/2;edge.position.set(x,.105,0);_lobScene.add(edge);
 
   // HTML label
   const lc=document.getElementById('lobbyStageLabels');
@@ -127,7 +135,7 @@ function _addLobChar(slot,x,idx,total,scale){
       <div class="lcl-rdy ${slot.ready?'is-rdy':'no-rdy'}">${slot.ready?'✓ READY':'NOT READY'}</div>`;
     lc.appendChild(lbl);
   }
-  _lobChars.push({group:charGrp,platform,glow});
+  _lobChars.push({group:charGrp,platform,glow,ped,edge});
 }
 
 function updateLobbyScene(){
@@ -138,6 +146,8 @@ function updateLobbyScene(){
     if(s?.group)    _lobScene.remove(s.group);
     if(s?.platform) _lobScene.remove(s.platform);
     if(s?.glow)     _lobScene.remove(s.glow);
+    if(s?.ped)      _lobScene.remove(s.ped);
+    if(s?.edge)     _lobScene.remove(s.edge);
   });
   _lobChars=[];
   const lc=document.getElementById('lobbyStageLabels');

@@ -345,49 +345,120 @@ function makeSoldierMesh(locId, type){
   const g=new THREE.Group();
   const isNorway=locId==='sweden';
   const isIsrael=locId==='beirut';
-  // Norway: steel blue. Israel: tan/olive IDF. Iran: dark olive-khaki.
+  // Faction palette: uniform / helmet / vest / accent stripe (readability marker)
   const uniC  = isNorway ? 0x4A6A8A : isIsrael ? 0xB8A878 : 0x6B7A2A;
   const helmC = isNorway ? 0x1E3A58 : isIsrael ? 0x8A8050 : 0x3A4A10;
   const vestC = isNorway ? 0x2A4A6A : isIsrael ? 0x9A9060 : 0x4A5A18;
+  const accC  = isNorway ? 0xB02A30 : isIsrael ? 0x2A4A8A : 0x1E8A3C;
   const skinM =new THREE.MeshLambertMaterial({color:0xC8955A});
   const uniM  =new THREE.MeshLambertMaterial({color:uniC});
+  const uniDkM=new THREE.MeshLambertMaterial({color:new THREE.Color(uniC).multiplyScalar(.6)});
   const helmM =new THREE.MeshLambertMaterial({color:helmC});
   const vestM =new THREE.MeshLambertMaterial({color:vestC});
+  const accM  =new THREE.MeshLambertMaterial({color:accC,emissive:new THREE.Color(accC),emissiveIntensity:.2});
+  const gearM =new THREE.MeshLambertMaterial({color:0x1A1C20});
   const rifleM=new THREE.MeshLambertMaterial({color:0x111111});
-  const s=type==='heavy'?1.6:type==='sniper'?1.05:1.0;
-  // Legs
+  // Height scale + width scale differ per type for distinct silhouettes
+  const s=type==='heavy'?1.3:type==='sniper'?1.05:1.0;       // height
+  const w=type==='heavy'?1.55:type==='sniper'?.85:1.0;       // bulk
+
+  // Legs: shin (dark) + thigh
   [-1,1].forEach(side=>{
-    const leg=new THREE.Mesh(new THREE.BoxGeometry(.15*s,.6*s,.16*s),uniM);
-    leg.position.set(side*.12*s,.3*s,0);g.add(leg);
+    const shin=new THREE.Mesh(new THREE.BoxGeometry(.13*w,.28*s,.14),uniDkM);
+    shin.position.set(side*.12*w,.14*s,0);g.add(shin);
+    const thigh=new THREE.Mesh(new THREE.BoxGeometry(.15*w,.32*s,.16),uniM);
+    thigh.position.set(side*.12*w,.44*s,0);g.add(thigh);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.15*w,.07,.20),gearM);
+    boot.position.set(side*.12*w,.035,.02);g.add(boot);
   });
-  // Torso
-  const torso=new THREE.Mesh(new THREE.BoxGeometry(.42*s,.52*s,.24*s),uniM);
+  // Torso + vest plate + belt
+  const torso=new THREE.Mesh(new THREE.BoxGeometry(.42*w,.52*s,.24),uniM);
   torso.position.y=.9*s;g.add(torso);
-  // Vest
-  const vest=new THREE.Mesh(new THREE.BoxGeometry(.44*s,.35*s,.08*s),vestM);
-  vest.position.set(0,.95*s,.12*s);g.add(vest);
-  // Arms
+  const belt=new THREE.Mesh(new THREE.BoxGeometry(.44*w,.05,.26),gearM);
+  belt.position.y=.66*s;g.add(belt);
+  const vest=new THREE.Mesh(new THREE.BoxGeometry(.40*w,.36*s,.08),vestM);
+  vest.position.set(0,.95*s,.14);g.add(vest);
+  const backPl=new THREE.Mesh(new THREE.BoxGeometry(.38*w,.32*s,.06),vestM);
+  backPl.position.set(0,.95*s,-.14);g.add(backPl);
+  // Faction chest stripe — the team read
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(.40*w+.01,.06,.02),accM);
+  stripe.position.set(0,1.06*s,.185);g.add(stripe);
+  // Arms + left armband
   [-1,1].forEach(side=>{
-    const arm=new THREE.Mesh(new THREE.BoxGeometry(.13*s,.48*s,.13*s),uniM);
-    arm.position.set(side*.32*s,.88*s,0);g.add(arm);
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(.13*w,.48*s,.13),uniM);
+    arm.position.set(side*.30*w,.88*s,0);g.add(arm);
+    const glove=new THREE.Mesh(new THREE.BoxGeometry(.11*w,.09,.12),gearM);
+    glove.position.set(side*.30*w,.62*s,.01);g.add(glove);
   });
-  // Head
-  const head=new THREE.Mesh(new THREE.BoxGeometry(.25*s,.26*s,.25*s),skinM);
-  head.position.y=1.35*s;g.add(head);
-  // Helmet
-  const helm=new THREE.Mesh(new THREE.BoxGeometry(.30*s,.18*s,.30*s),helmM);
-  helm.position.y=1.49*s;g.add(helm);
-  // Heavy shoulder pads
+  const band=new THREE.Mesh(new THREE.BoxGeometry(.14*w,.06,.14),accM);
+  band.position.set(-.30*w,1.02*s,0);g.add(band);
+  // Head + neck
+  const neck=new THREE.Mesh(new THREE.BoxGeometry(.09,.08,.09),skinM);
+  neck.position.y=1.20*s+.02;g.add(neck);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.24,.25,.24),skinM);
+  head.position.y=1.36*s;g.add(head);
+
   if(type==='heavy'){
+    // HEAVY: full faceplate, pauldrons, ammo pack, rotary cannon
+    const plate=new THREE.Mesh(new THREE.BoxGeometry(.22,.18,.04),gearM);
+    plate.position.set(0,1.36*s,.13);g.add(plate);
+    const slit=new THREE.Mesh(new THREE.BoxGeometry(.16,.03,.02),accM);
+    slit.position.set(0,1.38*s,.155);g.add(slit);
+    const helm=new THREE.Mesh(new THREE.BoxGeometry(.32,.20,.32),helmM);
+    helm.position.y=1.50*s;g.add(helm);
     [-1,1].forEach(side=>{
-      const pad=new THREE.Mesh(new THREE.BoxGeometry(.14,.12,.28),vestM);
-      pad.position.set(side*.38,.98*s,0);g.add(pad);
+      const pad=new THREE.Mesh(new THREE.BoxGeometry(.18,.14,.30),vestM);
+      pad.position.set(side*.38*w,1.10*s,0);g.add(pad);
+      const rim=new THREE.Mesh(new THREE.BoxGeometry(.20,.04,.32),gearM);
+      rim.position.set(side*.38*w,1.18*s,0);g.add(rim);
     });
+    const pack=new THREE.Mesh(new THREE.BoxGeometry(.34,.40,.16),gearM);
+    pack.position.set(0,1.0*s,-.26);g.add(pack);
+    // rotary cannon: cluster of barrels
+    const gun=new THREE.Group();
+    for(let i=0;i<5;i++){
+      const a=i/5*Math.PI*2;
+      const b=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.5,6),rifleM);
+      b.rotation.x=Math.PI/2;b.position.set(Math.cos(a)*.035,Math.sin(a)*.035,-.25);gun.add(b);
+    }
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.18,8),gearM);
+    hub.rotation.x=Math.PI/2;hub.position.z=.05;gun.add(hub);
+    gun.position.set(.30*w,.88*s,-.1);g.add(gun);
+  } else if(type==='sniper'){
+    // SNIPER: hood-profile helmet, single lens, long scoped rifle, shoulder cape hint
+    const helm=new THREE.Mesh(new THREE.BoxGeometry(.28,.16,.30),helmM);
+    helm.position.y=1.48*s;g.add(helm);
+    const lens=new THREE.Mesh(new THREE.BoxGeometry(.07,.05,.03),accM);
+    lens.position.set(.05,1.38*s,.13);g.add(lens);
+    const cape=new THREE.Mesh(new THREE.BoxGeometry(.30,.26,.05),uniDkM);
+    cape.position.set(0,1.02*s,-.17);cape.rotation.x=.15;g.add(cape);
+    const rifle=new THREE.Group();
+    const brl=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,.72,6),rifleM);
+    brl.rotation.x=Math.PI/2;brl.position.z=-.30;rifle.add(brl);
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.05,.06,.26),rifleM);
+    body.position.z=.06;rifle.add(body);
+    const scope=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.14,6),gearM);
+    scope.rotation.x=Math.PI/2;scope.position.set(0,.055,-.02);rifle.add(scope);
+    const bip=new THREE.Mesh(new THREE.BoxGeometry(.06,.10,.01),gearM);
+    bip.position.set(0,-.06,-.5);rifle.add(bip);
+    rifle.position.set(.30*w,.88*s,-.08);g.add(rifle);
+  } else {
+    // GRUNT: standard helmet w/ brim + goggles, rifle held forward
+    const helm=new THREE.Mesh(new THREE.BoxGeometry(.30,.16,.30),helmM);
+    helm.position.y=1.49*s;g.add(helm);
+    const brim=new THREE.Mesh(new THREE.BoxGeometry(.30,.03,.08),helmM);
+    brim.position.set(0,1.43*s,.16);g.add(brim);
+    const gog=new THREE.Mesh(new THREE.BoxGeometry(.20,.05,.03),gearM);
+    gog.position.set(0,1.40*s,.13);g.add(gog);
+    const rifle=new THREE.Group();
+    const brl=new THREE.Mesh(new THREE.BoxGeometry(.04,.04,.34),rifleM);
+    brl.position.z=-.14;rifle.add(brl);
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.05,.07,.18),rifleM);
+    body.position.z=.06;rifle.add(body);
+    const mag=new THREE.Mesh(new THREE.BoxGeometry(.035,.09,.05),gearM);
+    mag.position.set(0,-.07,.04);rifle.add(mag);
+    rifle.position.set(.30*w,.88*s,-.06);rifle.rotation.y=-.12;g.add(rifle);
   }
-  // Rifle / sniper rifle
-  const rLen=type==='sniper'?.56:.38;
-  const rifle=new THREE.Mesh(new THREE.BoxGeometry(.046,.046,rLen),rifleM);
-  rifle.position.set(.32*s,.88*s,-(rLen/2));g.add(rifle);
   return g;
 }
 

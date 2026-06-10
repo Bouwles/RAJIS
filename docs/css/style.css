@@ -666,9 +666,12 @@ body::after{content:'';position:fixed;inset:0;
   position:absolute;transform:translateX(-50%);
   display:flex;flex-direction:column;align-items:center;gap:2px;}
 .eb-type{
-  font-family:var(--font-ui);font-size:.48em;font-weight:700;
-  color:var(--red-light);letter-spacing:.1em;text-transform:uppercase;}
-.eb-bg{width:40px;height:3px;background:rgba(180,72,58,.14);overflow:hidden;}
+  font-family:var(--font-ui);font-size:.56em;font-weight:700;
+  color:var(--red-light);letter-spacing:.12em;text-transform:uppercase;
+  text-shadow:0 1px 2px rgba(0,0,0,.9);}
+.eb-bg{width:42px;height:4px;background:rgba(0,0,0,.55);
+  border:1px solid rgba(180,72,58,.4);overflow:hidden;
+  clip-path:polygon(0 0,calc(100% - 3px) 0,100% 100%,3px 100%);}
 .eb-fill{height:100%;background:var(--red);transition:width .1s;}
 .eb-fill.heavy{background:var(--amber);}
 .eb-fill.sniper{background:#7A6A9A;}

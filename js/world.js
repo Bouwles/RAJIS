@@ -1218,6 +1218,71 @@ function makeCharModel(c){
     const spine=new THREE.Mesh(new THREE.BoxGeometry(.10,tH*.8,.04),trimM);
     spine.position.set(0,torsoY+.02,-.17);g.add(spine);
   }
+
+  // ── Skin-specific gear: each outfit gets a distinct silhouette piece
+  const gear=c.gear||'none';
+  if(gear==='scarf'){
+    const scarfM=new THREE.MeshLambertMaterial({color:trimC});
+    const wrap=new THREE.Mesh(new THREE.BoxGeometry(.20,.09,.20),scarfM);
+    wrap.position.y=torsoY+tH/2+.05;g.add(wrap);
+    const tail=new THREE.Mesh(new THREE.BoxGeometry(.10,.26,.03),scarfM);
+    tail.position.set(.05,torsoY+tH*.28,.20);tail.rotation.z=.1;g.add(tail);
+  } else if(gear==='goggles'){
+    const frameM2=new THREE.MeshLambertMaterial({color:0x10141A});
+    const gogF=new THREE.Mesh(new THREE.BoxGeometry(.26,.07,.04),frameM2);
+    gogF.position.set(0,headY+(c.helmet?.16:.10),.13);g.add(gogF);
+    [-1,1].forEach(s=>{
+      const lens=new THREE.Mesh(new THREE.BoxGeometry(.08,.05,.02),visorM);
+      lens.position.set(s*.065,headY+(c.helmet?.16:.10),.15);g.add(lens);
+    });
+  } else if(gear==='medic'){
+    const whiteM=new THREE.MeshLambertMaterial({color:0xF2F2F2});
+    const redM=new THREE.MeshLambertMaterial({color:0xD03030,emissive:new THREE.Color(0x501010),emissiveIntensity:.3});
+    const patch=new THREE.Mesh(new THREE.BoxGeometry(.11,.11,.02),whiteM);
+    patch.position.set(.10,torsoY+tH*.16,.21);g.add(patch);
+    const crossV=new THREE.Mesh(new THREE.BoxGeometry(.025,.08,.022),redM);
+    crossV.position.set(.10,torsoY+tH*.16,.212);g.add(crossV);
+    const crossH=new THREE.Mesh(new THREE.BoxGeometry(.08,.025,.022),redM);
+    crossH.position.set(.10,torsoY+tH*.16,.212);g.add(crossH);
+    const medPack=new THREE.Mesh(new THREE.BoxGeometry(.08,.13,.14),whiteM);
+    medPack.position.set(-.22,.84,-.02);g.add(medPack);
+  } else if(gear==='cape'){
+    const capeM=new THREE.MeshLambertMaterial({color:underC.clone().multiplyScalar(.8)});
+    const cape=new THREE.Mesh(new THREE.BoxGeometry(tW+.06,.78,.035),capeM);
+    cape.position.set(0,torsoY-.06,-.20);cape.rotation.x=.08;g.add(cape);
+    const clasp=new THREE.Mesh(new THREE.BoxGeometry(tW*.5,.04,.03),trimM);
+    clasp.position.set(0,torsoY+tH/2-.03,.19);g.add(clasp);
+  } else if(gear==='officer'){
+    [-1,1].forEach(s=>{
+      const board=new THREE.Mesh(new THREE.BoxGeometry(.14,.025,.22),trimM);
+      board.position.set(s*(tW/2+.075),shY+.10,0);g.add(board);
+    });
+    const ribbonCols=[0xC23030,0x3060C2,0xD0A030];
+    ribbonCols.forEach((rc,i)=>{
+      const rb=new THREE.Mesh(new THREE.BoxGeometry(.035,.025,.015),
+        new THREE.MeshLambertMaterial({color:rc}));
+      rb.position.set(-.12+i*.045,torsoY+tH*.24,.21);g.add(rb);
+    });
+  } else if(gear==='bandolier'){
+    const bandoM=new THREE.MeshLambertMaterial({color:0x2A2014});
+    const bando=new THREE.Mesh(new THREE.BoxGeometry(.07,tH*.92,.025),bandoM);
+    bando.position.set(0,torsoY+.01,.205);bando.rotation.z=.62;g.add(bando);
+    const shellM=new THREE.MeshLambertMaterial({color:0xB89040});
+    for(let i=-2;i<=2;i++){
+      const sh=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.05,5),shellM);
+      sh.position.set(i*.052,torsoY+.01-i*.037,.215);sh.rotation.z=.62;g.add(sh);
+    }
+  } else if(gear==='elite'){
+    const goldM=new THREE.MeshLambertMaterial({color:visorC,emissive:visorC,emissiveIntensity:.7});
+    [-1,1].forEach(s=>{
+      const edgeL=new THREE.Mesh(new THREE.BoxGeometry(.02,tH*.58,.02),goldM);
+      edgeL.position.set(s*tW*.46,torsoY+tH*.10,.185);g.add(edgeL);
+      const padL=new THREE.Mesh(new THREE.BoxGeometry(.04,.02,heavy?.31:.25),goldM);
+      padL.position.set(s*(tW/2+.075),shY+(heavy?.14:.10),0);g.add(padL);
+    });
+    const chev=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,.02),goldM);
+    chev.position.set(0,torsoY+tH*.30,.21);g.add(chev);
+  }
   return g;
 }
 

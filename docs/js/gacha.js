@@ -621,7 +621,7 @@ function _sgBuildCinematic3D(profile){
     try{
       const custo=_sgSkinCusto(profile.richardVariant||'richard_basic_op');
       richardGroup=makeCharModel(custo);
-      richardGroup.position.set(0,0.25,0);
+      richardGroup.position.set(0,16,0); // starts airborne — drops in at stage 2
       sc.add(richardGroup);
     }catch(e){richardGroup=null;}
   }
@@ -692,6 +692,15 @@ function _sgPlayAnimation(profile,results){
     stageLabel.className='sg-cin-stage-label';
     overlay.appendChild(stageLabel);
 
+    // Lock-on reticle — tracks the missile's screen position
+    const lockRet=document.createElement('div');
+    lockRet.className='sg-lock-reticle';
+    lockRet.style.display='none';
+    lockRet.innerHTML=`<div class="sg-lr-c sg-lr-tl"></div><div class="sg-lr-c sg-lr-tr"></div>
+      <div class="sg-lr-c sg-lr-bl"></div><div class="sg-lr-c sg-lr-br"></div>
+      <div class="sg-lr-txt">TRACKING</div>`;
+    overlay.appendChild(lockRet);
+
     // Try to init Three.js renderer
     let renderer=null,rafId=null;
     let cinObjects=null;
@@ -718,29 +727,37 @@ function _sgPlayAnimation(profile,results){
     const PROJ_DUR=0.55;
     const missileStart=new THREE.Vector3(4,42,-8);
     const missileEnd=new THREE.Vector3(3,20,-5);
+    const projTarget=missileEnd.clone();   // where the shot is aimed (moves after a clash)
     // Rarity tier flags drive slow-mo, orbit cam, debris count, shake
     const isMyth=!!profile.special;
     const isLeg=profile.label==='LEGENDARY';
     const isEpic=profile.label==='EPIC';
+    let landed=false,landT=0;              // Richard drop-in state
+    let clashed=false,reShotAt=0;          // high-rarity mid-air clash / second shot
+    let labelOverride=null,labelOverrideUntil=0;
     let debris=[];
-    function _spawnImpactDebris(){
-      const n=isMyth?26:isLeg?18:isEpic?12:8;
-      const dm=new THREE.MeshLambertMaterial({color:new THREE.Color(profile.expCol),emissive:new THREE.Color(profile.expCol),emissiveIntensity:.8});
+    function _spawnBurst(pos,colorHex,n,spread,up){
+      const dm=new THREE.MeshLambertMaterial({color:new THREE.Color(colorHex),emissive:new THREE.Color(colorHex),emissiveIntensity:.8,transparent:true});
       for(let i=0;i<n;i++){
-        const s2=.12+Math.random()*.3;
+        const s2=.10+Math.random()*.28;
         const m=new THREE.Mesh(new THREE.BoxGeometry(s2,s2,s2),dm);
-        m.position.copy(missileEnd);
+        m.position.copy(pos);
         sc.add(m);
-        debris.push({m,vx:(Math.random()-.5)*16,vy:Math.random()*13+3,vz:(Math.random()-.5)*16,
+        debris.push({m,vx:(Math.random()-.5)*spread,vy:Math.random()*up+2,vz:(Math.random()-.5)*spread,
           rx:Math.random()*6,rz:Math.random()*6});
       }
+    }
+    function _spawnImpactDebris(){
+      _spawnBurst(projTarget,profile.expCol,isMyth?26:isLeg?18:isEpic?12:8,16,13);
     }
 
     const stageLabels=[
       {t:0,   text:'📍 '+profile.map},
-      {t:2.2, text:'⚠ INCOMING — '+profile.missile},
-      {t:4.2, text:''},
+      {t:2.0, text:'⚠ INCOMING — '+profile.missile},
+      {t:3.1, text:'◆ RICHARD ON SITE'},
+      {t:4.6, text:'◉ TRACKING TARGET'},
       {t:5.8, text:'◉ TARGET LOCKED'},
+      {t:6.5, text:'⚡ '+profile.weapon+' CHARGING'},
       {t:7.2, text:'▶ INTERCEPTOR DEPLOYED'},
       {t:8.5, text:''},
     ];
@@ -755,16 +772,21 @@ function _sgPlayAnimation(profile,results){
       if(missileHit&&expT<0.9&&(isLeg||isMyth)) dt*=isMyth?0.30:0.42;
       elapsed+=dt;
 
-      // Stage label
-      for(let i=stageLabels.length-1;i>=0;i--){
-        if(elapsed>=stageLabels[i].t){stageLabel.textContent=stageLabels[i].text;break;}
+      // Stage label (event overrides beat the timeline)
+      if(labelOverride&&elapsed<labelOverrideUntil){
+        stageLabel.textContent=labelOverride;
+      } else {
+        labelOverride=null;
+        for(let i=stageLabels.length-1;i>=0;i--){
+          if(elapsed>=stageLabels[i].t){stageLabel.textContent=stageLabels[i].text;break;}
+        }
       }
 
       // Camera — mythic gets a slow orbit around the explosion
       if(isMyth&&missileHit){
         const ang=expT*0.9+Math.PI*.3;
-        tmpPos.set(missileEnd.x+Math.cos(ang)*13,missileEnd.y+2.5,missileEnd.z+Math.sin(ang)*13);
-        camPos.lerp(tmpPos,0.06);camLook.lerp(missileEnd,0.10);
+        tmpPos.set(projTarget.x+Math.cos(ang)*13,projTarget.y+2.5,projTarget.z+Math.sin(ang)*13);
+        camPos.lerp(tmpPos,0.06);camLook.lerp(projTarget,0.10);
       } else {
         const frame=_sgGetCamFrame(elapsed);
         tmpPos.set(...frame.pos);tmpLook.set(...frame.look);
@@ -772,38 +794,91 @@ function _sgPlayAnimation(profile,results){
       }
       camera.position.copy(camPos);camera.lookAt(camLook);
 
-      // Missile fall
-      if(!missileHit&&elapsed<8.0){
+      // Stage 2 — Richard drop-in: falls from the sky, lands with impact
+      if(richardGroup&&!landed){
+        if(elapsed<2.4){richardGroup.position.y=16;}
+        else{
+          const t0=Math.min(1,(elapsed-2.4)/0.55);
+          richardGroup.position.y=16-15.75*_sgEaseIn(t0);
+          if(t0>=1){
+            landed=true;landT=0.3;
+            _spawnBurst(new THREE.Vector3(0,0.3,0),'#8A93A0',10,9,4); // landing dust
+          }
+        }
+      }
+      if(landT>0){ // landing impact shake
+        landT-=dt;
+        camera.rotation.z=Math.sin(landT*55)*0.010*Math.max(0,landT);
+      }
+
+      // Missile fall (freezes after a mid-air clash deflection)
+      if(!missileHit&&!clashed&&elapsed<8.0){
         const mt=_sgEaseIn(Math.max(0,(elapsed-0.3)/7.0));
         missileGroup.position.lerpVectors(missileStart,missileEnd,mt);
+        // High-rarity missiles fly evasive
+        if((isLeg||isMyth)&&elapsed>3.5) missileGroup.position.x+=Math.sin(elapsed*2.6)*1.1;
         missileGroup.rotation.y+=dt*0.6;
-        if(richardGroup){
+        if(richardGroup&&landed){
           const dir=new THREE.Vector3().subVectors(missileGroup.position,richardGroup.position).normalize();
           richardGroup.rotation.y=_sgLerpAngle(richardGroup.rotation.y,Math.atan2(dir.x,dir.z),0.06);
         }
       }
 
-      // Richard idle bob
-      if(richardGroup) richardGroup.position.y=0.25+Math.sin(elapsed*1.8)*0.025;
+      // Richard idle bob (only once landed)
+      if(richardGroup&&landed&&landT<=0) richardGroup.position.y=0.25+Math.sin(elapsed*1.8)*0.025;
 
-      // Rim light intensifies as missile approaches
+      // Lock-on reticle tracks the missile on screen
+      if(elapsed>4.6&&!missileHit&&missileGroup.visible){
+        const v=missileGroup.position.clone().project(camera);
+        if(v.z<1){
+          lockRet.style.display='block';
+          lockRet.style.left=((v.x*.5+.5)*100)+'%';
+          lockRet.style.top=((-v.y*.5+.5)*100)+'%';
+          const locked=elapsed>5.8;
+          lockRet.classList.toggle('sg-lr-locked',locked);
+          lockRet.querySelector('.sg-lr-txt').textContent=clashed?'RE-LOCK':locked?'LOCKED':'TRACKING';
+        }
+      } else lockRet.style.display='none';
+
+      // Rim light intensifies as missile approaches; weapon charge pulse before firing
       if(elapsed>3.5&&!missileHit) rimLight.intensity=Math.min(2.5,(elapsed-3.5)*0.6);
+      if(elapsed>6.4&&elapsed<7.0&&!projFired) rimLight.intensity=2.2+Math.sin(elapsed*32)*1.4;
 
       // Fire projectile
-      if(elapsed>7.0&&!projFired){
-        projFired=true;projGroup.visible=true;
+      if(elapsed>7.0&&!projFired&&!missileHit&&!reShotAt){
+        projFired=true;projGroup.visible=true;projT=0;
+        projTarget.copy(missileGroup.position);
         const startPos=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);
         projGroup.position.copy(startPos);
+      }
+      // Second (override) shot after a clash
+      if(reShotAt&&elapsed>=reShotAt&&!projFired&&!missileHit){
+        projFired=true;projGroup.visible=true;projT=0;reShotAt=0;
+        projTarget.copy(missileGroup.position);
+        projGroup.scale.setScalar(1.8); // stronger shot reads bigger
+        const startPos=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);
+        projGroup.position.copy(startPos);
+        labelOverride='▶ OVERRIDE SHOT';labelOverrideUntil=elapsed+0.8;
       }
       if(projFired&&!missileHit){
         projT+=dt/PROJ_DUR;
         if(projT>=1){
-          missileHit=true;projGroup.visible=false;missileGroup.visible=false;
-          expGroup.visible=true;expGroup.position.copy(missileEnd);expT=0;
-          _spawnImpactDebris();
+          if((isLeg||isMyth)&&!clashed){
+            // Stage 5 — mid-air clash: missile survives the first hit
+            clashed=true;projFired=false;projGroup.visible=false;
+            _spawnBurst(missileGroup.position,'#FFFFFF',8,10,6);
+            missileGroup.position.x+=2.4;missileGroup.position.y-=1.6; // deflects
+            reShotAt=elapsed+0.7;
+            labelOverride='⚠ TARGET SURVIVED — RE-ENGAGING';labelOverrideUntil=elapsed+0.7;
+          } else {
+            missileHit=true;projGroup.visible=false;missileGroup.visible=false;
+            expGroup.visible=true;expGroup.position.copy(projTarget);expT=0;
+            _spawnImpactDebris();
+            lockRet.style.display='none';
+          }
         }else{
           const start=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);
-          projGroup.position.lerpVectors(start,missileEnd,_sgEaseIn(projT));
+          projGroup.position.lerpVectors(start,projTarget,_sgEaseIn(projT));
         }
       }
 
@@ -837,7 +912,7 @@ function _sgPlayAnimation(profile,results){
         }
       }
 
-      if(elapsed>12.0||(missileHit&&expT>2.8)){cleanup();showResults();}
+      if(elapsed>14.5||(missileHit&&expT>2.8)){cleanup();showResults();}
       renderer.render(sc,camera);
     }
 

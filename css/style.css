@@ -2131,6 +2131,24 @@ body::after{content:'';position:fixed;inset:0;
 .sg-bv-s-cost{font-size:.65em;opacity:.8;font-weight:500;}
 .sg-bv-bal{font-family:var(--font-ui);font-size:.6em;letter-spacing:.1em;color:var(--text3);text-align:center;}
 
+/* Lock-on reticle (cinematic) */
+.sg-lock-reticle{
+  position:absolute;width:74px;height:74px;z-index:6;pointer-events:none;
+  transform:translate(-50%,-50%);transition:width .2s,height .2s;}
+.sg-lr-c{position:absolute;width:16px;height:16px;border:2px solid rgba(255,220,80,.9);}
+.sg-lr-tl{top:0;left:0;border-right:none;border-bottom:none;}
+.sg-lr-tr{top:0;right:0;border-left:none;border-bottom:none;}
+.sg-lr-bl{bottom:0;left:0;border-right:none;border-top:none;}
+.sg-lr-br{bottom:0;right:0;border-left:none;border-top:none;}
+.sg-lr-txt{
+  position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;
+  font-family:var(--font-ui);font-size:.58em;font-weight:800;letter-spacing:.18em;
+  color:rgba(255,220,80,.9);text-shadow:0 0 8px rgba(0,0,0,.8);}
+.sg-lr-locked{width:54px;height:54px;}
+.sg-lr-locked .sg-lr-c{border-color:#FF4040;animation:sgLockPulse .4s ease infinite alternate;}
+.sg-lr-locked .sg-lr-txt{color:#FF4040;}
+@keyframes sgLockPulse{from{opacity:.6;}to{opacity:1;}}
+
 /* Floating particles */
 .sg-particle{position:absolute;border-radius:50%;animation:sgParticleFloat linear infinite;}
 @keyframes sgParticleFloat{0%{transform:translateY(0) scale(1);opacity:.8;}50%{transform:translateY(-24px) scale(1.3);}100%{transform:translateY(-48px) scale(.7);opacity:0;}}

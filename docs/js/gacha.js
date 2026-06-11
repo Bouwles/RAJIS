@@ -706,6 +706,23 @@ function _sgPlayAnimation(profile,results){
     const PROJ_DUR=0.55;
     const missileStart=new THREE.Vector3(4,42,-8);
     const missileEnd=new THREE.Vector3(3,20,-5);
+    // Rarity tier flags drive slow-mo, orbit cam, debris count, shake
+    const isMyth=!!profile.special;
+    const isLeg=profile.label==='LEGENDARY';
+    const isEpic=profile.label==='EPIC';
+    let debris=[];
+    function _spawnImpactDebris(){
+      const n=isMyth?26:isLeg?18:isEpic?12:8;
+      const dm=new THREE.MeshLambertMaterial({color:new THREE.Color(profile.expCol),emissive:new THREE.Color(profile.expCol),emissiveIntensity:.8});
+      for(let i=0;i<n;i++){
+        const s2=.12+Math.random()*.3;
+        const m=new THREE.Mesh(new THREE.BoxGeometry(s2,s2,s2),dm);
+        m.position.copy(missileEnd);
+        sc.add(m);
+        debris.push({m,vx:(Math.random()-.5)*16,vy:Math.random()*13+3,vz:(Math.random()-.5)*16,
+          rx:Math.random()*6,rz:Math.random()*6});
+      }
+    }
 
     const stageLabels=[
       {t:0,   text:'📍 '+profile.map},
@@ -720,18 +737,27 @@ function _sgPlayAnimation(profile,results){
       if(skipped){cleanup();showResults();return;}
       rafId=requestAnimationFrame(tick);
       if(lastTime<0)lastTime=time;
-      const dt=Math.min((time-lastTime)/1000,0.05);
-      lastTime=time;elapsed+=dt;
+      let dt=Math.min((time-lastTime)/1000,0.05);
+      lastTime=time;
+      // Slow-motion impact for legendary/mythic pulls
+      if(missileHit&&expT<0.9&&(isLeg||isMyth)) dt*=isMyth?0.30:0.42;
+      elapsed+=dt;
 
       // Stage label
       for(let i=stageLabels.length-1;i>=0;i--){
         if(elapsed>=stageLabels[i].t){stageLabel.textContent=stageLabels[i].text;break;}
       }
 
-      // Camera
-      const frame=_sgGetCamFrame(elapsed);
-      tmpPos.set(...frame.pos);tmpLook.set(...frame.look);
-      camPos.lerp(tmpPos,0.05);camLook.lerp(tmpLook,0.05);
+      // Camera — mythic gets a slow orbit around the explosion
+      if(isMyth&&missileHit){
+        const ang=expT*0.9+Math.PI*.3;
+        tmpPos.set(missileEnd.x+Math.cos(ang)*13,missileEnd.y+2.5,missileEnd.z+Math.sin(ang)*13);
+        camPos.lerp(tmpPos,0.06);camLook.lerp(missileEnd,0.10);
+      } else {
+        const frame=_sgGetCamFrame(elapsed);
+        tmpPos.set(...frame.pos);tmpLook.set(...frame.look);
+        camPos.lerp(tmpPos,0.05);camLook.lerp(tmpLook,0.05);
+      }
       camera.position.copy(camPos);camera.lookAt(camLook);
 
       // Missile fall
@@ -762,6 +788,7 @@ function _sgPlayAnimation(profile,results){
         if(projT>=1){
           missileHit=true;projGroup.visible=false;missileGroup.visible=false;
           expGroup.visible=true;expGroup.position.copy(missileEnd);expT=0;
+          _spawnImpactDebris();
         }else{
           const start=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);
           projGroup.position.lerpVectors(start,missileEnd,_sgEaseIn(projT));
@@ -782,7 +809,20 @@ function _sgPlayAnimation(profile,results){
         expRing2.material.opacity=Math.max(0,0.7-es*0.9);
         expLight.intensity=Math.max(0,10*(1-es*0.6));
         rimLight.intensity=Math.max(0,4*(1-es));
-        if(profile.special&&expT<0.5) camera.rotation.z=Math.sin(expT*40)*0.008*(0.5-expT);
+        // Tiered screen shake — bigger for higher rarity
+        const shakeAmp=isMyth?0.016:isLeg?0.010:isEpic?0.005:0.002;
+        if(expT<0.8) camera.rotation.z=Math.sin(expT*42)*shakeAmp*(0.8-expT);
+        // Debris physics: arc out, tumble, sink
+        for(const d of debris){
+          d.vy-=22*dt;
+          d.m.position.x+=d.vx*dt;d.m.position.y+=d.vy*dt;d.m.position.z+=d.vz*dt;
+          d.m.rotation.x+=d.rx*dt;d.m.rotation.z+=d.rz*dt;
+          if(d.m.position.y<0.1){d.m.position.y=0.1;d.vy=0;d.vx*=.92;d.vz*=.92;}
+          d.m.material.opacity=Math.max(0,1-expT*.45);
+        }
+        if(debris.length&&!debris[0].m.material.transparent){
+          debris.forEach(d=>{d.m.material.transparent=true;});
+        }
       }
 
       if(elapsed>12.0||(missileHit&&expT>2.8)){cleanup();showResults();}
@@ -791,6 +831,7 @@ function _sgPlayAnimation(profile,results){
 
     function cleanup(){
       if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+      debris.forEach(d=>{try{sc.remove(d.m);}catch(e){}});debris=[];
       try{renderer.dispose();}catch(e){}
     }
 

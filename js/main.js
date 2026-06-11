@@ -513,19 +513,54 @@ function setStatsTab(tab){
 function buildStatsScreen(){
   const s=saveData;
   const lifetimeAcc=s.totalShotsFired>0?Math.round(s.totalIntercepted/s.totalShotsFired*100):0;
+  const skinCount=(s.ownedSkins||[]).length;
+  const camoCount=Object.values(s.ownedWeaponCamos||{}).reduce((a,c)=>a+(Array.isArray(c)?c.length:0),0);
+  const eqSkin=(typeof RICHARD_SKINS!=='undefined'&&RICHARD_SKINS.find(k=>k.id===s.equippedSkin))||null;
+  const uname=(typeof mpUser!=='undefined'&&mpUser?.username)||'RICHARD';
+  const card=(lbl,val,col)=>`<div class="pf-card"><div class="pf-card-val"${col?` style="color:${col}"`:''}>${val}</div><div class="pf-card-lbl">${lbl}</div></div>`;
   document.getElementById('statsTabContent').innerHTML=`
-    <div class="stat-box" style="max-width:400px;margin:0 auto 14px;">
-      <div class="stat-row"><span class="stat-lbl">Best Wave</span><span class="stat-val">${s.waveRecord}</span></div>
-      <div class="stat-row"><span class="stat-lbl">Total Score</span><span class="stat-val">${s.totalScore.toLocaleString()}</span></div>
-      <div class="stat-row"><span class="stat-lbl">Credits</span><span class="stat-val" style="color:var(--amber)">💰 ${s.currency}</span></div>
-      <div class="stat-row"><span class="stat-lbl">Missiles Intercepted</span><span class="stat-val">${s.totalIntercepted}</span></div>
-      <div class="stat-row"><span class="stat-lbl">Shots Fired</span><span class="stat-val">${s.totalShotsFired||0}</span></div>
-      <div class="stat-row"><span class="stat-lbl">Lifetime Accuracy</span><span class="stat-val">${lifetimeAcc}%</span></div>
-      <div class="stat-row"><span class="stat-lbl">Waves Completed</span><span class="stat-val">${s.totalWaves||0}</span></div>
-      <div class="stat-row"><span class="stat-lbl">Cards Collected</span><span class="stat-val">${(s.pickedCards||[]).length} / ${CARD_POOL.length}</span></div>
-      <div class="stat-row"><span class="stat-lbl">Battle Pass Level</span><span class="stat-val" style="color:var(--amber)">${s.bpLevel||0}</span></div>
-      <div class="stat-row"><span class="stat-lbl">Total XP</span><span class="stat-val">${s.bpXP||0}</span></div>
+    <div class="pf-wrap">
+      <div class="pf-banner">
+        <div class="pf-avatar"><canvas id="pfSkinCanvas" width="96" height="128" style="width:96px;height:128px;"></canvas></div>
+        <div class="pf-id">
+          <div class="pf-name">${uname}</div>
+          <div class="pf-sub">BP TIER ${s.bpLevel||0} · ${(s.bpXP||0).toLocaleString()} XP${s.bpPremium?' · <span style="color:#A855D8">★ PREMIUM</span>':''}</div>
+          <div class="pf-sub2">${eqSkin?eqSkin.name.toUpperCase():'OPERATOR'}</div>
+        </div>
+        <div class="pf-credits">💰 ${(s.currency||0).toLocaleString()}</div>
+      </div>
+      <div class="pf-grid">
+        ${card('Best Wave',s.waveRecord||0)}
+        ${card('Total Score',(s.totalScore||0).toLocaleString())}
+        ${card('Missiles Intercepted',s.totalIntercepted||0)}
+        ${card('Lifetime Accuracy',lifetimeAcc+'%')}
+        ${card('Waves Completed',s.totalWaves||0)}
+        ${card('Boss Kills',s.totalBossKills||0)}
+        ${card('Soldier Kills',s.totalSoldierKills||0)}
+        ${card('Outfits Owned',skinCount,'var(--amber)')}
+        ${card('Camos Owned',camoCount,'var(--amber)')}
+        ${card('Cards Collected',(s.pickedCards||[]).length+' / '+CARD_POOL.length)}
+        ${card('Summons',(s.gachaHistory||[]).length)}
+        ${card('Shots Fired',(s.totalShotsFired||0).toLocaleString())}
+      </div>
     </div>`;
+  // 3D equipped-skin portrait
+  requestAnimationFrame(()=>{
+    const cv=document.getElementById('pfSkinCanvas');
+    if(!cv||typeof makeCharModel!=='function'||typeof _buildShopScene!=='function') return;
+    if(!_shopPrevRdr){
+      const oc=document.createElement('canvas');oc.width=110;oc.height=160;
+      _shopPrevRdr=new THREE.WebGLRenderer({canvas:oc,antialias:true,alpha:true});
+      _shopPrevRdr.setSize(110,160,false);_shopPrevRdr.setClearColor(0x000000,0);
+    }
+    const sc=_buildShopScene();
+    const cam=new THREE.PerspectiveCamera(42,110/160,0.1,50);
+    cam.position.set(0,1.1,4.0);cam.lookAt(0,0.95,0);
+    const char=makeCharModel(s.customization||{});
+    char.rotation.y=0.35;sc.add(char);
+    _shopPrevRdr.render(sc,cam);sc.remove(char);
+    cv.getContext('2d').drawImage(_shopPrevRdr.domElement,0,0,96,128);
+  });
   // Encyclopedia
   const seen=new Set(s.seenCards||[]);
   const picked=new Set(s.pickedCards||[]);

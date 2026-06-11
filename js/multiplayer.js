@@ -866,7 +866,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('settingsLogoutConfirm').style.display='none';
   });
   document.getElementById('btnSettingsBack')?.addEventListener('click',()=>{
-    showScreen('pauseMenu');
+    // Context-aware back: pause menu only while actually paused mid-game,
+    // otherwise return to the lobby tabs
+    if(typeof gameActive!=='undefined'&&gameActive&&typeof gamePaused!=='undefined'&&gamePaused){
+      showScreen('pauseMenu');
+    } else {
+      showScreen('mainMenu');
+      if(typeof renderLobby==='function') renderLobby();
+    }
   });
 
   document.getElementById('btnMultiplayer')?.addEventListener('click',()=>{

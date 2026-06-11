@@ -120,7 +120,7 @@ function showScreen(name){
   if(el) el.classList.add('active');
   currentScreen=name;
   // Shared RL nav: visible on lobby + all hub screens
-  const hubScreens=['shopScreen','statsScreen','customization','weaponsScreen','friendsScreen','settingsScreen','bpScreen','itemShopScreen','lockerScreen'];
+  const hubScreens=['shopScreen','statsScreen','customization','weaponsScreen','friendsScreen','settingsScreen','bpScreen','itemShopScreen','lockerScreen','summonScreen'];
   const rlNav=document.getElementById('rlNav');
   if(rlNav){
     const showNav=name==='mainMenu'||hubScreens.includes(name);

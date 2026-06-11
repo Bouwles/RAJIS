@@ -348,7 +348,10 @@ function buildItemShop(){
   dg.innerHTML=daily.map(_dailyCardHtml).join('');
   requestAnimationFrame(_renderShopPreviews);
 
+  const builtDate=_getUAEDate();
   const tick=()=>{
+    // Midnight rollover: rotate the shop in place, no manual refresh needed
+    if(_getUAEDate()!==builtDate){buildItemShop();return;}
     const t='Resets in '+_shopCountdown();
     const a=document.getElementById('is2FeatTimer');
     const b=document.getElementById('is2DailyTimer');
@@ -678,7 +681,15 @@ function buildLockerScreen(tab){
     if(pv) pv.style.display='none';
     const owned=saveData.ownedSkins||['richard_default'];
     const equippedSkin=saveData.equippedSkin||'richard_default';
-    const skins=RICHARD_SKINS.filter(s=>owned.includes(s.id));
+    const RAR_ORD={mythic:5,legendary:4,epic:3,rare:2,uncommon:1,common:0};
+    // Owned only, tightly packed: equipped → rarity desc → alphabetical
+    const skins=RICHARD_SKINS.filter(s=>owned.includes(s.id))
+      .sort((a,b)=>{
+        if(a.id===equippedSkin) return -1;
+        if(b.id===equippedSkin) return 1;
+        const rd=(RAR_ORD[b.rarity||'uncommon']||0)-(RAR_ORD[a.rarity||'uncommon']||0);
+        return rd!==0?rd:a.name.localeCompare(b.name);
+      });
     if(!skins.length){grid.innerHTML='<div class="lkr-empty">No outfits owned — visit Item Shop</div>';return;}
     skins.forEach(sk=>{
       const isEq=equippedSkin===sk.id;
@@ -717,25 +728,41 @@ function buildLockerScreen(tab){
       wfRow.appendChild(b);
     });
     grid.appendChild(wfRow);
-    // Camo tiles for selected weapon — ALL camos shown, locked ones dimmed
-    const camos=WEAPON_CAMOS[_lkrCamoWeapon]||[];
+    // OWNED camos only (Locker is owned customization — locked items live
+    // in Shop/BP/Summon). Sorted: default → equipped → rarity desc → alpha.
     const ownedList=(saveData.ownedWeaponCamos||{})[_lkrCamoWeapon]||[];
     const equippedId=(saveData.equippedWeaponCamos||{})[_lkrCamoWeapon]||'default';
+    const RAR_ORD={mythic:5,legendary:4,epic:3,rare:2,uncommon:1,common:0};
+    const camos=(WEAPON_CAMOS[_lkrCamoWeapon]||[])
+      .filter(cm=>cm.id==='default'||ownedList.includes(cm.id))
+      .sort((a,b)=>{
+        if(a.id==='default') return -1;
+        if(b.id==='default') return 1;
+        if(a.id===equippedId) return -1;
+        if(b.id===equippedId) return 1;
+        const rd=(RAR_ORD[b.rarity||'common']||0)-(RAR_ORD[a.rarity||'common']||0);
+        return rd!==0?rd:a.name.localeCompare(b.name);
+      });
     const inner=document.createElement('div');
     inner.className='lkr-camo-grid-inner';
     camos.forEach(cm=>{
-      const locked=cm.id!=='default'&&!ownedList.includes(cm.id);
       const equipped=equippedId===cm.id;
       const tile=document.createElement('div');
-      tile.className='lkr-camo-tile'+(equipped?' lkr-camo-equipped':'')+(locked?' lkr-camo-locked':' lkr-camo-owned');
-      tile.innerHTML=`<div class="lkr-camo-swatch" style="background:linear-gradient(135deg,${cm.hexStr||'#303030'} 55%,${cm.accentStr||'#1A1A1E'} 55%);${locked?'filter:grayscale(.7) brightness(.45);':''}"></div>
+      tile.className='lkr-camo-tile lkr-camo-owned'+(equipped?' lkr-camo-equipped':'');
+      tile.innerHTML=`<div class="lkr-camo-swatch" style="background:linear-gradient(135deg,${cm.hexStr||'#303030'} 55%,${cm.accentStr||'#1A1A1E'} 55%);"></div>
         <div class="lkr-camo-name">${cm.name}</div>
-        <div class="lkr-camo-rar" style="color:${locked?'#555':_rarity(cm.rarity||'common').color}">${_rarity(cm.rarity||'common').label}</div>
-        ${equipped?'<div class="lkr-camo-eq-badge">ON</div>':''}
-        ${locked?'<div class="lkr-camo-lock-ico">🔒</div>':''}`;
-      if(!locked) tile.onclick=()=>_lkrSelectCamo(cm.id,tile);
+        <div class="lkr-camo-rar" style="color:${_rarity(cm.rarity||'common').color}">${_rarity(cm.rarity||'common').label}</div>
+        ${equipped?'<div class="lkr-camo-eq-badge">ON</div>':''}`;
+      tile.onclick=()=>_lkrSelectCamo(cm.id,tile);
       inner.appendChild(tile);
     });
+    if(camos.length<=1){
+      const note=document.createElement('div');
+      note.className='lkr-empty';
+      note.style.cssText='grid-column:1/-1;padding:14px 0;';
+      note.textContent='No extra camos owned for this weapon yet.';
+      inner.appendChild(note);
+    }
     grid.appendChild(inner);
     // Auto-select equipped camo (or keep prior selection if still valid)
     const autoId=(_lkrCamoSel&&camos.find(c=>c.id===_lkrCamoSel))?_lkrCamoSel:equippedId;

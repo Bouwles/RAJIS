@@ -1529,7 +1529,7 @@ body::after{content:'';position:fixed;inset:0;
 .is2-credits-badge{font-family:var(--font-mono);font-size:.78em;font-weight:700;color:var(--amber);letter-spacing:.08em;}
 .is2-wrap{display:flex;flex:1;overflow:hidden;}
 .is2-feat-col{
-  width:44%;display:flex;flex-direction:column;
+  width:52%;display:flex;flex-direction:column;
   border-right:1px solid rgba(255,255,255,.05);}
 .is2-daily-col{flex:1;display:flex;flex-direction:column;}
 .is2-col-hd{
@@ -1544,7 +1544,7 @@ body::after{content:'';position:fixed;inset:0;
   display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:8px;
   padding:8px;overflow-y:auto;flex:1;}
 .is2-daily-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:8px;
+  display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr;gap:8px;
   padding:8px;overflow-y:auto;flex:1;}
 /* Cards */
 .is2-feat-card,.is2-daily-card{
@@ -1765,6 +1765,8 @@ body::after{content:'';position:fixed;inset:0;
 
 /* ── SUMMON / GACHA SYSTEM ─────────────────────────────────────── */
 .sg-screen{background:var(--bg);flex-direction:column;align-items:stretch;justify-content:flex-start;overflow:hidden;}
+/* Summon lives inside the app layout — top nav stays visible/usable */
+#summonScreen.active{position:fixed!important;inset:0;padding-top:52px;}
 
 /* Topbar */
 .sg-topbar{
@@ -2024,10 +2026,13 @@ body::after{content:'';position:fixed;inset:0;
 /* Full-screen banner body */
 .sg-banner-body{flex:1;overflow:hidden;position:relative;}
 .sg-bv-wrap{display:flex;flex-direction:column;height:100%;position:relative;}
-.sg-bv-art{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.sg-bv-art{flex:1;display:flex;align-items:center;justify-content:flex-start;position:relative;overflow:hidden;}
 .sg-bv-glow{position:absolute;inset:0;pointer-events:none;}
 .sg-bv-particles{position:absolute;inset:0;pointer-events:none;}
-.sg-bv-center{position:relative;z-index:2;text-align:center;padding:20px 24px 0;}
+.sg-bv-center{
+  position:relative;z-index:2;text-align:left;
+  align-self:flex-start;max-width:46%;
+  padding:28px 24px 0 38px;}
 .sg-bv-title{font-family:var(--font-ui);font-size:2em;font-weight:900;letter-spacing:.14em;text-transform:uppercase;text-shadow:0 0 40px currentColor;margin-bottom:4px;}
 .sg-bv-subtitle{font-family:var(--font-ui);font-size:.72em;letter-spacing:.2em;color:var(--text2);margin-bottom:12px;}
 .sg-bv-desc{font-size:.78em;color:var(--text3);max-width:480px;margin:0 auto 18px;letter-spacing:.04em;}
@@ -2153,7 +2158,13 @@ body::after{content:'';position:fixed;inset:0;
 #settingsCodeInput::placeholder{opacity:.35;}
 
 /* ── Gacha v3: 3D preview areas ─────────────────────────────────── */
-.sg-bv-preview-area{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1;}
+/* Preview owns the right half — never sits under the title block */
+.sg-bv-preview-area{position:absolute;top:0;right:0;left:auto;width:52%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1;padding:14px;}
+.sg-bv-feats{display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;}
+@media(max-width:860px){
+  .sg-bv-center{max-width:100%;padding:18px 20px 0;}
+  .sg-bv-preview-area{left:0;right:0;width:100%;top:42%;height:58%;}
+}
 .sg-bv-3d-canvas{display:block;border-radius:6px;box-shadow:0 0 32px rgba(0,0,0,.7);}
 
 /* CSS camo preview in banner */

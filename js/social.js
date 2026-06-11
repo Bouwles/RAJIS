@@ -751,17 +751,22 @@ let _chatUnsub=null;
 function initLobbyChat(){
   if(!_fbDb||!_fbUser||_chatUnsub) return;
   _chatUnsub=_fbDb.collection('globalChat')
-    .orderBy('ts','desc').limit(10)
+    .orderBy('ts','desc').limit(40)
     .onSnapshot(snap=>{
       const msgs=[];
       snap.forEach(d=>msgs.unshift(d.data()));
       const box=document.getElementById('rlChatMessages');
       if(!box) return;
-      box.innerHTML=msgs.map(m=>
-        `<div class="rl-chat-msg"><span class="rl-cmn">${_esc(m.user||'?')}</span> ${_esc(m.text||'')}</div>`
-      ).join('');
+      const myUid=_fbUser?.uid;
+      box.innerHTML=msgs.length?msgs.map(m=>
+        `<div class="rl-chat-msg${m.uid===myUid?' rl-chat-self':''}"><span class="rl-cmn">${_esc(m.user||'?')}</span> ${_esc(m.text||'')}</div>`
+      ).join(''):'<div class="rl-chat-empty">GLOBAL CHAT — SAY HELLO</div>';
       box.scrollTop=box.scrollHeight;
-    },()=>{});
+    },err=>{
+      console.warn('[Chat] listener error:',err.message);
+      const box=document.getElementById('rlChatMessages');
+      if(box) box.innerHTML='<div class="rl-chat-empty">CHAT UNAVAILABLE — CHECK CONNECTION</div>';
+    });
 }
 
 function sendChatMsg(text){
@@ -772,7 +777,10 @@ function sendChatMsg(text){
     user:mpUser?.username||'RICHARD',
     text:text.trim().slice(0,120),
     ts:firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(()=>{});
+  }).catch(e=>{
+    console.warn('[Chat] send failed:',e.message);
+    showNotif('Chat message failed to send');
+  });
 }
 
 function _renderSeasonPanel(){

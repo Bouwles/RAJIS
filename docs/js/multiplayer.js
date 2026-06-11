@@ -910,6 +910,9 @@ document.addEventListener('DOMContentLoaded',()=>{
                 if((lsSd.bpLevel||0)>(fbSd.bpLevel||0)) fbSd.bpLevel=lsSd.bpLevel;
                 if(Array.isArray(lsSd.bpClaimedTiers)&&(lsSd.bpClaimedTiers.length||0)>(fbSd.bpClaimedTiers.length||0))
                   fbSd.bpClaimedTiers=lsSd.bpClaimedTiers;
+                if(Array.isArray(lsSd.bpClaimedTiersP)&&(lsSd.bpClaimedTiersP.length||0)>((fbSd.bpClaimedTiersP||[]).length||0))
+                  fbSd.bpClaimedTiersP=lsSd.bpClaimedTiersP;
+                if(lsSd.bpPremium===true) fbSd.bpPremium=true;
               }
             }catch(e){}
             saveData=_normalizeInventory(fbSd);

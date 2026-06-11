@@ -423,10 +423,10 @@
     </div>
     <div class="settings-section">
       <div class="settings-section-label">Codes</div>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input id="settingsCodeInput" type="text" placeholder="ENTER CODE…"
-          style="flex:1;background:rgba(255,255,255,.07);border:1px solid #334;border-radius:6px;
-          color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.92em;padding:9px 12px;
+          style="flex:1;min-width:140px;background:rgba(255,255,255,.07);border:1px solid #334;border-radius:0;
+          color:var(--text);font-family:var(--font-ui);font-size:.92em;padding:9px 12px;
           outline:none;letter-spacing:.1em;text-transform:uppercase" />
         <button class="menu-btn btn-secondary" onclick="redeemCode()" style="margin:0;padding:10px 20px;font-size:.88em;flex-shrink:0">REDEEM</button>
       </div>
@@ -646,15 +646,19 @@
 
 <!-- BATTLE PASS SCREEN -->
 <div id="bpScreen" class="screen">
-  <div class="bp-wrap">
-    <div class="screen-title" style="margin-bottom:10px;">Battle Pass — Season 1</div>
-    <div class="bp-header">
-      <div id="bpCurrentTier" class="bp-big-tier">TIER 0</div>
-      <div class="bp-xp-track"><div class="bp-xp-fill" id="bpXPBar" style="width:0%"></div></div>
-      <div id="bpXPText" class="bp-xp-text">0 XP</div>
+  <div class="bp2-layout">
+    <div id="bpHdrInfo" class="bp2-header"></div>
+    <div class="bp2-main">
+      <div id="bpTrack" class="bp2-track-area"></div>
+      <div class="bp2-side">
+        <div id="bpPreview" class="bp2-preview"><div class="bp-pv-empty">SELECT A REWARD</div></div>
+        <div class="bp2-actions">
+          <button class="bp2-btn bp2-btn-claim" id="bpClaimBtn" onclick="bpClaimSelected()" disabled>CLAIM</button>
+          <button class="bp2-btn bp2-btn-all" onclick="bpClaimAll()">CLAIM ALL</button>
+        </div>
+      </div>
     </div>
-    <div id="bpTierList" class="bp-tier-list"></div>
-    <button class="back-btn" style="margin-top:14px;" onclick="showScreen('mainMenu');renderLobby()">← Back to Lobby</button>
+    <button class="back-btn" style="margin:8px auto 0;" onclick="showScreen('mainMenu');renderLobby()">← Back to Lobby</button>
   </div>
 </div>
 

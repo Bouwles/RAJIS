@@ -18,7 +18,7 @@ function defaultSave(){
     hasCyberBullet:false,
     hasRajpnFist:false,
     equippedWeapons:['pistol','launcher'],
-    bpXP:0, bpLevel:0, bpClaimedTiers:[],
+    bpXP:0, bpLevel:0, bpClaimedTiers:[], bpClaimedTiersP:[], bpPremium:false,
     ownedSkins:['richard_default'], equippedSkin:'richard_default',
     ownedWeaponCamos: camoDef,
     equippedWeaponCamos: equippedDef,
@@ -47,6 +47,18 @@ function _normalizeInventory(sd){
   if(!sd) return defaultSave();
   if(!Array.isArray(sd.ownedSkins)||!sd.ownedSkins.length) sd.ownedSkins=['richard_default'];
   if(!sd.equippedSkin) sd.equippedSkin='richard_default';
+  // Visual fallback: never show a blank mannequin. If the equipped skin ID is
+  // invalid or customization is missing, restore from the skin catalog.
+  // Runs on login/normalize paths (RICHARD_SKINS loaded); never wipes valid data.
+  if(typeof RICHARD_SKINS!=='undefined'){
+    let eq=RICHARD_SKINS.find(s=>s.id===sd.equippedSkin);
+    if(!eq){
+      sd.equippedSkin='richard_default';
+      eq=RICHARD_SKINS.find(s=>s.id==='richard_default');
+    }
+    if(eq&&(!sd.customization||!sd.customization.outfitColor))
+      sd.customization=Object.assign({},sd.customization||{},eq.custo);
+  }
   if(typeof sd.ownedWeaponCamos!=='object'||!sd.ownedWeaponCamos) sd.ownedWeaponCamos={};
   if(typeof sd.equippedWeaponCamos!=='object'||!sd.equippedWeaponCamos) sd.equippedWeaponCamos={};
   ALL_WEAPON_IDS.forEach(w=>{
@@ -54,6 +66,8 @@ function _normalizeInventory(sd){
     if(!sd.equippedWeaponCamos[w]) sd.equippedWeaponCamos[w]='default';
   });
   if(!Array.isArray(sd.bpClaimedTiers)) sd.bpClaimedTiers=[];
+  if(!Array.isArray(sd.bpClaimedTiersP)) sd.bpClaimedTiersP=[];
+  if(typeof sd.bpPremium!=='boolean') sd.bpPremium=false;
   if(!Array.isArray(sd.pickedCards)) sd.pickedCards=[];
   if(!Array.isArray(sd.seenCards)) sd.seenCards=[];
   if(!sd.upgrades) sd.upgrades={armor_plate:0,speed_chip:0,hot_rounds:0};

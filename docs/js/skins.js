@@ -29,6 +29,32 @@ const RICHARD_SKINS=[
    custo:{outfitColor:'#F0F0F0',visorColor:'#AAAAAA',skinTone:'#F0F0F0',armorStyle:'heavy',   helmet:true, backpack:'missile',gear:'cape'}},
   {id:'richard_gold',      name:'THE RICHARD',           tagline:'Legendary gold operator',     price:0,
    custo:{outfitColor:'#AA7700',visorColor:'#FFEE00',skinTone:'#E8C49A',armorStyle:'heavy',   helmet:true, backpack:'missile',gear:'elite'}},
+  // ── Gacha-exclusive skins (summon rewards) — registered here so the
+  //    Locker can render/equip them. IDs must match GACHA_SKIN_POOL.
+  {id:'richard_final_override',   name:'Final Override Richard',   tagline:'Summon — mythic override unit', price:0, rarity:'mythic',
+   custo:{outfitColor:'#1A0A1A',visorColor:'#FF2080',skinTone:'#E8C49A',armorStyle:'heavy',   helmet:true, backpack:'missile',gear:'elite'}},
+  {id:'richard_elite_interceptor',name:'Elite Interceptor Richard',tagline:'Summon — mythic interceptor',   price:0, rarity:'mythic',
+   custo:{outfitColor:'#0A1A3A',visorColor:'#44CCFF',skinTone:'#E8C49A',armorStyle:'heavy',   helmet:true, backpack:'missile',gear:'elite'}},
+  {id:'richard_shadow_ops',       name:'Shadow Ops Richard',       tagline:'Summon — legendary spectre',    price:0, rarity:'legendary',
+   custo:{outfitColor:'#0A0A0A',visorColor:'#00FF88',skinTone:'#8A6A5A',armorStyle:'heavy',   helmet:true, backpack:'none',   gear:'cape'}},
+  {id:'richard_gold_phantom',     name:'Gold Phantom Richard',     tagline:'Summon — legendary phantom',    price:0, rarity:'legendary',
+   custo:{outfitColor:'#AA7700',visorColor:'#FFEE00',skinTone:'#E8C49A',armorStyle:'heavy',   helmet:true, backpack:'missile',gear:'elite'}},
+  {id:'richard_cyber_assault',    name:'Cyber Assault Richard',    tagline:'Summon — legendary cyber unit', price:0, rarity:'legendary',
+   custo:{outfitColor:'#1A0A30',visorColor:'#DD00FF',skinTone:'#E8C49A',armorStyle:'standard',helmet:true, backpack:'missile',gear:'bandolier'}},
+  {id:'richard_arctic_storm',     name:'Arctic Storm Richard',     tagline:'Summon — epic cold front',      price:0, rarity:'epic',
+   custo:{outfitColor:'#88AACC',visorColor:'#CCEEFF',skinTone:'#F0EEF8',armorStyle:'heavy',   helmet:true, backpack:'missile',gear:'goggles'}},
+  {id:'richard_neon_striker',     name:'Neon Striker Richard',     tagline:'Summon — epic night striker',   price:0, rarity:'epic',
+   custo:{outfitColor:'#0A0020',visorColor:'#FF00FF',skinTone:'#E8C49A',armorStyle:'standard',helmet:true, backpack:'none',   gear:'elite'}},
+  {id:'richard_urban_ghost',      name:'Urban Ghost Richard',      tagline:'Summon — epic urban phantom',   price:0, rarity:'epic',
+   custo:{outfitColor:'#1A1A1A',visorColor:'#AAAAAA',skinTone:'#E8C49A',armorStyle:'light',   helmet:true, backpack:'none',   gear:'cape'}},
+  {id:'richard_desert_hawk',      name:'Desert Hawk Richard',      tagline:'Summon — rare sand raptor',     price:0, rarity:'rare',
+   custo:{outfitColor:'#C8A874',visorColor:'#FFAA00',skinTone:'#C8A070',armorStyle:'light',   helmet:true, backpack:'none',   gear:'scarf'}},
+  {id:'richard_forest_ranger',    name:'Forest Ranger Richard',    tagline:'Summon — rare woodland unit',   price:0, rarity:'rare',
+   custo:{outfitColor:'#1A3A1A',visorColor:'#44AA22',skinTone:'#A87060',armorStyle:'light',   helmet:true, backpack:'none',   gear:'bandolier'}},
+  {id:'richard_recon_blue',       name:'Recon Blue Richard',       tagline:'Summon — uncommon recon unit',  price:0, rarity:'uncommon',
+   custo:{outfitColor:'#1A2A5A',visorColor:'#4488FF',skinTone:'#E8C49A',armorStyle:'light',   helmet:true, backpack:'none',   gear:'none'}},
+  {id:'richard_basic_op',         name:'Basic Operative Richard',  tagline:'Summon — common operative',     price:0, rarity:'common',
+   custo:{outfitColor:'#2A2A2A',visorColor:'#8888AA',skinTone:'#E8C49A',armorStyle:'light',   helmet:false,backpack:'none',   gear:'none'}},
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -733,88 +759,293 @@ function equipSkin(skinId){
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  BATTLE PASS
+//  BATTLE PASS — Season 1: Interceptor Protocol
+//  50 tiers, Free + Premium tracks. Premium costs BP_PREMIUM_COST
+//  credits. Claims are manual (CLAIM / CLAIM ALL) and write to
+//  Firebase atomically through the existing working save path.
 // ═══════════════════════════════════════════════════════════════
+const BP_SEASON_TITLE='SEASON 1 — INTERCEPTOR PROTOCOL';
+const BP_PREMIUM_COST=25000;
+// Reward shapes: {credits} {chronoShards} {summonTickets} {featuredTickets}
+//                {dupeFragments} {skin:'id'} {camo:['weapon','camoId']}
 const BP_TIERS=[
-  {tier:1,  label:'100 CR',       icon:'💰', credits:100},
-  {tier:2,  label:'Recon',        icon:'🪖', skin:'richard_recon'},
-  {tier:3,  label:'200 CR + 100 Shards', icon:'💰', credits:200, chronoShards:100},
-  {tier:4,  label:'Flashbang ×2',       icon:'💥'},
-  {tier:5,  label:'Arctic',             icon:'🪖', skin:'richard_arctic'},
-  {tier:6,  label:'300 CR',             icon:'💰', credits:300},
-  {tier:7,  label:'Desert Storm + 1 Ticket', icon:'🪖', skin:'richard_desert', summonTickets:1},
-  {tier:8,  label:'400 CR',             icon:'💰', credits:400},
-  {tier:9,  label:'The Medic',          icon:'🪖', skin:'richard_medic'},
-  {tier:10, label:'500 CR',             icon:'💰', credits:500},
-  {tier:11, label:'Veteran',            icon:'🪖', skin:'richard_veteran'},
-  {tier:12, label:'600 CR + 200 Shards',icon:'💰', credits:600, chronoShards:200},
-  {tier:13, label:'Commander',          icon:'🪖', skin:'richard_commander'},
-  {tier:14, label:'700 CR',             icon:'💰', credits:700},
-  {tier:15, label:'Neon',               icon:'🪖', skin:'richard_neon'},
-  {tier:16, label:'800 CR',             icon:'💰', credits:800},
-  {tier:17, label:'Blizzard',           icon:'🪖', skin:'richard_blizzard'},
-  {tier:18, label:'900 CR + Featured Ticket', icon:'💰', credits:900, featuredTickets:1},
-  {tier:19, label:'Sunset',             icon:'🪖', skin:'richard_sunset'},
-  {tier:20, label:'1000 CR',            icon:'💰', credits:1000},
-  {tier:21, label:'Shadow',             icon:'🪖', skin:'richard_shadow'},
-  {tier:22, label:'1100 CR',            icon:'💰', credits:1100},
-  {tier:23, label:'Phantom',            icon:'🪖', skin:'richard_phantom'},
-  {tier:24, label:'1200 CR + 3 Tickets',icon:'💰', credits:1200, summonTickets:3},
-  {tier:25, label:'THE RICHARD + 5 Featured', icon:'🏆', skin:'richard_gold', featuredTickets:5},
+  {tier:1,  free:{credits:200},        prem:{credits:500}},
+  {tier:2,  free:{chronoShards:100},   prem:{chronoShards:300}},
+  {tier:3,  free:{summonTickets:1},    prem:{summonTickets:2}},
+  {tier:4,  free:{credits:300},        prem:{camo:['launcher','redline']}},
+  {tier:5,  free:{camo:['pistol','sand']}, prem:{credits:800}},
+  {tier:6,  free:{credits:400},        prem:{featuredTickets:2}},
+  {tier:7,  free:{dupeFragments:50},   prem:{chronoShards:400}},
+  {tier:8,  free:{chronoShards:150},   prem:{skin:'richard_desert'}},
+  {tier:9,  free:{summonTickets:1},    prem:{credits:1000}},
+  {tier:10, free:{skin:'richard_veteran'}, prem:{summonTickets:3}},
+  {tier:11, free:{credits:500},        prem:{chronoShards:500}},
+  {tier:12, free:{chronoShards:200},   prem:{camo:['pistol','black']}},
+  {tier:13, free:{credits:600},        prem:{credits:1200}},
+  {tier:14, free:{summonTickets:2},    prem:{featuredTickets:2}},
+  {tier:15, free:{credits:700},        prem:{dupeFragments:100}},
+  {tier:16, free:{dupeFragments:100},  prem:{skin:'richard_arctic'}},
+  {tier:17, free:{credits:800},        prem:{credits:1400}},
+  {tier:18, free:{featuredTickets:1},  prem:{camo:['sniper','midnight']}},
+  {tier:19, free:{chronoShards:250},   prem:{chronoShards:600}},
+  {tier:20, free:{camo:['launcher','arctic']}, prem:{summonTickets:4}},
+  {tier:21, free:{credits:900},        prem:{credits:1600}},
+  {tier:22, free:{summonTickets:2},    prem:{camo:['smg','frost']}},
+  {tier:23, free:{credits:1000},       prem:{featuredTickets:3}},
+  {tier:24, free:{chronoShards:300},   prem:{skin:'richard_recon'}},
+  {tier:25, free:{featuredTickets:1},  prem:{credits:2000}},
+  {tier:26, free:{credits:1100},       prem:{chronoShards:700}},
+  {tier:27, free:{dupeFragments:150},  prem:{summonTickets:4}},
+  {tier:28, free:{credits:1200},       prem:{camo:['railgun','void']}},
+  {tier:29, free:{summonTickets:3},    prem:{credits:1800}},
+  {tier:30, free:{skin:'richard_medic'}, prem:{dupeFragments:200}},
+  {tier:31, free:{credits:1300},       prem:{featuredTickets:3}},
+  {tier:32, free:{chronoShards:350},   prem:{camo:['cluster','inferno']}},
+  {tier:33, free:{credits:1400},       prem:{credits:2200}},
+  {tier:34, free:{summonTickets:2},    prem:{chronoShards:800}},
+  {tier:35, free:{credits:1500},       prem:{summonTickets:5}},
+  {tier:36, free:{dupeFragments:200},  prem:{skin:'richard_blizzard'}},
+  {tier:37, free:{credits:1600},       prem:{credits:2400}},
+  {tier:38, free:{chronoShards:400},   prem:{featuredTickets:4}},
+  {tier:39, free:{featuredTickets:2},  prem:{dupeFragments:300}},
+  {tier:40, free:{camo:['shotgun','urban']}, prem:{credits:2600}},
+  {tier:41, free:{credits:1700},       prem:{chronoShards:900}},
+  {tier:42, free:{summonTickets:3},    prem:{camo:['shock','thunder']}},
+  {tier:43, free:{credits:1800},       prem:{credits:2800}},
+  {tier:44, free:{chronoShards:450},   prem:{summonTickets:5}},
+  {tier:45, free:{credits:1900},       prem:{featuredTickets:5}},
+  {tier:46, free:{dupeFragments:250},  prem:{camo:['sniper','ember']}},
+  {tier:47, free:{credits:2000},       prem:{credits:3000}},
+  {tier:48, free:{chronoShards:500},   prem:{chronoShards:1000}},
+  {tier:49, free:{featuredTickets:3},  prem:{dupeFragments:400}},
+  {tier:50, free:{credits:2500},       prem:{skin:'richard_gold'}},
 ];
 
-function buildBPScreen(){
-  const tier=saveData.bpLevel||0;
-  const xp=saveData.bpXP||0;
-  const nextXP=(tier+1)*500;
-  const pct=Math.min(100,Math.round((xp%500)/500*100));
-  const cTier=document.getElementById('bpCurrentTier');
-  const xpBar=document.getElementById('bpXPBar');
-  const xpText=document.getElementById('bpXPText');
-  if(cTier) cTier.textContent='TIER '+tier;
-  if(xpBar) xpBar.style.width=pct+'%';
-  if(xpText) xpText.textContent=xp+' XP — '+Math.max(0,nextXP-xp)+' XP to Tier '+(tier+1);
-  if(!saveData.bpClaimedTiers) saveData.bpClaimedTiers=[];
-  let claimed=false;
+let _bpSel=null; // {tier, track:'free'|'prem'}
+
+function _bpRewardInfo(r){
+  if(!r) return{icon:'—',label:'No reward',rarity:'common'};
+  if(r.skin){
+    const sk=RICHARD_SKINS.find(s=>s.id===r.skin);
+    return{icon:'🪖',label:sk?sk.name:r.skin,rarity:r.skin==='richard_gold'?'mythic':'epic',skin:r.skin};
+  }
+  if(r.camo){
+    const[w,cid]=r.camo;
+    const cm=(WEAPON_CAMOS[w]||[]).find(c=>c.id===cid);
+    return{icon:'🎨',label:(cm?cm.name:cid)+' '+(_LKR_WEAPON_LABELS[w]||w),rarity:cm?.rarity||'rare',camo:r.camo,camoData:cm};
+  }
+  if(r.credits)        return{icon:'💰',label:r.credits.toLocaleString()+' Credits',rarity:'common'};
+  if(r.chronoShards)   return{icon:'◈', label:r.chronoShards+' Chrono Shards',rarity:'uncommon'};
+  if(r.summonTickets)  return{icon:'🎟',label:r.summonTickets+' Summon Ticket'+(r.summonTickets>1?'s':''),rarity:'uncommon'};
+  if(r.featuredTickets)return{icon:'✦', label:r.featuredTickets+' Featured Ticket'+(r.featuredTickets>1?'s':''),rarity:'rare'};
+  if(r.dupeFragments)  return{icon:'◇', label:r.dupeFragments+' Dupe Fragments',rarity:'common'};
+  return{icon:'?',label:'Reward',rarity:'common'};
+}
+
+// 'claimed' | 'claimable' | 'needPremium' | 'locked'
+function _bpState(tier,track){
+  const lvl=saveData.bpLevel||0;
+  const arr=track==='prem'?(saveData.bpClaimedTiersP||[]):(saveData.bpClaimedTiers||[]);
+  if(arr.includes(tier)) return'claimed';
+  if(lvl<tier) return'locked';
+  if(track==='prem'&&!saveData.bpPremium) return'needPremium';
+  return'claimable';
+}
+
+function _bpGrant(r){
+  // Apply reward to saveData + build atomic Firebase increments
+  const upd={};
+  if(!saveData.summonCurrency) saveData.summonCurrency={chronoShards:0,summonTickets:0,featuredTickets:0};
+  if(r.credits){saveData.currency=(saveData.currency||0)+r.credits;upd['saveData.currency']=firebase.firestore.FieldValue.increment(r.credits);}
+  if(r.chronoShards){saveData.summonCurrency.chronoShards=(saveData.summonCurrency.chronoShards||0)+r.chronoShards;upd['saveData.summonCurrency.chronoShards']=firebase.firestore.FieldValue.increment(r.chronoShards);}
+  if(r.summonTickets){saveData.summonCurrency.summonTickets=(saveData.summonCurrency.summonTickets||0)+r.summonTickets;upd['saveData.summonCurrency.summonTickets']=firebase.firestore.FieldValue.increment(r.summonTickets);}
+  if(r.featuredTickets){saveData.summonCurrency.featuredTickets=(saveData.summonCurrency.featuredTickets||0)+r.featuredTickets;upd['saveData.summonCurrency.featuredTickets']=firebase.firestore.FieldValue.increment(r.featuredTickets);}
+  if(r.dupeFragments){saveData.dupeFragments=(saveData.dupeFragments||0)+r.dupeFragments;upd['saveData.dupeFragments']=firebase.firestore.FieldValue.increment(r.dupeFragments);}
+  if(r.skin){
+    if(!saveData.ownedSkins) saveData.ownedSkins=['richard_default'];
+    if(!saveData.ownedSkins.includes(r.skin)) saveData.ownedSkins.push(r.skin);
+    upd['saveData.ownedSkins']=firebase.firestore.FieldValue.arrayUnion(r.skin);
+  }
+  if(r.camo){
+    const[w,cid]=r.camo;
+    if(!saveData.ownedWeaponCamos) saveData.ownedWeaponCamos={};
+    if(!Array.isArray(saveData.ownedWeaponCamos[w])) saveData.ownedWeaponCamos[w]=[];
+    if(!saveData.ownedWeaponCamos[w].includes(cid)) saveData.ownedWeaponCamos[w].push(cid);
+    upd[`saveData.ownedWeaponCamos.${w}`]=firebase.firestore.FieldValue.arrayUnion(cid);
+  }
+  return upd;
+}
+
+function bpClaim(tier,track){
+  const t=BP_TIERS.find(x=>x.tier===tier);
+  if(!t) return false;
+  const r=track==='prem'?t.prem:t.free;
+  if(!r||_bpState(tier,track)!=='claimable') return false;
+  const upd=_bpGrant(r);
+  if(track==='prem'){
+    saveData.bpClaimedTiersP.push(tier);
+    upd['saveData.bpClaimedTiersP']=firebase.firestore.FieldValue.arrayUnion(tier);
+  } else {
+    saveData.bpClaimedTiers.push(tier);
+    upd['saveData.bpClaimedTiers']=firebase.firestore.FieldValue.arrayUnion(tier);
+  }
+  if(_fbUser&&_fbDb) _fbDb.collection('users').doc(_fbUser.uid).update(upd).catch(e=>console.warn('[BP] Firebase write failed:',e.message));
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
+  const info=_bpRewardInfo(r);
+  showNotif('Tier '+tier+': '+info.label+' claimed!');
+  return true;
+}
+
+function bpClaimSelected(){
+  if(!_bpSel) return;
+  if(bpClaim(_bpSel.tier,_bpSel.track)){
+    if(typeof updateSaveUI==='function') updateSaveUI();
+    buildBPScreen();
+  }
+}
+
+function bpClaimAll(){
+  let n=0;
   BP_TIERS.forEach(t=>{
-    if(tier>=t.tier&&!saveData.bpClaimedTiers.includes(t.tier)){
-      saveData.bpClaimedTiers.push(t.tier);
-      if(t.credits){saveData.currency+=t.credits;showNotif('BP Tier '+t.tier+': +'+t.credits+' CR!');}
-      if(t.skin){
-        if(!saveData.ownedSkins) saveData.ownedSkins=['richard_default'];
-        if(!saveData.ownedSkins.includes(t.skin)) saveData.ownedSkins.push(t.skin);
-      }
-      if(!saveData.summonCurrency) saveData.summonCurrency={chronoShards:0,summonTickets:0,featuredTickets:0};
-      if(t.chronoShards){saveData.summonCurrency.chronoShards=(saveData.summonCurrency.chronoShards||0)+t.chronoShards;showNotif('BP Tier '+t.tier+': +'+t.chronoShards+' Chrono Shards!');}
-      if(t.summonTickets){saveData.summonCurrency.summonTickets=(saveData.summonCurrency.summonTickets||0)+t.summonTickets;showNotif('BP Tier '+t.tier+': +'+t.summonTickets+' Summon Ticket(s)!');}
-      if(t.featuredTickets){saveData.summonCurrency.featuredTickets=(saveData.summonCurrency.featuredTickets||0)+t.featuredTickets;showNotif('BP Tier '+t.tier+': +'+t.featuredTickets+' Featured Ticket(s)!');}
-      // Atomic Firebase write for BP rewards
-      if(_fbUser&&_fbDb){
-        const _bpUpd={'saveData.bpClaimedTiers':firebase.firestore.FieldValue.arrayUnion(t.tier)};
-        if(t.skin) _bpUpd['saveData.ownedSkins']=firebase.firestore.FieldValue.arrayUnion(t.skin);
-        if(t.credits) _bpUpd['saveData.currency']=firebase.firestore.FieldValue.increment(t.credits);
-        if(t.chronoShards) _bpUpd['saveData.summonCurrency.chronoShards']=firebase.firestore.FieldValue.increment(t.chronoShards);
-        if(t.summonTickets) _bpUpd['saveData.summonCurrency.summonTickets']=firebase.firestore.FieldValue.increment(t.summonTickets);
-        if(t.featuredTickets) _bpUpd['saveData.summonCurrency.featuredTickets']=firebase.firestore.FieldValue.increment(t.featuredTickets);
-        _fbDb.collection('users').doc(_fbUser.uid).update(_bpUpd).catch(e=>console.warn('[BP] Firebase write failed:',e.message));
-      }
-      if(t.skin) showNotif('BP Tier '+t.tier+': '+t.label+' unlocked!');
-      claimed=true;
-    }
+    if(t.free&&_bpState(t.tier,'free')==='claimable'&&bpClaim(t.tier,'free')) n++;
+    if(t.prem&&_bpState(t.tier,'prem')==='claimable'&&bpClaim(t.tier,'prem')) n++;
   });
-  if(claimed) saveSave();
-  const el=document.getElementById('bpTierList');
-  if(!el) return;
-  el.innerHTML=BP_TIERS.map(t=>{
-    const done=tier>=t.tier;
-    const cur=tier===t.tier-1;
-    return`<div class="bp-tile${done?' bp-tile-done':cur?' bp-tile-cur':''}">
-      <div class="bp-tile-num">${t.tier}</div>
-      <div class="bp-tile-icon">${t.icon}</div>
-      <div class="bp-tile-label">${t.label}</div>
-      ${done?'<div class="bp-tile-check">✓</div>':''}
+  if(n>0){
+    saveSave();
+    if(typeof updateSaveUI==='function') updateSaveUI();
+    showNotif(n+' reward'+(n>1?'s':'')+' claimed!');
+  } else showNotif('Nothing to claim yet.');
+  buildBPScreen();
+}
+
+function bpBuyPremium(){
+  if(saveData.bpPremium){showNotif('Premium already owned!');return;}
+  if((saveData.currency||0)<BP_PREMIUM_COST){showNotif('Not enough credits — need '+BP_PREMIUM_COST.toLocaleString()+'!');return;}
+  saveData.currency-=BP_PREMIUM_COST;
+  saveData.bpPremium=true;
+  if(_fbUser&&_fbDb){
+    _fbDb.collection('users').doc(_fbUser.uid).update({
+      'saveData.currency':firebase.firestore.FieldValue.increment(-BP_PREMIUM_COST),
+      'saveData.bpPremium':true,
+    }).catch(e=>console.warn('[BP] Premium purchase write failed:',e.message));
+  }
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
+  if(typeof updateSaveUI==='function') updateSaveUI();
+  showNotif('★ PREMIUM BATTLE PASS UNLOCKED! ★');
+  buildBPScreen();
+}
+
+function bpSelect(tier,track){
+  _bpSel={tier,track};
+  document.querySelectorAll('.bp-cell-sel').forEach(c=>c.classList.remove('bp-cell-sel'));
+  const cell=document.getElementById('bpCell_'+track+'_'+tier);
+  if(cell) cell.classList.add('bp-cell-sel');
+  _bpRenderPreview();
+}
+
+function _bpRenderPreview(){
+  const pv=document.getElementById('bpPreview');
+  const claimBtn=document.getElementById('bpClaimBtn');
+  if(!pv) return;
+  if(!_bpSel){pv.innerHTML='<div class="bp-pv-empty">SELECT A REWARD</div>';if(claimBtn)claimBtn.disabled=true;return;}
+  const t=BP_TIERS.find(x=>x.tier===_bpSel.tier);
+  const r=_bpSel.track==='prem'?t.prem:t.free;
+  const info=_bpRewardInfo(r);
+  const rc=_rarity(info.rarity);
+  const state=_bpState(_bpSel.tier,_bpSel.track);
+  let visual='';
+  if(info.skin){
+    visual=`<canvas id="bpPvCanvas" width="140" height="190" style="width:140px;height:190px;"></canvas>`;
+  } else if(info.camoData){
+    visual=_camoGunPreview(info.camoData.hexStr||'#303030',info.camoData.accentStr);
+  } else {
+    visual=`<div class="bp-pv-icon" style="color:${rc.color}">${info.icon}</div>`;
+  }
+  const stateTxt={claimed:'✓ CLAIMED',claimable:'READY TO CLAIM',needPremium:'REQUIRES PREMIUM PASS',locked:'REACH TIER '+_bpSel.tier};
+  const stateCol={claimed:'#4F7A5E',claimable:'var(--amber)',needPremium:'#A855D8',locked:'var(--text3)'};
+  pv.innerHTML=`
+    <div class="bp-pv-track ${_bpSel.track==='prem'?'bp-pv-track-prem':''}">${_bpSel.track==='prem'?'★ PREMIUM':'FREE'} · TIER ${_bpSel.tier}</div>
+    <div class="bp-pv-visual" style="border-color:${rc.border}">${visual}</div>
+    <div class="bp-pv-name">${info.label}</div>
+    <div class="bp-pv-rar" style="color:${rc.color}">${rc.label}</div>
+    <div class="bp-pv-state" style="color:${stateCol[state]}">${stateTxt[state]}</div>`;
+  if(claimBtn) claimBtn.disabled=state!=='claimable';
+  // Render 3D skin preview after DOM insert
+  if(info.skin){
+    requestAnimationFrame(()=>{
+      const cv=document.getElementById('bpPvCanvas');
+      if(!cv||typeof makeCharModel!=='function') return;
+      if(!_shopPrevRdr){
+        const oc=document.createElement('canvas');oc.width=110;oc.height=160;
+        _shopPrevRdr=new THREE.WebGLRenderer({canvas:oc,antialias:true,alpha:true});
+        _shopPrevRdr.setSize(110,160,false);_shopPrevRdr.setClearColor(0x000000,0);
+      }
+      const sc=_buildShopScene();
+      const cam=new THREE.PerspectiveCamera(42,110/160,0.1,50);
+      cam.position.set(0,1.1,4.2);cam.lookAt(0,0.9,0);
+      const sk=RICHARD_SKINS.find(s=>s.id===info.skin);
+      if(!sk) return;
+      const char=makeCharModel(sk.custo);
+      char.rotation.y=0.4;sc.add(char);
+      _shopPrevRdr.render(sc,cam);sc.remove(char);
+      cv.getContext('2d').drawImage(_shopPrevRdr.domElement,0,0,140,190);
+    });
+  }
+}
+
+function buildBPScreen(){
+  const lvl=saveData.bpLevel||0;
+  const xp=saveData.bpXP||0;
+  const inLvl=xp-lvl*500;
+  const pct=Math.min(100,Math.round(inLvl/500*100));
+  const hdr=document.getElementById('bpHdrInfo');
+  if(hdr) hdr.innerHTML=`
+    <div class="bp-season-title">${BP_SEASON_TITLE}</div>
+    <div class="bp-hdr-row">
+      <div class="bp-big-tier">TIER ${lvl}</div>
+      <div class="bp-xp-wrap">
+        <div class="bp-xp-track"><div class="bp-xp-fill" style="width:${pct}%"></div></div>
+        <div class="bp-xp-text">${inLvl} / 500 XP to Tier ${lvl+1}</div>
+      </div>
+      ${saveData.bpPremium
+        ?'<div class="bp-prem-owned">★ PREMIUM ACTIVE</div>'
+        :`<button class="bp-prem-buy" onclick="bpBuyPremium()">UNLOCK PREMIUM — 💰 ${BP_PREMIUM_COST.toLocaleString()}</button>`}
     </div>`;
-  }).join('');
-  const cur=el.querySelector('.bp-tile-cur');
+  const track=document.getElementById('bpTrack');
+  if(!track) return;
+  const cellHtml=(t,r,trk)=>{
+    if(!r) return`<div class="bp-cell bp-cell-empty"></div>`;
+    const info=_bpRewardInfo(r);
+    const rc=_rarity(info.rarity);
+    const state=_bpState(t.tier,trk);
+    const cls={claimed:'bp-cell-claimed',claimable:'bp-cell-ready',needPremium:'bp-cell-prem-lock',locked:'bp-cell-locked'}[state];
+    const sel=_bpSel&&_bpSel.tier===t.tier&&_bpSel.track===trk?' bp-cell-sel':'';
+    return`<div class="bp-cell ${cls}${sel}" id="bpCell_${trk}_${t.tier}" onclick="bpSelect(${t.tier},'${trk}')" style="--rar:${rc.color}">
+      <div class="bp-cell-icon">${info.icon}</div>
+      <div class="bp-cell-lbl">${info.label}</div>
+      ${state==='claimed'?'<div class="bp-cell-check">✓</div>':''}
+      ${state==='claimable'?'<div class="bp-cell-dot"></div>':''}
+      ${state==='needPremium'?'<div class="bp-cell-lock">★</div>':''}
+      ${state==='locked'?'<div class="bp-cell-lock">🔒</div>':''}
+    </div>`;
+  };
+  track.innerHTML=`
+    <div class="bp-track-labels">
+      <div class="bp-lane-lbl"></div>
+      <div class="bp-lane-lbl">FREE</div>
+      <div class="bp-lane-lbl bp-lane-prem">★ PREMIUM</div>
+    </div>
+    <div class="bp-track-scroll" id="bpTrackScroll">
+      ${BP_TIERS.map(t=>{
+        const cur=(saveData.bpLevel||0)+1===t.tier;
+        return`<div class="bp-col${cur?' bp-col-cur':''}">
+          <div class="bp-col-num">${t.tier}</div>
+          ${cellHtml(t,t.free,'free')}
+          ${cellHtml(t,t.prem,'prem')}
+        </div>`;
+      }).join('')}
+    </div>`;
+  const cur=track.querySelector('.bp-col-cur');
   if(cur) setTimeout(()=>cur.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),120);
+  _bpRenderPreview();
 }

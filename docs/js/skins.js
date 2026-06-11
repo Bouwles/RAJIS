@@ -351,13 +351,23 @@ function _camoGunPreview(hex,accent){
 function _isOwned(item){
   if(item.rewardType==='skin') return(saveData.ownedSkins||['richard_default']).includes(item.id);
   if(item.rewardType==='weaponCamo') return((saveData.ownedWeaponCamos||{})[item.weaponId]||[]).includes(item.camoId);
+  if(item.rewardType==='profileIcon') return(saveData.ownedProfileIcons||[]).includes(item.refId);
+  if(item.rewardType==='callingCard') return(saveData.ownedCallingCards||[]).includes(item.refId);
+  if(item.rewardType==='title')       return(saveData.ownedTitles||[]).includes(item.refId);
+  if(item.rewardType==='badge')       return(saveData.ownedBadges||[]).includes(item.refId);
   return false;
 }
 function _isEquipped(item){
+  const pc=saveData.profileCustomization||{};
   if(item.rewardType==='skin') return(saveData.equippedSkin||'richard_default')===item.id;
   if(item.rewardType==='weaponCamo') return((saveData.equippedWeaponCamos||{})[item.weaponId]||'default')===item.camoId;
+  if(item.rewardType==='profileIcon') return pc.icon===item.refId;
+  if(item.rewardType==='callingCard') return pc.callingCard===item.refId;
+  if(item.rewardType==='title')       return pc.title===item.refId;
+  if(item.rewardType==='badge')       return pc.badge===item.refId;
   return false;
 }
+const _PC_REWARD_KIND={profileIcon:'icon',callingCard:'callingCard',title:'title',badge:'badge'};
 
 function getDailyShopItems(){
   const date=_getUAEDate();
@@ -550,6 +560,14 @@ function openShopModal(itemId){
         <div style="transform:scale(1.4);transform-origin:center center;">${_camoGunPreview(hex)}</div>
         <div style="font-size:.58em;font-family:var(--font-ui);letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-top:12px;">${item.weaponId.toUpperCase()} CAMO</div>
       </div>`;
+    } else if(item.rewardType==='callingCard'&&typeof renderCallingCard==='function'){
+      const me=(typeof mpUser!=='undefined'&&mpUser?.username)||'RICHARD';
+      const mine=saveData.profileCustomization||{};
+      prev.innerHTML=`<div style="width:100%;height:100%;background:${r.bg};display:flex;align-items:center;justify-content:center;padding:14px;">
+        ${renderCallingCard({username:me,level:saveData.bpLevel||0,icon:mine.icon,callingCard:item.refId,title:mine.title,badge:mine.badge})}
+      </div>`;
+    } else {
+      prev.innerHTML=`<div style="width:100%;height:100%;background:${r.bg};display:flex;align-items:center;justify-content:center;font-size:4em;">${item.icon||'✦'}</div>`;
     }
     prev.style.borderBottom=`1px solid ${r.border}`;
   }
@@ -562,7 +580,9 @@ function openShopModal(itemId){
     } else if(owned){
       const equipFn=item.rewardType==='skin'
         ?`equipSkin('${item.id}');closeShopModal();buildItemShop()`
-        :`equipWeaponCamo('${item.weaponId}','${item.camoId}');closeShopModal();buildItemShop()`;
+        :item.rewardType==='weaponCamo'
+          ?`equipWeaponCamo('${item.weaponId}','${item.camoId}');closeShopModal();buildItemShop()`
+          :`equipProfileItem('${_PC_REWARD_KIND[item.rewardType]}','${item.refId}');closeShopModal();buildItemShop()`;
       btnHtml=`<button class="is2-modal-buy" style="background:rgba(74,159,232,.45);" onclick="${equipFn}">EQUIP</button>`;
     } else {
       btnHtml=`<button class="is2-modal-buy" style="background:${r.color};color:#06080F;" onclick="buyShopItem('${item.id}')">BUY — 💰 ${item.price.toLocaleString()}</button>`;
@@ -602,6 +622,10 @@ async function buyShopItem(itemId){
       } else if(item.rewardType==='weaponCamo'){
         upd[`saveData.ownedWeaponCamos.${item.weaponId}`]=firebase.firestore.FieldValue.arrayUnion(item.camoId);
         upd[`saveData.equippedWeaponCamos.${item.weaponId}`]=item.camoId;
+      } else if(_PC_REWARD_KIND[item.rewardType]){
+        const kind=_PC_REWARD_KIND[item.rewardType];
+        upd['saveData.'+_PC_KINDS[kind].owned]=firebase.firestore.FieldValue.arrayUnion(item.refId);
+        upd['saveData.profileCustomization.'+_PC_KINDS[kind].key]=item.refId;
       }
       await _fbDb.collection('users').doc(_fbUser.uid).update(upd);
       console.log('[Shop] Purchase committed to Firebase:', item.id);
@@ -627,6 +651,13 @@ async function buyShopItem(itemId){
       saveData.ownedWeaponCamos[item.weaponId].push(item.camoId);
     if(!saveData.equippedWeaponCamos) saveData.equippedWeaponCamos={};
     saveData.equippedWeaponCamos[item.weaponId]=item.camoId;
+  } else if(_PC_REWARD_KIND[item.rewardType]){
+    const kind=_PC_REWARD_KIND[item.rewardType];
+    const k=_PC_KINDS[kind];
+    if(!Array.isArray(saveData[k.owned])) saveData[k.owned]=[];
+    if(!saveData[k.owned].includes(item.refId)) saveData[k.owned].push(item.refId);
+    if(!saveData.profileCustomization) saveData.profileCustomization={icon:'icon_default',callingCard:'card_default',title:'title_rookie',badge:null};
+    saveData.profileCustomization[k.key]=item.refId;
   }
   // Sync localStorage (Firebase already updated above)
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
@@ -911,7 +942,7 @@ const BP_TIERS=[
   {tier:2,  free:{chronoShards:100},   prem:{chronoShards:300}},
   {tier:3,  free:{summonTickets:1},    prem:{summonTickets:2}},
   {tier:4,  free:{credits:300},        prem:{camo:['launcher','redline']}},
-  {tier:5,  free:{camo:['pistol','sand']}, prem:{credits:800}},
+  {tier:5,  free:{camo:['pistol','sand']}, prem:{card:'card_bp_elite'}},
   {tier:6,  free:{credits:400},        prem:{featuredTickets:2}},
   {tier:7,  free:{dupeFragments:50},   prem:{chronoShards:400}},
   {tier:8,  free:{chronoShards:150},   prem:{skin:'richard_desert'}},
@@ -919,7 +950,7 @@ const BP_TIERS=[
   {tier:10, free:{skin:'richard_veteran'}, prem:{summonTickets:3}},
   {tier:11, free:{credits:500},        prem:{chronoShards:500}},
   {tier:12, free:{chronoShards:200},   prem:{camo:['pistol','black']}},
-  {tier:13, free:{credits:600},        prem:{credits:1200}},
+  {tier:13, free:{card:'card_city_savior'}, prem:{pcIcon:'icon_crown'}},
   {tier:14, free:{summonTickets:2},    prem:{featuredTickets:2}},
   {tier:15, free:{credits:700},        prem:{dupeFragments:100}},
   {tier:16, free:{dupeFragments:100},  prem:{skin:'richard_arctic'}},
@@ -932,14 +963,14 @@ const BP_TIERS=[
   {tier:23, free:{credits:1000},       prem:{featuredTickets:3}},
   {tier:24, free:{chronoShards:300},   prem:{skin:'richard_recon'}},
   {tier:25, free:{featuredTickets:1},  prem:{credits:2000}},
-  {tier:26, free:{credits:1100},       prem:{chronoShards:700}},
+  {tier:26, free:{pcIcon:'icon_shield'}, prem:{chronoShards:700}},
   {tier:27, free:{dupeFragments:150},  prem:{summonTickets:4}},
   {tier:28, free:{credits:1200},       prem:{camo:['railgun','void']}},
   {tier:29, free:{summonTickets:3},    prem:{credits:1800}},
   {tier:30, free:{skin:'richard_medic'}, prem:{dupeFragments:200}},
   {tier:31, free:{credits:1300},       prem:{featuredTickets:3}},
   {tier:32, free:{chronoShards:350},   prem:{camo:['cluster','inferno']}},
-  {tier:33, free:{credits:1400},       prem:{credits:2200}},
+  {tier:33, free:{title:'title_city_defender'}, prem:{card:'card_gold_lockon'}},
   {tier:34, free:{summonTickets:2},    prem:{chronoShards:800}},
   {tier:35, free:{credits:1500},       prem:{summonTickets:5}},
   {tier:36, free:{dupeFragments:200},  prem:{skin:'richard_blizzard'}},
@@ -949,7 +980,7 @@ const BP_TIERS=[
   {tier:40, free:{camo:['shotgun','urban']}, prem:{credits:2600}},
   {tier:41, free:{credits:1700},       prem:{chronoShards:900}},
   {tier:42, free:{summonTickets:3},    prem:{camo:['shock','thunder']}},
-  {tier:43, free:{credits:1800},       prem:{credits:2800}},
+  {tier:43, free:{card:'card_stormline'}, prem:{title:'title_elite_defender'}},
   {tier:44, free:{chronoShards:450},   prem:{summonTickets:5}},
   {tier:45, free:{credits:1900},       prem:{featuredTickets:5}},
   {tier:46, free:{dupeFragments:250},  prem:{camo:['sniper','ember']}},
@@ -972,6 +1003,9 @@ function _bpRewardInfo(r){
     const cm=(WEAPON_CAMOS[w]||[]).find(c=>c.id===cid);
     return{icon:'🎨',label:(cm?cm.name:cid)+' '+(_LKR_WEAPON_LABELS[w]||w),rarity:cm?.rarity||'rare',camo:r.camo,camoData:cm};
   }
+  if(r.card){const c=typeof _pcCard==='function'?_pcCard(r.card):null;return{icon:c?c.motif:'🎴',label:(c?c.name:r.card)+' Card',rarity:c?c.rarity:'rare',card:r.card};}
+  if(r.pcIcon){const c=typeof _pcIcon==='function'?_pcIcon(r.pcIcon):null;return{icon:c?c.emoji:'👤',label:(c?c.name:r.pcIcon)+' Icon',rarity:c?c.rarity:'rare'};}
+  if(r.title){const c=typeof _pcTitle==='function'?_pcTitle(r.title):null;return{icon:'🏷️',label:'Title: '+(c?c.name:r.title),rarity:c?c.rarity:'rare'};}
   if(r.credits)        return{icon:'💰',label:r.credits.toLocaleString()+' Credits',rarity:'common'};
   if(r.chronoShards)   return{icon:'◈', label:r.chronoShards+' Chrono Shards',rarity:'uncommon'};
   if(r.summonTickets)  return{icon:'🎟',label:r.summonTickets+' Summon Ticket'+(r.summonTickets>1?'s':''),rarity:'uncommon'};
@@ -1011,6 +1045,9 @@ function _bpGrant(r){
     if(!saveData.ownedWeaponCamos[w].includes(cid)) saveData.ownedWeaponCamos[w].push(cid);
     upd[`saveData.ownedWeaponCamos.${w}`]=firebase.firestore.FieldValue.arrayUnion(cid);
   }
+  if(r.card&&typeof grantProfileItem==='function')   Object.assign(upd,grantProfileItem('callingCard',r.card));
+  if(r.pcIcon&&typeof grantProfileItem==='function') Object.assign(upd,grantProfileItem('icon',r.pcIcon));
+  if(r.title&&typeof grantProfileItem==='function')  Object.assign(upd,grantProfileItem('title',r.title));
   return upd;
 }
 
@@ -1096,6 +1133,9 @@ function _bpRenderPreview(){
     visual=`<canvas id="bpPvCanvas" width="140" height="190" style="width:140px;height:190px;"></canvas>`;
   } else if(info.camoData){
     visual=_camoGunPreview(info.camoData.hexStr||'#303030',info.camoData.accentStr);
+  } else if(info.card&&typeof renderCallingCard==='function'){
+    const mine=saveData.profileCustomization||{};
+    visual=`<div style="transform:scale(.82);transform-origin:center;">${renderCallingCard({username:(typeof mpUser!=='undefined'&&mpUser?.username)||'RICHARD',callingCard:info.card,icon:mine.icon,title:mine.title,badge:mine.badge})}</div>`;
   } else {
     visual=`<div class="bp-pv-icon" style="color:${rc.color}">${info.icon}</div>`;
   }

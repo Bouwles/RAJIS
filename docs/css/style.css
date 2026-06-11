@@ -1111,6 +1111,71 @@ body::after{content:'';position:fixed;inset:0;
   font-family:var(--font-ui);font-size:.6em;font-weight:700;
   letter-spacing:.14em;color:var(--text3);text-transform:uppercase;margin-top:5px;}
 
+/* ── CALLING CARD COMPONENT ─────────────────────────────────── */
+.cc-banner{
+  position:relative;display:flex;align-items:center;gap:12px;
+  width:340px;max-width:100%;height:74px;padding:0 14px;
+  border:1px solid;overflow:hidden;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));}
+.cc-motif{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  font-size:3.2em;opacity:.14;pointer-events:none;}
+.cc-icon{
+  width:46px;height:46px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:1.5em;border:1px solid;}
+.cc-mid{flex:1;min-width:0;position:relative;z-index:1;}
+.cc-name{
+  font-family:var(--font-ui);font-size:1.15em;font-weight:800;
+  letter-spacing:.1em;color:#fff;text-transform:uppercase;line-height:1.1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cc-title{font-family:var(--font-ui);font-size:.62em;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-top:2px;}
+.cc-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;position:relative;z-index:1;}
+.cc-badge{font-size:1.1em;line-height:1;}
+.cc-level{font-family:var(--font-mono);font-size:.6em;color:rgba(255,255,255,.65);letter-spacing:.08em;}
+
+/* ── PROFILE CUSTOMIZATION PANEL ────────────────────────────── */
+.pf-custom{margin-bottom:14px;}
+.pc-hd{
+  font-family:var(--font-ui);font-size:.8em;font-weight:800;letter-spacing:.2em;
+  color:var(--text2);text-transform:uppercase;margin-bottom:8px;}
+.pc-preview{display:flex;justify-content:center;margin-bottom:10px;}
+.pc-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+.pc-tab{
+  font-family:var(--font-ui);font-size:.62em;font-weight:700;letter-spacing:.12em;
+  padding:6px 12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+  color:var(--text3);cursor:pointer;text-transform:uppercase;transition:all .15s;}
+.pc-tab:hover{color:var(--text);background:rgba(255,255,255,.08);}
+.pc-tab-on{background:rgba(212,149,42,.16)!important;border-color:rgba(212,149,42,.55)!important;color:var(--amber)!important;}
+.pc-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:7px;
+  max-height:240px;overflow-y:auto;padding:2px;}
+.pc-grid::-webkit-scrollbar{width:5px;}
+.pc-grid::-webkit-scrollbar-thumb{background:var(--border2);}
+.pc-tile{
+  position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:9px 6px;background:rgba(10,14,24,.9);cursor:pointer;
+  border:1px solid rgba(255,255,255,.08);border-bottom:2px solid var(--rar,#444);
+  transition:all .15s;}
+.pc-tile:hover{background:rgba(22,30,48,.9);transform:translateY(-1px);}
+.pc-tile-eq{border-color:rgba(212,149,42,.55)!important;background:rgba(212,149,42,.07)!important;}
+.pc-tile-wide{grid-column:span 2;}
+.pc-ico{
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  font-size:1.3em;border:1px solid rgba(255,255,255,.1);}
+.pc-card-mini{
+  width:100%;height:34px;display:flex;align-items:center;justify-content:center;
+  font-size:1.2em;border:1px solid;}
+.pc-title-tx{font-family:var(--font-ui);font-size:.78em;font-weight:800;letter-spacing:.12em;padding:8px 0;}
+.pc-nm{
+  font-family:var(--font-ui);font-size:.55em;font-weight:700;letter-spacing:.06em;
+  color:var(--text2);text-transform:uppercase;text-align:center;line-height:1.2;}
+.pc-on{
+  position:absolute;top:3px;right:3px;background:rgba(212,149,42,.9);color:#000;
+  font-family:var(--font-ui);font-size:.46em;font-weight:800;padding:1px 4px;letter-spacing:.05em;}
+.pc-empty{
+  grid-column:1/-1;font-family:var(--font-ui);font-size:.66em;letter-spacing:.1em;
+  color:var(--text3);text-align:center;padding:18px 0;text-transform:uppercase;}
+
 /* ================================================================
    PARTY INVITE POPUP
    ================================================================ */

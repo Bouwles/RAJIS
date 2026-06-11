@@ -28,6 +28,11 @@ function defaultSave(){
       helmet:true, visorColor:'#44CCFF', backpack:'missile',
       skinTone:'#E8C49A'
     },
+    profileCustomization:{icon:'icon_default',callingCard:'card_default',title:'title_rookie',badge:null},
+    ownedProfileIcons:['icon_default'],
+    ownedCallingCards:['card_default'],
+    ownedTitles:['title_rookie'],
+    ownedBadges:[],
     summonCurrency:{chronoShards:500,summonTickets:3,featuredTickets:0},
     dupeFragments:0,
     gachaPity:{
@@ -68,6 +73,15 @@ function _normalizeInventory(sd){
   if(!Array.isArray(sd.bpClaimedTiers)) sd.bpClaimedTiers=[];
   if(!Array.isArray(sd.bpClaimedTiersP)) sd.bpClaimedTiersP=[];
   if(typeof sd.bpPremium!=='boolean') sd.bpPremium=false;
+  if(!sd.profileCustomization||typeof sd.profileCustomization!=='object')
+    sd.profileCustomization={icon:'icon_default',callingCard:'card_default',title:'title_rookie',badge:null};
+  if(!sd.profileCustomization.icon) sd.profileCustomization.icon='icon_default';
+  if(!sd.profileCustomization.callingCard) sd.profileCustomization.callingCard='card_default';
+  if(!sd.profileCustomization.title) sd.profileCustomization.title='title_rookie';
+  if(!Array.isArray(sd.ownedProfileIcons)||!sd.ownedProfileIcons.length) sd.ownedProfileIcons=['icon_default'];
+  if(!Array.isArray(sd.ownedCallingCards)||!sd.ownedCallingCards.length) sd.ownedCallingCards=['card_default'];
+  if(!Array.isArray(sd.ownedTitles)||!sd.ownedTitles.length) sd.ownedTitles=['title_rookie'];
+  if(!Array.isArray(sd.ownedBadges)) sd.ownedBadges=[];
   if(!Array.isArray(sd.pickedCards)) sd.pickedCards=[];
   if(!Array.isArray(sd.seenCards)) sd.seenCards=[];
   if(!sd.upgrades) sd.upgrades={armor_plate:0,speed_chip:0,hot_rounds:0};

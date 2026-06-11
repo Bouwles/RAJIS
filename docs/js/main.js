@@ -529,6 +529,7 @@ function buildStatsScreen(){
         </div>
         <div class="pf-credits">💰 ${(s.currency||0).toLocaleString()}</div>
       </div>
+      <div id="pfCustomization" class="pf-custom"></div>
       <div class="pf-grid">
         ${card('Best Wave',s.waveRecord||0)}
         ${card('Total Score',(s.totalScore||0).toLocaleString())}
@@ -544,6 +545,7 @@ function buildStatsScreen(){
         ${card('Shots Fired',(s.totalShotsFired||0).toLocaleString())}
       </div>
     </div>`;
+  if(typeof buildProfileCustomization==='function') buildProfileCustomization();
   // 3D equipped-skin portrait
   requestAnimationFrame(()=>{
     const cv=document.getElementById('pfSkinCanvas');

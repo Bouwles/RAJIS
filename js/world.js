@@ -1301,7 +1301,7 @@ function rebuildCharPreview(){
 function _getWeaponCamoColors(weaponId){
   const defBase={launcher:0x23262B,pistol:0x26282E,shotgun:0x222428,sniper:0x23262A,smg:0x24262B,railgun:0x222A36,cluster:0x2E2418,shock:0x241E32};
   const defAcc ={launcher:0x14151A,pistol:0x15161B,shotgun:0x131418,sniper:0x141519,smg:0x14151A,railgun:0x121822,cluster:0x1A140C,shock:0x14101E};
-  let base=defBase[weaponId]||0x24262B, accent=defAcc[weaponId]||0x14151A;
+  let base=defBase[weaponId]||0x24262B, accent=defAcc[weaponId]||0x14151A, glowI=.10;
   const camoId=saveData&&saveData.equippedWeaponCamos?saveData.equippedWeaponCamos[weaponId]:'default';
   if(camoId&&camoId!=='default'&&typeof WEAPON_CAMOS!=='undefined'&&WEAPON_CAMOS[weaponId]){
     const camo=WEAPON_CAMOS[weaponId].find(c=>c.id===camoId);
@@ -1309,14 +1309,15 @@ function _getWeaponCamoColors(weaponId){
       base=parseInt(camo.hexStr.replace('#',''),16);
       accent=camo.accentStr?parseInt(camo.accentStr.replace('#',''),16)
         :new THREE.Color(base).multiplyScalar(.4).getHex();
+      if(camo.emissiveStr) glowI=.55; // energy/mythic camos: accent zones glow
     }
   }
-  return{base,accent};
+  return{base,accent,glowI};
 }
 function _getWeaponCamoColor(weaponId){return _getWeaponCamoColors(weaponId).base;}
 // Shared weapon material builders — soft emissive lift so camo reads in shadow without glowing
 function _wpnBaseMat(hex){return new THREE.MeshLambertMaterial({color:hex,emissive:new THREE.Color(hex),emissiveIntensity:.14});}
-function _wpnAccMat(hex){return new THREE.MeshLambertMaterial({color:hex,emissive:new THREE.Color(hex),emissiveIntensity:.10});}
+function _wpnAccMat(hex,glowI){return new THREE.MeshLambertMaterial({color:hex,emissive:new THREE.Color(hex),emissiveIntensity:glowI||.10});}
 function makeWeaponMesh(){
   if(currentWeapon==='pistol')      return makePistolMesh();
   if(currentWeapon==='shotgun')     return makeShotgunMesh();
@@ -1331,7 +1332,7 @@ function makeLauncherMesh(){
   const g=new THREE.Group();
   const cc=_getWeaponCamoColors('launcher');
   const metalM=_wpnBaseMat(cc.base);
-  const accM  =_wpnAccMat(cc.accent);
+  const accM  =_wpnAccMat(cc.accent,cc.glowI);
   const darkM =new THREE.MeshLambertMaterial({color:0x111111});
   const tube=new THREE.Mesh(new THREE.CylinderGeometry(.062,.062,.70,10),metalM);
   tube.rotation.x=Math.PI/2;tube.position.z=-.08;g.add(tube);
@@ -1362,7 +1363,7 @@ function makePistolMesh(){
   const g=new THREE.Group();
   const cc=_getWeaponCamoColors('pistol');
   const metalM=_wpnBaseMat(cc.base);
-  const accM  =_wpnAccMat(cc.accent);
+  const accM  =_wpnAccMat(cc.accent,cc.glowI);
   const darkM =new THREE.MeshLambertMaterial({color:0x111111});
   const barrel=new THREE.Mesh(new THREE.BoxGeometry(.042,.042,.36),metalM);
   barrel.position.z=-.14;g.add(barrel);
@@ -1385,7 +1386,7 @@ function makeShotgunMesh(){
   const g=new THREE.Group();
   const cc=_getWeaponCamoColors('shotgun');
   const metalM=_wpnBaseMat(cc.base);
-  const woodM =_wpnAccMat(cc.accent);
+  const woodM =_wpnAccMat(cc.accent,cc.glowI);
   const darkM =new THREE.MeshLambertMaterial({color:0x0D0D0D});
   // Double barrel
   const bL=new THREE.Mesh(new THREE.CylinderGeometry(.028,.028,.58,8),metalM);
@@ -1423,7 +1424,7 @@ function makeSniperMesh(){
   const g=new THREE.Group();
   const cc=_getWeaponCamoColors('sniper');
   const metalM=_wpnBaseMat(cc.base);
-  const woodM =_wpnAccMat(cc.accent);
+  const woodM =_wpnAccMat(cc.accent,cc.glowI);
   const darkM =new THREE.MeshLambertMaterial({color:0x0A0A0A});
   const glassM=new THREE.MeshLambertMaterial({color:0x112233,emissive:new THREE.Color(0x001122),emissiveIntensity:.4});
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.82,8),metalM);
@@ -1454,7 +1455,7 @@ function makeSmgMesh(){
   const g=new THREE.Group();
   const cc=_getWeaponCamoColors('smg');
   const metalM=_wpnBaseMat(cc.base);
-  const polyM =_wpnAccMat(cc.accent);
+  const polyM =_wpnAccMat(cc.accent,cc.glowI);
   const darkM =new THREE.MeshLambertMaterial({color:0x0E0E0E});
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.28,8),metalM);
   barrel.rotation.x=Math.PI/2;barrel.position.z=-.1;g.add(barrel);
@@ -1478,7 +1479,7 @@ function makeRailgunMesh(){
   const g=new THREE.Group();
   const cc=_getWeaponCamoColors('railgun');
   const metalM=_wpnBaseMat(cc.base);
-  const darkM =_wpnAccMat(cc.accent);
+  const darkM =_wpnAccMat(cc.accent,cc.glowI);
   const glowM =new THREE.MeshLambertMaterial({color:0x00FFFF,emissive:new THREE.Color(0x00FFFF),emissiveIntensity:1.5});
   // long barrel
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,1.0,8),metalM);
@@ -1506,7 +1507,7 @@ function makeClusterMesh(){
   const g=new THREE.Group();
   const cc=_getWeaponCamoColors('cluster');
   const metalM=_wpnBaseMat(cc.base);
-  const drumM =_wpnAccMat(cc.accent);
+  const drumM =_wpnAccMat(cc.accent,cc.glowI);
   const darkM =new THREE.MeshLambertMaterial({color:0x1A1A0A});
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.052,.058,.38,8),metalM);
   barrel.rotation.x=Math.PI/2;barrel.position.z=-.08;g.add(barrel);
@@ -1530,7 +1531,7 @@ function makeShockMesh(){
   const g=new THREE.Group();
   const cc=_getWeaponCamoColors('shock');
   const metalM=_wpnBaseMat(cc.base);
-  const darkM =_wpnAccMat(cc.accent);
+  const darkM =_wpnAccMat(cc.accent,cc.glowI);
   const glowM =new THREE.MeshLambertMaterial({color:0xAA44FF,emissive:new THREE.Color(0xAA44FF),emissiveIntensity:1.2});
   const body=new THREE.Mesh(new THREE.BoxGeometry(.088,.082,.44),metalM);
   body.position.set(0,0,.04);g.add(body);

@@ -127,6 +127,33 @@ const WEAPON_CAMOS={
   ],
 };
 
+// ── Camo expansion: 12 themed camos added to EVERY weapon ────────
+// Stored per-weapon (weapon-specific IDs in saveData.ownedWeaponCamos),
+// rendered through the existing two-tone hexStr/accentStr pipeline.
+// emissiveStr marks mythic/energy camos — accent zones get a soft glow.
+(function(){
+  const EX=[
+    {id:'snowdust',  name:'Snow Dust',        hexStr:'#E4E8EC',accentStr:'#9AA8B4',price:400, rarity:'uncommon', pattern:'snow',     materialStyle:'matte'},
+    {id:'stormveil', name:'Storm Veil',       hexStr:'#4A5A6E',accentStr:'#1E2630',price:550, rarity:'rare',     pattern:'storm',    materialStyle:'matte'},
+    {id:'burntmetal',name:'Burnt Metal',      hexStr:'#5A3A28',accentStr:'#2A180E',price:550, rarity:'rare',     pattern:'burnt',    materialStyle:'worn'},
+    {id:'chromeshift',name:'Chrome Shift',    hexStr:'#A8B0BC',accentStr:'#4A525E',price:650, rarity:'rare',     pattern:'chrome',   materialStyle:'metallic'},
+    {id:'carbon',    name:'Carbon',           hexStr:'#23262C',accentStr:'#3A4250',price:750, rarity:'epic',     pattern:'carbon',   materialStyle:'fiber'},
+    {id:'hazline',   name:'Hazard Stripe',    hexStr:'#E8A020',accentStr:'#16161A',price:750, rarity:'epic',     pattern:'hazard',   materialStyle:'matte'},
+    {id:'digistorm', name:'Digital Storm',    hexStr:'#3A5A7A',accentStr:'#182838',price:800, rarity:'epic',     pattern:'digital',  materialStyle:'matte'},
+    {id:'circuit',   name:'Blue Circuit',     hexStr:'#1A3A5A',accentStr:'#44AAFF',price:900, rarity:'epic',     pattern:'circuit',  materialStyle:'tech',    emissiveStr:'#44AAFF'},
+    {id:'goldline',  name:'Goldline',         hexStr:'#D8B040',accentStr:'#6A4A14',price:1400,rarity:'legendary',pattern:'goldplate',materialStyle:'metallic'},
+    {id:'obsidian',  name:'Obsidian',         hexStr:'#15151C',accentStr:'#2A2A3A',price:1400,rarity:'legendary',pattern:'gloss',    materialStyle:'gloss'},
+    {id:'crimfrac',  name:'Crimson Fracture', hexStr:'#A02030',accentStr:'#2A0608',price:1500,rarity:'legendary',pattern:'fracture', materialStyle:'cracked', emissiveStr:'#FF3040'},
+    {id:'mythcore',  name:'Mythic Core',      hexStr:'#2A0A1A',accentStr:'#FF2080',price:2500,rarity:'mythic',   pattern:'energy',   materialStyle:'energy',  emissiveStr:'#FF2080'},
+  ];
+  Object.keys(WEAPON_CAMOS).forEach(w=>{
+    EX.forEach(c=>{
+      if(!WEAPON_CAMOS[w].find(x=>x.id===c.id))
+        WEAPON_CAMOS[w].push(Object.assign({weaponId:w,source:'shop'},c));
+    });
+  });
+})();
+
 // ═══════════════════════════════════════════════════════════════
 //  SHOP CATALOG
 // ═══════════════════════════════════════════════════════════════
@@ -177,6 +204,90 @@ const SHOP_CATALOG=[
   {id:'shop_camo_shk_thunder',name:'Thunder Shock',       itemType:'Shock Camo',       section:'daily', rewardType:'weaponCamo', weaponId:'shock',       camoId:'thunder', rarity:'epic',      price:800, isNew:true},
   {id:'shop_camo_shk_ghost',  name:'Ghost Shock',         itemType:'Shock Camo',       section:'daily', rewardType:'weaponCamo', weaponId:'shock',       camoId:'ghost',   rarity:'uncommon',  price:600},
 ];
+
+// ── Skin expansion: 60 outfits ───────────────────────────────────
+// [id, name, outfit, visor, armorStyle, helmet, backpack, gear, rarity, price]
+(function(){
+  const X=[
+    ['sandstorm_raider','Sandstorm Raider','#B89860','#FFB030','light',1,'none','scarf','rare',900],
+    ['frostline_defender','Frostline Defender','#C2D6E4','#7ACCFF','standard',1,'missile','goggles','rare',950],
+    ['night_ops','Night Ops Richard','#10141C','#3A86FF','stealth',1,'none','none','epic',1200],
+    ['crimson_breach','Crimson Breach','#7A1620','#FF5040','heavy',1,'missile','bandolier','epic',1250],
+    ['blue_steel','Blue Steel Operator','#2A4A6E','#9CC8FF','standard',1,'none','none','uncommon',650],
+    ['golden_intercept','Golden Interceptor','#C29A2E','#FFE066','heavy',1,'missile','elite','legendary',1900],
+    ['obsidian_tact','Obsidian Tactical','#16161E','#8A92B0','standard',1,'none','bandolier','epic',1200],
+    ['arctic_ghost','Arctic Ghost','#E2ECF2','#A8E4FF','stealth',1,'none','cape','epic',1300],
+    ['desert_cmdr','Desert Commander','#A88A50','#FFC050','standard',1,'missile','officer','rare',1000],
+    ['urban_riot','Urban Riot','#3A3E46','#FF7030','heavy',1,'none','none','rare',950],
+    ['heavy_plated','Heavy Plated Richard','#4A505C','#C2CCDA','heavy',1,'missile','none','rare',1000],
+    ['recon_shadow','Recon Shadow','#1E242E','#50FFB0','stealth',1,'none','none','rare',950],
+    ['cyber_runner','Cyber Runner','#241038','#FF40C8','stealth',1,'none','elite','epic',1350],
+    ['coastline_def','Coastline Defender','#3A6A7A','#7AE2D8','light',1,'none','none','uncommon',650],
+    ['dubai_elite','Dubai Elite Guard','#9A8348','#FFE9A0','standard',1,'missile','officer','epic',1300],
+    ['beirut_street','Beirut Street Operator','#8A7458','#FFA868','light',1,'none','scarf','uncommon',700],
+    ['sweden_snow','Sweden Snow Patrol','#D2DCE6','#9CC2E8','standard',1,'none','goggles','uncommon',700],
+    ['red_alert','Red Alert Richard','#8A1218','#FF3030','heavy',1,'missile','none','epic',1300],
+    ['black_chrome','Black Chrome Richard','#1A1C22','#C8D2E0','heavy',1,'none','elite','legendary',1800],
+    ['storm_chaser','Storm Chaser','#3E4A5E','#9CB8FF','light',1,'none','none','rare',850],
+    ['rail_division','Rail Division','#1E2A3E','#00E8FF','standard',1,'missile','bandolier','epic',1250],
+    ['missile_lead','Missile Squad Leader','#3A4A3A','#FFD040','standard',1,'missile','officer','rare',1000],
+    ['tact_engineer','Tactical Engineer','#5A5240','#FFB838','light',1,'none','none','uncommon',600],
+    ['hazard_resp','Hazard Response','#C2861A','#FFE040','heavy',1,'none','none','rare',950],
+    ['whiteout','Whiteout Armor','#EAEFF4','#C8E8FF','heavy',1,'missile','none','epic',1250],
+    ['carbon_assault','Carbon Assault','#22262E','#6A7890','standard',1,'none','bandolier','rare',900],
+    ['bronze_vet','Bronze Veteran','#7A5A34','#E8A860','standard',1,'none','none','uncommon',600],
+    ['silver_sentinel','Silver Sentinel','#9AA4B2','#E2ECF8','heavy',1,'none','none','rare',1000],
+    ['gold_vanguard','Gold Vanguard','#B8923A','#FFE070','heavy',1,'missile','officer','legendary',1850],
+    ['mythic_overdrive','Mythic Overdrive','#30081E','#FF2080','heavy',1,'missile','elite','mythic',2600],
+    ['skyline_def','Skyline Defender','#2E4258','#8AC8FF','standard',1,'missile','none','rare',900],
+    ['smoke_jumper','Smoke Jumper','#4E4A46','#D8D0C8','light',1,'none','scarf','uncommon',650],
+    ['arctic_cmdr','Arctic Commander','#AFC4D4','#DFF2FF','heavy',1,'missile','officer','epic',1350],
+    ['desert_phantom','Desert Phantom','#C4A678','#FFF0C0','stealth',1,'none','cape','epic',1300],
+    ['urban_phantom','Urban Phantom','#2A2E36','#B8C4D8','stealth',1,'none','cape','epic',1300],
+    ['crimson_scope','Crimson Scope','#5E1A22','#FF6050','light',1,'none','none','rare',900],
+    ['midnight_launcher','Midnight Launcher','#141A2E','#5070FF','standard',1,'missile','none','rare',950],
+    ['riot_shield','Riot Shield Operator','#3A424E','#FFC830','heavy',1,'none','none','rare',1000],
+    ['warden','Warden Richard','#2E3A2E','#A0D080','heavy',1,'none','officer','rare',1000],
+    ['elite_city','Elite City Guard','#1E3046','#70B8FF','standard',1,'missile','officer','epic',1300],
+    ['thunder_resp','Thunder Response','#3A3A12','#FFF040','standard',1,'none','none','rare',900],
+    ['ember_tact','Ember Tactical','#6E3018','#FF8040','light',1,'none','none','uncommon',700],
+    ['glacier_strike','Glacier Strike','#BCD8E8','#70E0FF','heavy',1,'missile','goggles','epic',1300],
+    ['deep_navy','Deep Navy Operator','#101E36','#4080D0','standard',1,'none','none','uncommon',650],
+    ['orange_hazard','Orange Hazard Suit','#C2641A','#FFC040','heavy',1,'none','none','rare',900],
+    ['green_field','Green Field Specialist','#3A5A2E','#90E060','light',1,'none','none','common',450],
+    ['red_core','Red Core Armor','#48101A','#FF2040','heavy',1,'missile','elite','legendary',1900],
+    ['omega_intercept','Omega Interceptor','#1A2440','#40FFE0','heavy',1,'missile','elite','mythic',2600],
+    ['final_override_suit','Final Override Suit','#22081A','#FF40A0','heavy',1,'missile','elite','mythic',2800],
+    ['cyber_driver','Cyber Bullet Driver','#181030','#40C8FF','light',1,'none','bandolier','epic',1250],
+    ['rajpn_champion','RAJPN Champion','#7A2A12','#FFD040','standard',1,'none','officer','legendary',1800],
+    ['gulag_champion','Gulag Champion','#4A3A2E','#FF9040','heavy',1,'none','bandolier','legendary',1750],
+    ['drone_hunter','Drone Hunter','#2A323A','#60FFD0','light',1,'none','goggles','rare',900],
+    ['boss_slayer','Boss Slayer','#501818','#FFAA30','heavy',1,'missile','bandolier','legendary',1800],
+    ['smoke_trail','Smoke Trail Specialist','#56504A','#C0D0E0','light',1,'none','scarf','uncommon',650],
+    ['neonless_blackout','Neonless Blackout','#0C0C10','#3A3A44','stealth',1,'none','none','epic',1250],
+    ['dustline_recon','Dustline Recon','#9A8662','#E8D0A0','light',1,'none','scarf','uncommon',650],
+    ['ironclad','Ironclad Defender','#3E444E','#A8B8CC','heavy',1,'none','none','rare',1000],
+    ['prime_intercept','Prime Interceptor','#1A3050','#70D0FF','heavy',1,'missile','elite','legendary',1900],
+    ['founder','Founder Richard','#3A2A5A','#C8A0FF','standard',1,'missile','elite','legendary',2000],
+  ];
+  X.forEach(a=>{
+    const[id,name,outfit,visor,armor,helmet,backpack,gear,rarity,price]=a;
+    const skinId='richard_rx_'+id;
+    RICHARD_SKINS.push({id:skinId,name,tagline:'Expansion outfit — '+rarity,price,rarity,
+      custo:{outfitColor:outfit,visorColor:visor,skinTone:'#E8C49A',armorStyle:armor,helmet:!!helmet,backpack,gear}});
+    SHOP_CATALOG.push({id:skinId,name,itemType:'Outfit',section:'featured',rewardType:'skin',rarity,price});
+  });
+  // Expansion camos join the daily shop rotation pool
+  const _WLBL={pistol:'Pistol',launcher:'Launcher',sniper:'Sniper',smg:'SMG',shotgun:'Shotgun',railgun:'Railgun',cluster:'Cluster',shock:'Shock'};
+  Object.entries(WEAPON_CAMOS).forEach(([wid,camos])=>{
+    camos.filter(c=>c.source==='shop').forEach(c=>{
+      SHOP_CATALOG.push({id:`shop_xc_${wid}_${c.id}`,name:c.name+' '+(_WLBL[wid]||wid),
+        itemType:(_WLBL[wid]||wid)+' Camo',section:'daily',rewardType:'weaponCamo',
+        weaponId:wid,camoId:c.id,rarity:c.rarity||'rare',price:c.price||600});
+    });
+  });
+})();
+
 
 // ─────────────────────────────────────────────────────────────────
 //  HELPERS

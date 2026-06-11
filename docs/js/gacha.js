@@ -34,6 +34,18 @@ const _SG_SKIN_CUSTO={
   richard_basic_op:          {outfitColor:'#2A2A2A',visorColor:'#8888AA',skinTone:'#E8C49A',armorStyle:'light',  helmet:false,backpack:'none'},
 };
 
+// High-rarity expansion skins join the summon pool (custo resolves via RICHARD_SKINS)
+function _sgExtendPool(){
+  if(typeof RICHARD_SKINS==='undefined') return;
+  RICHARD_SKINS
+    .filter(s=>s.id.startsWith('richard_rx_')&&['epic','legendary','mythic'].includes(s.rarity))
+    .forEach(s=>{
+      if(!GACHA_SKIN_POOL.find(p=>p.id===s.id))
+        GACHA_SKIN_POOL.push({id:s.id,name:s.name.toUpperCase(),rarity:s.rarity,type:'skin'});
+    });
+}
+_sgExtendPool();
+
 function _sgSkinCusto(skinId){
   if(_SG_SKIN_CUSTO[skinId]) return _SG_SKIN_CUSTO[skinId];
   if(typeof RICHARD_SKINS!=='undefined'){

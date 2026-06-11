@@ -415,6 +415,13 @@ function updateRemotePlayers(){
   const lastDt=Math.min((performance.now()-_rpLastT)/1000,.05);
   _rpLastT=performance.now();
   const alpha=Math.min(1,lastDt*30);
+  // Killcam recorder: snapshot self + opponent each frame during 1v1
+  if(battleActive&&!_kcActive){
+    let opp=null;
+    mpRemotePlayers.forEach(rp=>{ if(!opp) opp=rp; });
+    _kcBuf.push({mx:px,my:py,mz:pz,ox:opp?opp.pos.x:px,oy:opp?opp.pos.y:py,oz:opp?opp.pos.z:pz});
+    if(_kcBuf.length>_KC_MAX) _kcBuf.shift();
+  }
   mpRemotePlayers.forEach(rp=>{
     rp.pos.lerp(rp.targetPos,alpha);
     let dyaw=rp.targetYaw-rp.yaw;
@@ -784,8 +791,8 @@ function _battleRoundEnd(won){
   if(battleRounds.local>=2||battleRounds.remote>=2){
     endBattleMode(battleRounds.local>=2);
   } else {
-    showNotif(won?'ROUND WIN! Get ready…':'ROUND LOST! Get ready…');
-    setTimeout(()=>{
+    showNotif(won?'ROUND WIN!':'ROUND LOST!');
+    _showKillcam(won,()=>{
       battleHP={local:BATTLE_MAX_HP,remote:BATTLE_MAX_HP};
       // Reposition
       const myTeam=mpMyTeam||(mpIsHost?'A':'B');
@@ -803,8 +810,87 @@ function _battleRoundEnd(won){
         _applyBattleWeapon(w);
         mpConns.forEach(c=>{ if(c.open) c.send({type:'battle_weapon',weapon:w}); });
       }
-    },1500);
+    });
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  1v1 KILLCAM — ghost replay from recorded snapshots
+//  Records ~12s of self+opponent positions during battle; on round
+//  end the camera replays the kill from the killer's perspective
+//  while a calling-card panel and countdown overlay the screen.
+// ═══════════════════════════════════════════════════════════════
+let _kcActive=false,_kcBuf=[],_kcT=0,_kcDone=null,_kcKiller='o';
+const _KC_MAX=720; // ~12s at 60fps
+
+function _showKillcam(won,next){
+  if(_kcBuf.length<30){setTimeout(next,1500);return;} // not enough data — simple delay
+  const oppName=mpIsHost?(mpConns[0]?._mpName||'ENEMY'):(mpConn?._mpName||'ENEMY');
+  const killerName=won?(mpUser?.username||'YOU'):oppName;
+  let ov=document.getElementById('killcamOverlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='killcamOverlay';
+    document.body.appendChild(ov);
+  }
+  const cardHtml=won&&typeof renderMyCallingCard==='function'
+    ?renderMyCallingCard('ROUND WINNER')
+    :typeof renderCallingCard==='function'
+      ?renderCallingCard({username:killerName,level:'?',sub:'ROUND WINNER'})
+      :`<div class="kc-name-fallback">${killerName}</div>`;
+  const wep=WEAPONS[currentWeapon]||{};
+  ov.innerHTML=`
+    <div class="kc-label">KILLCAM</div>
+    <div class="kc-sub">${won?'YOUR ELIMINATION':'ELIMINATED BY '+killerName}</div>
+    <div class="kc-bottom">
+      <div class="kc-card">${cardHtml}</div>
+      <div class="kc-right">
+        <div class="kc-weapon">${wep.icon||'🔫'} ${wep.name||currentWeapon.toUpperCase()}</div>
+        <div class="kc-score">ROUND SCORE &nbsp;${battleRounds.local} — ${battleRounds.remote}</div>
+        <div class="kc-count" id="kcCount">NEXT ROUND IN 5</div>
+      </div>
+    </div>`;
+  ov.style.display='flex';
+  if(document.pointerLockElement){_suppressPauseLock=true;document.exitPointerLock();}
+  const ch=document.getElementById('crosshair'); if(ch) ch.style.display='none';
+  if(typeof weaponMesh!=='undefined'&&weaponMesh) weaponMesh.visible=false;
+  _kcKiller=won?'m':'o';
+  _kcT=0;_kcDone=next;_kcActive=true;
+  let n=5;
+  const iv=setInterval(()=>{
+    if(!_kcActive){clearInterval(iv);return;}
+    n--;
+    const el=document.getElementById('kcCount');
+    if(el) el.textContent=n>0?('NEXT ROUND IN '+n):'GO!';
+    if(n<=0){clearInterval(iv);_endKillcam();}
+  },1000);
+}
+
+function _endKillcam(){
+  if(!_kcActive) return;
+  _kcActive=false;
+  const ov=document.getElementById('killcamOverlay');
+  if(ov) ov.style.display='none';
+  const ch=document.getElementById('crosshair'); if(ch&&gameActive) ch.style.display='block';
+  if(typeof weaponMesh!=='undefined'&&weaponMesh) weaponMesh.visible=true;
+  _kcBuf=[];
+  const fn=_kcDone;_kcDone=null;
+  if(fn) fn();
+}
+
+// Called from the main game loop while the killcam is active
+function updateKillcam(dt){
+  if(!_kcBuf.length) return;
+  _kcT+=dt;
+  // Replay the last ~4.5s of footage over the countdown, then hold the hit
+  const span=Math.min(_kcBuf.length-1,270);
+  const start=_kcBuf.length-1-span;
+  const idx=Math.min(_kcBuf.length-1,start+Math.floor(Math.min(1,_kcT/4.5)*span));
+  const s=_kcBuf[idx];
+  const killer=_kcKiller==='m'?[s.mx,s.my,s.mz]:[s.ox,s.oy,s.oz];
+  const victim=_kcKiller==='m'?[s.ox,s.oy,s.oz]:[s.mx,s.my,s.mz];
+  camera.position.set(killer[0],killer[1]+0.35,killer[2]);
+  camera.lookAt(victim[0],victim[1]+0.3,victim[2]);
 }
 
 function endBattleMode(won){

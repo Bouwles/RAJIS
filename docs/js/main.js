@@ -94,7 +94,7 @@ function setupEvents(){
     if(isLocked){
       document.getElementById('clickNotice').style.display='none';
       document.getElementById('btnSettingsFloat').style.display='none';
-    } else if(gameActive&&!gamePaused&&!_suppressPauseLock){
+    } else if(gameActive&&!gamePaused&&!_suppressPauseLock&&!(typeof _kcActive!=='undefined'&&_kcActive)){
       // Browser swallows Escape keydown while in pointer lock — pause here instead
       pauseGame();
     }
@@ -239,7 +239,12 @@ function gameLoop(t){
   const dt=Math.min((t-lastT)/1000,.05);
   lastT=t;
 
-  if(gameActive&&!gamePaused){
+  const _kc=typeof _kcActive!=='undefined'&&_kcActive;
+  if(_kc){
+    // Killcam replay drives the camera; world stays frozen
+    updateKillcam(dt);
+    updateParticles(dt);
+  } else if(gameActive&&!gamePaused){
     if(mods.aimbot&&isLocked) applyAimbot();
     if(mods.infAmmo){ammo=WEAPONS[currentWeapon].maxAmmo;weaponAmmo[currentWeapon]=ammo;isReloading=false;}
     if(isLocked) updatePlayer(dt);

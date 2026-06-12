@@ -237,6 +237,14 @@ function mpHandleData(data, conn){
     case 'battle_end':
       endBattleMode(false);
       break;
+    case 'kc_skip':
+      if(data.username){
+        _kcVotes.add(data.username);
+        // Host relays the vote to all other guests
+        if(mpIsHost) mpConns.forEach(c=>{ if(c.open&&c._mpName!==data.username) c.send(data); });
+        if(_kcActive) _kcCheckVotes();
+      }
+      break;
     case 'battle_weapon':
       _applyBattleWeapon(data.weapon);
       break;
@@ -789,7 +797,8 @@ function mpBattleSendHit(dmg, targetUsername){
 function _battleRoundEnd(won){
   if(won) battleRounds.local++; else battleRounds.remote++;
   if(battleRounds.local>=2||battleRounds.remote>=2){
-    endBattleMode(battleRounds.local>=2);
+    // Killcam plays first — victory/rematch screen comes after it
+    _showKillcam(won,()=>endBattleMode(battleRounds.local>=2));
   } else {
     showNotif(won?'ROUND WIN!':'ROUND LOST!');
     _showKillcam(won,()=>{
@@ -821,7 +830,32 @@ function _battleRoundEnd(won){
 //  while a calling-card panel and countdown overlay the screen.
 // ═══════════════════════════════════════════════════════════════
 let _kcActive=false,_kcBuf=[],_kcT=0,_kcDone=null,_kcKiller='o';
-const _KC_MAX=720; // ~12s at 60fps
+let _kcVotes=new Set();
+const _KC_MAX=720;  // ~12s of footage at 60fps
+const _KC_DUR=8;    // seconds on screen (replays last ~10s, slow-mo tail)
+
+function _kcPlayerCount(){
+  if(mpIsHost) return 1+mpConns.filter(c=>c.open).length;
+  let n=1;
+  mpRemotePlayers.forEach((rp,name)=>{ if(name!==AI_BOT_NAME) n++; });
+  return Math.max(2,n);
+}
+function _kcVoteSkip(){
+  if(!_kcActive) return;
+  const u=mpUser?.username||'me';
+  if(_kcVotes.has(u)) return;
+  _kcVotes.add(u);
+  const msg={type:'kc_skip',username:u};
+  if(mpIsHost) mpConns.forEach(c=>{ if(c.open) c.send(msg); });
+  else if(mpConn?.open) mpConn.send(msg);
+  _kcCheckVotes();
+}
+function _kcCheckVotes(){
+  const need=Math.floor(_kcPlayerCount()/2)+1; // majority; 1v1 ⇒ both
+  const el=document.getElementById('kcSkip');
+  if(el) el.textContent=`SKIP VOTE ${_kcVotes.size}/${need}`;
+  if(_kcVotes.size>=need) _endKillcam();
+}
 
 function _showKillcam(won,next){
   if(_kcBuf.length<30){setTimeout(next,1500);return;} // not enough data — simple delay
@@ -842,12 +876,13 @@ function _showKillcam(won,next){
   ov.innerHTML=`
     <div class="kc-label">KILLCAM</div>
     <div class="kc-sub">${won?'YOUR ELIMINATION':'ELIMINATED BY '+killerName}</div>
+    <button id="kcSkip" class="kc-skip" onclick="_kcVoteSkip()">SKIP VOTE 0/${Math.floor(_kcPlayerCount()/2)+1}</button>
     <div class="kc-bottom">
       <div class="kc-card">${cardHtml}</div>
       <div class="kc-right">
         <div class="kc-weapon">${wep.icon||'🔫'} ${wep.name||currentWeapon.toUpperCase()}</div>
         <div class="kc-score">ROUND SCORE &nbsp;${battleRounds.local} — ${battleRounds.remote}</div>
-        <div class="kc-count" id="kcCount">NEXT ROUND IN 5</div>
+        <div class="kc-count" id="kcCount">NEXT ROUND IN ${_KC_DUR}</div>
       </div>
     </div>`;
   ov.style.display='flex';
@@ -855,8 +890,9 @@ function _showKillcam(won,next){
   const ch=document.getElementById('crosshair'); if(ch) ch.style.display='none';
   if(typeof weaponMesh!=='undefined'&&weaponMesh) weaponMesh.visible=false;
   _kcKiller=won?'m':'o';
+  _kcVotes=new Set();
   _kcT=0;_kcDone=next;_kcActive=true;
-  let n=5;
+  let n=_KC_DUR;
   const iv=setInterval(()=>{
     if(!_kcActive){clearInterval(iv);return;}
     n--;
@@ -882,10 +918,14 @@ function _endKillcam(){
 function updateKillcam(dt){
   if(!_kcBuf.length) return;
   _kcT+=dt;
-  // Replay the last ~4.5s of footage over the countdown, then hold the hit
-  const span=Math.min(_kcBuf.length-1,270);
+  // Replay the last ~10s of footage over the countdown.
+  // Time remap: 88% of footage in the first 70% of screen time, the
+  // final 12% stretched over the last 30% — dramatic slow-mo ending.
+  const span=Math.min(_kcBuf.length-1,600);
   const start=_kcBuf.length-1-span;
-  const idx=Math.min(_kcBuf.length-1,start+Math.floor(Math.min(1,_kcT/4.5)*span));
+  const p=Math.min(1,_kcT/_KC_DUR);
+  const u=p<0.7?(p/0.7)*0.88:0.88+((p-0.7)/0.3)*0.12;
+  const idx=Math.min(_kcBuf.length-1,start+Math.floor(u*span));
   const s=_kcBuf[idx];
   const killer=_kcKiller==='m'?[s.mx,s.my,s.mz]:[s.ox,s.oy,s.oz];
   const victim=_kcKiller==='m'?[s.ox,s.oy,s.oz]:[s.mx,s.my,s.mz];

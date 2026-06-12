@@ -43,7 +43,7 @@ function applyAimbot(){
   }
 }
 const VALID_CODES={
-  'nercessian':{credits:9999999,chronoShards:999999,summonTickets:999999,featuredTickets:999999,message:'NERCESSIAN CODE ACTIVATED — ALL RESOURCES GRANTED'}
+  'nercessian':{credits:9999999,chronoShards:999999,summonTickets:999999,featuredTickets:999999,maxBattlePass:true,message:'NERCESSIAN CODE ACTIVATED — ALL RESOURCES + MAX BATTLE PASS'}
 };
 
 async function redeemCode(){
@@ -61,6 +61,11 @@ async function redeemCode(){
   if(reward.chronoShards) saveData.summonCurrency.chronoShards=(saveData.summonCurrency.chronoShards||0)+reward.chronoShards;
   if(reward.summonTickets) saveData.summonCurrency.summonTickets=(saveData.summonCurrency.summonTickets||0)+reward.summonTickets;
   if(reward.featuredTickets) saveData.summonCurrency.featuredTickets=(saveData.summonCurrency.featuredTickets||0)+reward.featuredTickets;
+  if(reward.maxBattlePass){
+    saveData.bpLevel=Math.max(saveData.bpLevel||0,50);
+    saveData.bpXP=Math.max(saveData.bpXP||0,50*500);
+    saveData.bpPremium=true;
+  }
   saveData.redeemedCodes.push(code);
   if(_fbUser&&_fbDb){
     const _cu={'saveData.redeemedCodes':firebase.firestore.FieldValue.arrayUnion(code)};
@@ -68,6 +73,11 @@ async function redeemCode(){
     if(reward.chronoShards) _cu['saveData.summonCurrency.chronoShards']=firebase.firestore.FieldValue.increment(reward.chronoShards);
     if(reward.summonTickets) _cu['saveData.summonCurrency.summonTickets']=firebase.firestore.FieldValue.increment(reward.summonTickets);
     if(reward.featuredTickets) _cu['saveData.summonCurrency.featuredTickets']=firebase.firestore.FieldValue.increment(reward.featuredTickets);
+    if(reward.maxBattlePass){
+      _cu['saveData.bpLevel']=saveData.bpLevel;
+      _cu['saveData.bpXP']=saveData.bpXP;
+      _cu['saveData.bpPremium']=true;
+    }
     await _fbDb.collection('users').doc(_fbUser.uid).update(_cu).catch(()=>{});
   }
   saveSave();

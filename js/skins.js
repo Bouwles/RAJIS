@@ -824,11 +824,9 @@ function buildLockerScreen(tab){
     const owned=saveData.ownedSkins||['richard_default'];
     const equippedSkin=saveData.equippedSkin||'richard_default';
     const RAR_ORD={mythic:5,legendary:4,epic:3,rare:2,uncommon:1,common:0};
-    // Owned only, tightly packed: equipped → rarity desc → alphabetical
+    // Owned only, tightly packed: rarest → least rare → alphabetical
     const skins=RICHARD_SKINS.filter(s=>owned.includes(s.id))
       .sort((a,b)=>{
-        if(a.id===equippedSkin) return -1;
-        if(b.id===equippedSkin) return 1;
         const rd=(RAR_ORD[b.rarity||'uncommon']||0)-(RAR_ORD[a.rarity||'uncommon']||0);
         return rd!==0?rd:a.name.localeCompare(b.name);
       });

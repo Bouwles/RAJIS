@@ -293,20 +293,23 @@ function _sgAnimateSkinToCanvas(canvas,skinId){
     t+=0.016;char.rotation.y=t*0.7;
     rdr.render(sc,cam);
     const ctx=canvas.getContext('2d');
-    if(ctx)ctx.drawImage(rdr.domElement,0,0,w,h);
+    if(ctx){ctx.clearRect(0,0,w,h);ctx.drawImage(rdr.domElement,0,0,w,h);}
     if(canvas.isConnected)_sgPvRaf=requestAnimationFrame(tick);
     else{_sgPvRaf=null;sc.remove(char);}
   }
   tick();
 }
 
-// Render a camo preview using the CSS/color approach (no Three.js needed)
-function _sgCamoPreviewHTML(camoHex,camoName,weaponName){
-  return`<div class="sg-camo-3d-wrap">
-    <div class="sg-camo-gun-body" style="background:${camoHex};box-shadow:0 0 24px ${camoHex}99,inset 0 2px 6px rgba(255,255,255,.18)"></div>
-    <div class="sg-camo-gun-barrel" style="background:${camoHex}cc"></div>
-    <div class="sg-camo-gun-stock" style="background:${camoHex}88"></div>
-    <div class="sg-camo-label">${weaponName}<br><span style="color:${camoHex}">${camoName}</span></div>
+// Render a camo preview — reuses the proper two-tone gun silhouette
+function _sgCamoPreviewHTML(camoHex,camoName,weaponName,accentHex){
+  const gun=typeof _camoGunPreview==='function'
+    ?_camoGunPreview(camoHex,accentHex)
+    :`<div style="width:140px;height:46px;background:${camoHex};border-radius:4px;"></div>`;
+  return`<div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px;">
+    <div style="transform:scale(1.7);transform-origin:center;">${gun}</div>
+    <div style="font-family:var(--font-ui);font-size:.8em;font-weight:800;letter-spacing:.16em;
+      color:var(--text);text-transform:uppercase;text-align:center;margin-top:18px;">
+      ${weaponName}<br><span style="color:${camoHex};font-size:1.15em;">${camoName}</span></div>
   </div>`;
 }
 
@@ -333,7 +336,7 @@ function _sgStart3DPreview(banner){
   }else if(main.type==='camo'){
     _sgStopPvAnim();
     const wrap=document.getElementById('sgBvPvWrap_'+banner.id);
-    if(wrap) wrap.innerHTML=_sgCamoPreviewHTML(main.hexStr||banner.color,main.name,main.weapon||'');
+    if(wrap) wrap.innerHTML=_sgCamoPreviewHTML(main.hexStr||banner.color,main.name,(main.weapon||'').toUpperCase()+' CAMO',main.accentStr);
   }else{
     _sgFallbackCanvas(canvas,banner.color);
   }

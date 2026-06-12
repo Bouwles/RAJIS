@@ -145,6 +145,12 @@ const WEAPON_CAMOS={
     {id:'obsidian',  name:'Obsidian',         hexStr:'#15151C',accentStr:'#2A2A3A',price:1400,rarity:'legendary',pattern:'gloss',    materialStyle:'gloss'},
     {id:'crimfrac',  name:'Crimson Fracture', hexStr:'#A02030',accentStr:'#2A0608',price:1500,rarity:'legendary',pattern:'fracture', materialStyle:'cracked', emissiveStr:'#FF3040'},
     {id:'mythcore',  name:'Mythic Core',      hexStr:'#2A0A1A',accentStr:'#FF2080',price:2500,rarity:'mythic',   pattern:'energy',   materialStyle:'energy',  emissiveStr:'#FF2080'},
+    {id:'tigerstripe',name:'Tiger Stripe',    hexStr:'#8A5A20',accentStr:'#1A1208',price:600, rarity:'rare',     pattern:'stripe',   materialStyle:'matte'},
+    {id:'urbanfog',  name:'Urban Fog',        hexStr:'#7A828E',accentStr:'#3A4048',price:450, rarity:'uncommon', pattern:'digital',  materialStyle:'matte'},
+    {id:'toxic',     name:'Toxic Surge',      hexStr:'#7AC820',accentStr:'#1A3008',price:900, rarity:'epic',     pattern:'energy',   materialStyle:'tech',    emissiveStr:'#7AC820'},
+    {id:'royal',     name:'Royal Guard',      hexStr:'#3A2A8A',accentStr:'#C8A030',price:1500,rarity:'legendary',pattern:'goldtrim', materialStyle:'metallic'},
+    {id:'magma',     name:'Magma Vein',       hexStr:'#3A1408',accentStr:'#FF6020',price:1000,rarity:'epic',     pattern:'fracture', materialStyle:'cracked', emissiveStr:'#FF6020'},
+    {id:'whitegold', name:'White Gold',       hexStr:'#E8E4D8',accentStr:'#C8A030',price:1600,rarity:'legendary',pattern:'goldtrim', materialStyle:'metallic'},
   ];
   Object.keys(WEAPON_CAMOS).forEach(w=>{
     EX.forEach(c=>{
@@ -273,9 +279,13 @@ const SHOP_CATALOG=[
   X.forEach(a=>{
     const[id,name,outfit,visor,armor,helmet,backpack,gear,rarity,price]=a;
     const skinId='richard_rx_'+id;
-    RICHARD_SKINS.push({id:skinId,name,tagline:'Expansion outfit — '+rarity,price,rarity,
+    const summonOnly=rarity==='legendary'||rarity==='mythic';
+    RICHARD_SKINS.push({id:skinId,name,tagline:(summonOnly?'Summon exclusive — ':'Expansion outfit — ')+rarity,price,rarity,
+      source:summonOnly?'summon':'shop',
       custo:{outfitColor:outfit,visorColor:visor,skinTone:'#E8C49A',armorStyle:armor,helmet:!!helmet,backpack,gear}});
-    SHOP_CATALOG.push({id:skinId,name,itemType:'Outfit',section:'featured',rewardType:'skin',rarity,price});
+    // Legendary/mythic expansion skins are SUMMON-EXCLUSIVE — not sold in shop
+    if(!summonOnly)
+      SHOP_CATALOG.push({id:skinId,name,itemType:'Outfit',section:'featured',rewardType:'skin',rarity,price});
   });
   // Expansion camos join the daily shop rotation pool
   const _WLBL={pistol:'Pistol',launcher:'Launcher',sniper:'Sniper',smg:'SMG',shotgun:'Shotgun',railgun:'Railgun',cluster:'Cluster',shock:'Shock'};

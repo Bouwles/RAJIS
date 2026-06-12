@@ -82,6 +82,11 @@ function _normalizeInventory(sd){
   if(!Array.isArray(sd.ownedCallingCards)||!sd.ownedCallingCards.length) sd.ownedCallingCards=['card_default'];
   if(!Array.isArray(sd.ownedTitles)||!sd.ownedTitles.length) sd.ownedTitles=['title_rookie'];
   if(!Array.isArray(sd.ownedBadges)) sd.ownedBadges=[];
+  // Achievement counters + claim map (additive)
+  ['rajpnUses','cyberUses','hookUses','mpKills','mpMatchWins','coopWaves'].forEach(k=>{
+    if(typeof sd[k]!=='number') sd[k]=0;
+  });
+  if(!sd.achClaimed||typeof sd.achClaimed!=='object') sd.achClaimed={};
   if(!Array.isArray(sd.pickedCards)) sd.pickedCards=[];
   if(!Array.isArray(sd.seenCards)) sd.seenCards=[];
   if(!sd.upgrades) sd.upgrades={armor_plate:0,speed_chip:0,hot_rounds:0};

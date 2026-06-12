@@ -80,6 +80,7 @@ function endWave(){
   document.getElementById('stCleanBonus').textContent=cleanBonus>0?`+${cleanBonus}`:'—';
 
   waveNum++;
+  if(typeof mpRemotePlayers!=='undefined'&&mpRemotePlayers.size>0&&!battleActive&&typeof achInc==='function') achInc('coopWaves');
   // XP for battle pass
   const xpGained=100+Math.max(0,waveNum-1)*10;
   saveData.bpXP=(saveData.bpXP||0)+xpGained;
@@ -359,6 +360,7 @@ function _ropePoints(from, to, segs){
 function fireHook(){
   if(hookActive||hookPulling||hookCD>0) return;
   sfxHookFire();
+  if(typeof achInc==='function') achInc('hookUses');
   const dir=new THREE.Vector3(); camera.getWorldDirection(dir);
   hookPos=new THREE.Vector3(px,py,pz).add(dir.clone().multiplyScalar(.6));
   hookVel=dir.clone().multiplyScalar(100);
@@ -599,6 +601,7 @@ function fireCyberBullet(){
   }
   if(!target){showNotif('No missile in range!');return;}
   cyberBulletCD=15;
+  if(typeof achInc==='function') achInc('cyberUses');
   const carG=makeCyberCarMesh();
   // Start position: far edge of map behind player
   const angle=yaw+Math.PI+(Math.random()-.5)*.5;
@@ -717,6 +720,7 @@ function fireRajpnFist(){
   }
   if(!target){showNotif('No missile to target!');return;}
   rajpnFistCD=RAJPN_CD;
+  if(typeof achInc==='function') achInc('rajpnUses');
   // Compute perpendicular to player→missile — fists always clap from both sides of target
   const toMx=target.pos.x-px, toMz=target.pos.z-pz;
   const toML=Math.sqrt(toMx*toMx+toMz*toMz)||1;

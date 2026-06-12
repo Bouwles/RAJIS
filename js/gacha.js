@@ -145,7 +145,10 @@ function _getSgCamoPool(){
   const seq=['legendary','epic','rare','uncommon','common'];
   const pool=[];
   Object.entries(WEAPON_CAMOS).forEach(([weapon,camos])=>{
-    (camos||[]).forEach((c,i)=>pool.push({...c,weapon,type:'camo',rarity:c.rarity||seq[Math.min(i,4)]}));
+    (camos||[]).forEach((c,i)=>{
+      if(c.source==='achievement') return; // achievement camos are exclusive
+      pool.push({...c,weapon,type:'camo',rarity:c.rarity||seq[Math.min(i,4)]});
+    });
   });
   return pool;
 }

@@ -796,6 +796,7 @@ function mpBattleSendHit(dmg, targetUsername){
 
 function _battleRoundEnd(won){
   if(won) battleRounds.local++; else battleRounds.remote++;
+  if(won&&typeof achInc==='function') achInc('mpKills');
   if(battleRounds.local>=2||battleRounds.remote>=2){
     // Killcam plays first — victory/rematch screen comes after it
     _showKillcam(won,()=>endBattleMode(battleRounds.local>=2));
@@ -947,7 +948,10 @@ function endBattleMode(won){
   document.getElementById('weaponBar').style.display='none';
 
   const reward=won?(500+battleRounds.local*100):0;
-  if(won){ saveData.currency+=reward; saveSave(); }
+  if(won){
+    if(typeof achInc==='function') achInc('mpMatchWins');
+    saveData.currency+=reward; saveSave();
+  }
 
   const title=document.getElementById('battleEndTitle');
   const sub=document.getElementById('battleEndSub');

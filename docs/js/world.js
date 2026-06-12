@@ -1018,7 +1018,93 @@ function buildStreetProps(locId){
 // ═══════════════════════════════════════════════════════════════
 //  CHARACTER MODEL (Preview)
 // ═══════════════════════════════════════════════════════════════
+// FAT PAUL — RAJPN gold achievement exclusive. Fat operator: white tee
+// with small red chest logo + big red back circle, black shorts,
+// backwards black cap, and an actual face.
+function _makeFatPaul(c){
+  const g=new THREE.Group();
+  const skinM =new THREE.MeshLambertMaterial({color:new THREE.Color(c.skinTone||'#E8C49A')});
+  const shirtM=new THREE.MeshLambertMaterial({color:0xF2F2F2});
+  const shortM=new THREE.MeshLambertMaterial({color:0x16161A});
+  const capM  =new THREE.MeshLambertMaterial({color:0x111114});
+  const redM  =new THREE.MeshLambertMaterial({color:0xD02020,emissive:new THREE.Color(0x500808),emissiveIntensity:.25});
+  const shoeM =new THREE.MeshLambertMaterial({color:0x0E0E10});
+
+  // Shoes + chunky calves (bare skin below the shorts)
+  [-1,1].forEach(s=>{
+    const shoe=new THREE.Mesh(new THREE.BoxGeometry(.22,.13,.30),shoeM);
+    shoe.position.set(s*.16,.065,.02);g.add(shoe);
+    const calf=new THREE.Mesh(new THREE.BoxGeometry(.19,.26,.20),skinM);
+    calf.position.set(s*.16,.27,0);g.add(calf);
+  });
+  // Black shorts — wide, knee length
+  [-1,1].forEach(s=>{
+    const leg=new THREE.Mesh(new THREE.BoxGeometry(.24,.26,.26),shortM);
+    leg.position.set(s*.16,.53,0);g.add(leg);
+  });
+  const hips=new THREE.Mesh(new THREE.BoxGeometry(.58,.18,.34),shortM);
+  hips.position.y=.72;g.add(hips);
+
+  // Belly — the man is round. White tee over a big torso.
+  const belly=new THREE.Mesh(new THREE.BoxGeometry(.72,.46,.52),shirtM);
+  belly.position.y=1.02;g.add(belly);
+  const chest=new THREE.Mesh(new THREE.BoxGeometry(.64,.30,.44),shirtM);
+  chest.position.y=1.40;g.add(chest);
+  // Small red logo circle — top-left chest (viewer +x)
+  const logo=new THREE.Mesh(new THREE.CircleGeometry(.05,12),redM);
+  logo.position.set(.18,1.47,.225);g.add(logo);
+  // Big red circle centered on the back
+  const backLogo=new THREE.Mesh(new THREE.CircleGeometry(.19,16),redM);
+  backLogo.position.set(0,1.16,-.265);backLogo.rotation.y=Math.PI;g.add(backLogo);
+  // Short sleeves + thick bare arms
+  [-1,1].forEach(s=>{
+    const sleeve=new THREE.Mesh(new THREE.BoxGeometry(.20,.18,.22),shirtM);
+    sleeve.position.set(s*.43,1.42,0);g.add(sleeve);
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(.16,.42,.17),skinM);
+    arm.position.set(s*.45,1.12,0);arm.rotation.z=s*.10;g.add(arm);
+    const hand=new THREE.Mesh(new THREE.BoxGeometry(.13,.12,.13),skinM);
+    hand.position.set(s*.49,.88,.01);g.add(hand);
+  });
+
+  // Head with an actual face
+  const headY=1.74;
+  const neck=new THREE.Mesh(new THREE.BoxGeometry(.13,.08,.13),skinM);
+  neck.position.y=1.58;g.add(neck);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.30,.30,.29),skinM);
+  head.position.y=headY;g.add(head);
+  // Eyes: whites + pupils + brows
+  [-1,1].forEach(s=>{
+    const white=new THREE.Mesh(new THREE.BoxGeometry(.07,.05,.02),new THREE.MeshLambertMaterial({color:0xF8F8F8}));
+    white.position.set(s*.075,headY+.04,.15);g.add(white);
+    const pupil=new THREE.Mesh(new THREE.BoxGeometry(.028,.035,.022),new THREE.MeshLambertMaterial({color:0x1A1410}));
+    pupil.position.set(s*.075,headY+.038,.155);g.add(pupil);
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(.085,.022,.02),new THREE.MeshLambertMaterial({color:0x2A1A08}));
+    brow.position.set(s*.075,headY+.085,.15);g.add(brow);
+  });
+  // Nose + grin + stubble
+  const nose=new THREE.Mesh(new THREE.BoxGeometry(.05,.06,.05),skinM);
+  nose.position.set(0,headY-.005,.165);g.add(nose);
+  const grin=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,.02),new THREE.MeshLambertMaterial({color:0x6A3A30}));
+  grin.position.set(0,headY-.075,.152);g.add(grin);
+  const stubble=new THREE.Mesh(new THREE.BoxGeometry(.20,.05,.02),new THREE.MeshLambertMaterial({color:0xB89878}));
+  stubble.position.set(0,headY-.115,.148);g.add(stubble);
+  // Ears
+  [-1,1].forEach(s=>{
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(.03,.07,.06),skinM);
+    ear.position.set(s*.165,headY+.01,0);g.add(ear);
+  });
+  // Backwards black cap: dome + brim at the BACK + button
+  const capDome=new THREE.Mesh(new THREE.BoxGeometry(.33,.12,.32),capM);
+  capDome.position.y=headY+.17;g.add(capDome);
+  const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.30,.035,.16),capM);
+  capBrim.position.set(0,headY+.13,-.23);g.add(capBrim);
+  const capBtn=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.02,8),capM);
+  capBtn.position.y=headY+.24;g.add(capBtn);
+  return g;
+}
+
 function makeCharModel(c){
+  if(c&&c.gear==='fatpaul') return _makeFatPaul(c);
   const g=new THREE.Group();
   const armorC=new THREE.Color(c.outfitColor);
   const visorC=new THREE.Color(c.visorColor);

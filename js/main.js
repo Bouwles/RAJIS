@@ -521,8 +521,13 @@ function pickCard(card){
 function setStatsTab(tab){
   document.getElementById('statsTabContent').style.display=tab==='stats'?'':'none';
   document.getElementById('encyclopediaTabContent').style.display=tab==='encyclopedia'?'':'none';
+  const ach=document.getElementById('achievementsTabContent');
+  if(ach) ach.style.display=tab==='achievements'?'':'none';
   document.getElementById('tabStatsBtn').classList.toggle('active',tab==='stats');
   document.getElementById('tabEncyBtn').classList.toggle('active',tab==='encyclopedia');
+  const ab=document.getElementById('tabAchBtn');
+  if(ab) ab.classList.toggle('active',tab==='achievements');
+  if(tab==='achievements'&&typeof buildAchievements==='function') buildAchievements();
 }
 
 function buildStatsScreen(){

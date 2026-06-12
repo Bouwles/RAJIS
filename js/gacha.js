@@ -66,6 +66,32 @@ const _SG_ANIM_PROFILES={
   common:   {weapon:'PISTOL',                missile:'STANDARD MISSILE', map:'DUBAI',                   skyColor:0x87CEEB,groundColor:0xD4B896,buildColor:0xC4A882,fogColor:0xD0C4A4,expCol:'#8A9BA8',flashCol:'#AABBCC',label:'COMMON',   special:false,richardVariant:'richard_basic_op'},
 };
 
+// ── Independent animation variables ───────────────────────────
+// Map, weapon, missile, sky, and Richard skin roll separately —
+// rarity only controls the explosion/label/impact treatment.
+const _SG_MAPS=[
+  {map:'DUBAI',                  skyColor:0x87CEEB,groundColor:0xD4B896,buildColor:0xC4A882,fogColor:0xD0C4A4},
+  {map:'BEIRUT',                 skyColor:0x6B8FAD,groundColor:0xC8A870,buildColor:0xB09060,fogColor:0xB0987A},
+  {map:'SWEDEN',                 skyColor:0x9BB4C8,groundColor:0xC6D0D4,buildColor:0xAFA89A,fogColor:0xAABCC8},
+  {map:'NIGHT CITY',             skyColor:0x050A14,groundColor:0x0A1018,buildColor:0x1A2230,fogColor:0x080E18},
+  {map:'RED ALERT ZONE',         skyColor:0x1A0404,groundColor:0x200808,buildColor:0x2A1010,fogColor:0x1A0606},
+  {map:'STORM FRONT',            skyColor:0x232B36,groundColor:0x2E3640,buildColor:0x3A4450,fogColor:0x2A323C},
+  {map:'FINAL INTERCEPTION ZONE',skyColor:0x030308,groundColor:0x060608,buildColor:0x0C0C18,fogColor:0x0A0810},
+];
+const _SG_WEAPON_NAMES=['STANDARD LAUNCHER','SNIPER LAUNCHER','HEAVY LAUNCHER','RAIL CANNON','SHOCK PROJECTOR','FINAL OVERRIDE CANNON'];
+const _SG_MISSILE_NAMES=['STANDARD MISSILE','ARMORED MISSILE','CLUSTER MISSILE','BLACKOUT MISSILE','RED CORE OMEGA'];
+function _sgBuildAnimProfile(bestRarity){
+  const base=_SG_ANIM_PROFILES[bestRarity]||_SG_ANIM_PROFILES.common;
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const m=pick(_SG_MAPS);
+  const skinPool=GACHA_SKIN_POOL.map(s=>s.id);
+  return Object.assign({},base,m,{
+    weapon:pick(_SG_WEAPON_NAMES),
+    missile:pick(_SG_MISSILE_NAMES),
+    richardVariant:pick(skinPool),
+  });
+}
+
 // ── Rarity helpers ────────────────────────────────────────────
 function _rarityColor(r){
   return{mythic:'#FF2080',legendary:'#F07830',epic:'#A855D8',rare:'#4A9FE8',uncommon:'#4ACFA8',common:'#8A9BA8'}[r]||'#8A9BA8';
@@ -671,7 +697,7 @@ function _sgBuildCinematic3D(profile){
   return{sc,rimLight,richardGroup,missileGroup,projGroup,expGroup,expCore,expRing,expRing2,expLight};
 }
 
-function _sgPlayAnimation(profile,results){
+function _sgPlayAnimation(profile,results,variant){
   return new Promise(resolve=>{
     const overlay=document.getElementById('sgSummonOverlay');
     overlay.innerHTML='';overlay.style.display='flex';
@@ -739,6 +765,8 @@ function _sgPlayAnimation(profile,results){
     let landed=false,landT=0;              // Richard drop-in state
     let clashed=false,reShotAt=0;          // high-rarity mid-air clash / second shot
     let labelOverride=null,labelOverrideUntil=0;
+    // Featured-save variant state: shot misses, saver flies in
+    let varPhase=0,varObjs=[],varT=0,varSpawnAt=0;
     let debris=[];
     function _spawnBurst(pos,colorHex,n,spread,up){
       const dm=new THREE.MeshLambertMaterial({color:new THREE.Color(colorHex),emissive:new THREE.Color(colorHex),emissiveIntensity:.8,transparent:true});
@@ -852,9 +880,11 @@ function _sgPlayAnimation(profile,results){
       }
 
       // Fire projectile
-      if(elapsed>7.0&&!projFired&&!missileHit&&!reShotAt){
+      if(elapsed>7.0&&!projFired&&!missileHit&&!reShotAt&&varPhase===0){
         projFired=true;projGroup.visible=true;projT=0;
         projTarget.copy(missileGroup.position);
+        // Featured-save variant: the shot is aimed wide — it will miss
+        if(variant) projTarget.x+=5.5;
         const startPos=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);
         projGroup.position.copy(startPos);
         if(typeof sfxFire==='function') sfxFire();
@@ -871,7 +901,12 @@ function _sgPlayAnimation(profile,results){
       if(projFired&&!missileHit){
         projT+=dt/PROJ_DUR;
         if(projT>=1){
-          if((isLeg||isMyth)&&!clashed){
+          if(variant&&varPhase===0){
+            // Stage MISS — interceptor sails wide, a saver is inbound
+            varPhase=1;projFired=false;projGroup.visible=false;
+            labelOverride='✖ INTERCEPTOR MISSED';labelOverrideUntil=elapsed+0.6;
+            varSpawnAt=elapsed+0.6;
+          } else if((isLeg||isMyth)&&!clashed&&!variant){
             // Stage 5 — mid-air clash: missile survives the first hit
             clashed=true;projFired=false;projGroup.visible=false;
             _spawnBurst(missileGroup.position,'#FFFFFF',8,10,6);
@@ -889,6 +924,55 @@ function _sgPlayAnimation(profile,results){
           const start=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);
           projGroup.position.lerpVectors(start,projTarget,_sgEaseIn(projT));
         }
+      }
+
+      // Featured-save variant: RAJPN fists / Cyber Bullet save the intercept
+      if(varPhase===1&&elapsed>=varSpawnAt){
+        varPhase=2;varT=0;
+        const mp=missileGroup.position;
+        if(variant==='cyber'&&typeof makeCyberCarMesh==='function'){
+          const car=makeCyberCarMesh();
+          car.scale.setScalar(1.4);
+          car.position.set(mp.x-46,mp.y-2,mp.z+6);
+          car.rotation.y=Math.PI/2;
+          sc.add(car);varObjs=[car];
+          labelOverride='⚡ CYBER BULLET INBOUND';labelOverrideUntil=elapsed+1.2;
+        } else if(typeof _makeFistGroup==='function'){
+          const lF=_makeFistGroup(true),rF=_makeFistGroup(false);
+          lF.scale.setScalar(1.2);rF.scale.setScalar(1.2);
+          lF.position.set(mp.x-42,mp.y,mp.z);
+          rF.position.set(mp.x+42,mp.y,mp.z);
+          sc.add(lF);sc.add(rF);varObjs=[lF,rF];
+          labelOverride='👊 RAJPN FIST BUMP INBOUND';labelOverrideUntil=elapsed+1.2;
+        } else {varPhase=3;} // builders unavailable — straight to explosion
+        if(typeof sfxAlert==='function') sfxAlert();
+      }
+      if(varPhase===2&&varObjs.length){
+        varT+=dt/1.1;
+        const mp=missileGroup.position;
+        varObjs.forEach((o,i)=>{
+          const sx=i===0?(variant==='cyber'?mp.x-46:mp.x-42):mp.x+42;
+          o.position.x=sx+(mp.x-sx)*_sgEaseIn(Math.min(1,varT));
+          o.position.y+=( mp.y-o.position.y)*0.12;
+          o.position.z+=(mp.z-o.position.z)*0.12;
+          if(variant==='cyber') o.rotation.z=Math.sin(elapsed*6)*.06;
+        });
+        if(varT>=1) varPhase=3;
+      }
+      if(varPhase===3&&!missileHit){
+        missileHit=true;projGroup.visible=false;missileGroup.visible=false;
+        expGroup.visible=true;expGroup.position.copy(missileGroup.position);
+        projTarget.copy(missileGroup.position);expT=0;
+        _spawnImpactDebris();
+        _spawnBurst(missileGroup.position,'#FFFFFF',12,14,8);
+        lockRet.style.display='none';
+        labelOverride='✦ FEATURED INTERCEPT — '+(variant==='rajpn'?'RAJPN FIST BUMP':'CYBER BULLET')+' ✦';
+        labelOverrideUntil=elapsed+3;
+        if(typeof sfxSummonImpact==='function') sfxSummonImpact(profile.label.toLowerCase());
+      }
+      // Savers fade out with the explosion
+      if(missileHit&&varObjs.length&&expT>0.5){
+        varObjs.forEach(o=>sc.remove(o));varObjs=[];
       }
 
       // Explosion
@@ -928,6 +1012,7 @@ function _sgPlayAnimation(profile,results){
     function cleanup(){
       if(rafId){cancelAnimationFrame(rafId);rafId=null;}
       debris.forEach(d=>{try{sc.remove(d.m);}catch(e){}});debris=[];
+      varObjs.forEach(o=>{try{sc.remove(o);}catch(e){}});varObjs=[];
       try{renderer.dispose();}catch(e){}
     }
 
@@ -1007,7 +1092,19 @@ async function doSummon(bannerId,count){
   _sgUpdateCurrencies();
   const rarOrder=['mythic','legendary','epic','rare','uncommon','common'];
   const best=rarOrder.find(r=>results.some(res=>res.rarity===r))||'common';
-  await _sgPlayAnimation(_SG_ANIM_PROFILES[best]||_SG_ANIM_PROFILES.common,results);
+  // Featured-save variant: if the pull contains a featured item, the shot
+  // can MISS and get saved by RAJPN fists (rarer) or the Cyber Bullet.
+  // Seeing either saver on screen = guaranteed featured item.
+  let variant=null;
+  try{
+    const featIds=_sgGetFeaturedItems(banner).map(f=>f.id);
+    if(results.some(r=>featIds.includes(r.id))){
+      const roll=Math.random();
+      if(roll<0.10) variant='rajpn';
+      else if(roll<0.28) variant='cyber';
+    }
+  }catch(e){}
+  await _sgPlayAnimation(_sgBuildAnimProfile(best),results,variant);
   _sgRenderBannerBody(banners.find(b=>b.id===bannerId)||banner);
   _sgUpdateCurrencies();
 }

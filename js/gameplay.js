@@ -472,20 +472,10 @@ function releaseHook(){
 // ═══════════════════════════════════════════════════════════════
 let _cyberBulletState=null; // {mesh, pos, vel, target, t}
 
-function fireCyberBullet(){
-  if(!cyberBulletOwned||cyberBulletCD>0) return;
-  // Find nearest missile
-  let target=null, bestDist=9999;
-  for(const m of missiles){
-    if(m.isDestroyed) continue;
-    const d=m.pos.distanceTo(new THREE.Vector3(px,py,pz));
-    if(d<bestDist){bestDist=d;target=m;}
-  }
-  if(!target){showNotif('No missile in range!');return;}
-  cyberBulletCD=15;
-  // Build Camaro SS-inspired Cyber Bullet muscle car
+function makeCyberCarMesh(){
   const carG=new THREE.Group();
-  const blk=new THREE.MeshLambertMaterial({color:0x080A0A});
+
+  const blk=new THREE.MeshLambertMaterial({color:0xAEB6BE,emissive:0x30343A,emissiveIntensity:.22}); // silver SS body
   const drk=new THREE.MeshLambertMaterial({color:0x050505});
   const chr=new THREE.MeshLambertMaterial({color:0x707070});
   const gls=new THREE.MeshLambertMaterial({color:0x1A2030,transparent:true,opacity:.65});
@@ -504,6 +494,13 @@ function fireCyberBullet(){
   hood.position.set(0,.85,1.15);carG.add(hood);
   const ridge=new THREE.Mesh(new THREE.BoxGeometry(.26,.055,1.78),drk);
   ridge.position.set(0,.92,1.1);carG.add(ridge);
+  // SS rally stripes — twin black stripes over hood + roof
+  [-0.42,0.42].forEach(x=>{
+    const st1=new THREE.Mesh(new THREE.BoxGeometry(.34,.045,2.0),drk);
+    st1.position.set(x,.915,1.15);carG.add(st1);
+    const st2=new THREE.Mesh(new THREE.BoxGeometry(.34,.045,2.2),drk);
+    st2.position.set(x,1.47,-.2);carG.add(st2);
+  });
   // Front fender flares
   [-1,1].forEach(s=>{
     const f=new THREE.Mesh(new THREE.BoxGeometry(.13,.42,1.38),blk);
@@ -588,6 +585,21 @@ function fireCyberBullet(){
   const flame=new THREE.Mesh(new THREE.ConeGeometry(.44,1.8,8),new THREE.MeshLambertMaterial({color:0xFF8800,emissive:0xFF5500,emissiveIntensity:1,transparent:true,opacity:.8}));
   flame.rotation.x=Math.PI/2;flame.position.z=3.2;carG.add(flame);
 
+  return carG;
+}
+
+function fireCyberBullet(){
+  if(!cyberBulletOwned||cyberBulletCD>0) return;
+  // Find nearest missile
+  let target=null, bestDist=9999;
+  for(const m of missiles){
+    if(m.isDestroyed) continue;
+    const d=m.pos.distanceTo(new THREE.Vector3(px,py,pz));
+    if(d<bestDist){bestDist=d;target=m;}
+  }
+  if(!target){showNotif('No missile in range!');return;}
+  cyberBulletCD=15;
+  const carG=makeCyberCarMesh();
   // Start position: far edge of map behind player
   const angle=yaw+Math.PI+(Math.random()-.5)*.5;
   const startX=px+Math.sin(angle)*80, startZ=pz+Math.cos(angle)*80;
@@ -651,28 +663,46 @@ let _rajpnState=null;
 const RAJPN_CD=12;
 
 function _makeFistGroup(isLeft){
+  // Detailed fist: palm + 4 curled two-segment fingers + wrapped thumb,
+  // knuckle ridge, wristband cuff. Knuckles face +x (left) / -x (right).
   const g=new THREE.Group();
-  const d=isLeft?1:-1; // knuckles face +x for left, -x for right
-  const skinMat=new THREE.MeshLambertMaterial({color:0xC8955A,emissive:0xFF6600,emissiveIntensity:.35});
-  const kMat=new THREE.MeshLambertMaterial({color:0x9A7030,emissive:0x663300,emissiveIntensity:.2});
+  const d=isLeft?1:-1;
+  const skinMat=new THREE.MeshLambertMaterial({color:0xC8955A,emissive:0xFF6600,emissiveIntensity:.3});
+  const skinDk =new THREE.MeshLambertMaterial({color:0xA87844,emissive:0xCC4400,emissiveIntensity:.22});
   const nailMat=new THREE.MeshLambertMaterial({color:0xE8C898});
-  // Palm
-  const palm=new THREE.Mesh(new THREE.BoxGeometry(2.4,2.0,2.8),skinMat); g.add(palm);
-  // 4 finger knuckles on punching face
+  const bandMat=new THREE.MeshLambertMaterial({color:0x18202E,emissive:0x2244AA,emissiveIntensity:.4});
+  // Palm block
+  const palm=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.1,2.9),skinMat); g.add(palm);
+  // Knuckle ridge across punching face
+  const ridge=new THREE.Mesh(new THREE.BoxGeometry(.5,.5,2.7),skinDk);
+  ridge.position.set(1.05*d,.85,0);g.add(ridge);
+  // 4 fingers: upper segment angled forward + folded segment tucked under
   for(let i=0;i<4;i++){
-    const k=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.58,0.52),kMat);
-    k.position.set(1.2*d, 0.5, -0.9+i*0.6); g.add(k);
-    const n=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.14,0.3),nailMat);
-    n.position.set(1.41*d, 0.7, -0.9+i*0.6); g.add(n);
+    const z=-1.0+i*0.66;
+    const k=new THREE.Mesh(new THREE.BoxGeometry(.62,.62,.56),skinMat);
+    k.position.set(1.25*d,.55,z);g.add(k);
+    const seg=new THREE.Mesh(new THREE.BoxGeometry(.5,.78,.5),skinDk);
+    seg.position.set(1.42*d,-.1,z);g.add(seg);
+    const fold=new THREE.Mesh(new THREE.BoxGeometry(.46,.4,.46),skinMat);
+    fold.position.set(1.08*d,-.62,z);g.add(fold);
+    const n=new THREE.Mesh(new THREE.BoxGeometry(.2,.16,.32),nailMat);
+    n.position.set(1.56*d,-.42,z);g.add(n);
   }
-  // Thumb
-  const thumb=new THREE.Mesh(new THREE.BoxGeometry(0.48,1.0,0.52),kMat);
-  thumb.position.set(0.75*d,-0.8,-0.85); g.add(thumb);
-  const tn=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.14,0.3),nailMat);
-  tn.position.set(0.75*d,-0.35,-1.05); g.add(tn);
-  // Wrist/arm stub
-  const arm=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.7,2.2),skinMat);
-  arm.position.set(-1.3*d,-0.1,0); g.add(arm);
+  // Thumb wrapping across the front-bottom
+  const thumb1=new THREE.Mesh(new THREE.BoxGeometry(.6,.58,1.1),skinMat);
+  thumb1.position.set(.7*d,-.95,-.85);thumb1.rotation.y=.35*d;g.add(thumb1);
+  const thumb2=new THREE.Mesh(new THREE.BoxGeometry(.5,.5,.7),skinDk);
+  thumb2.position.set(1.1*d,-.95,-.25);g.add(thumb2);
+  const tn=new THREE.Mesh(new THREE.BoxGeometry(.3,.16,.3),nailMat);
+  tn.position.set(1.32*d,-.78,-.2);g.add(tn);
+  // Wrist + RAJPN wristband cuff
+  const wrist=new THREE.Mesh(new THREE.BoxGeometry(1.7,1.7,2.1),skinMat);
+  wrist.position.set(-1.4*d,-.1,0);g.add(wrist);
+  const cuff=new THREE.Mesh(new THREE.BoxGeometry(.55,1.95,2.35),bandMat);
+  cuff.position.set(-2.2*d,-.1,0);g.add(cuff);
+  // Vein detail on top of hand
+  const vein=new THREE.Mesh(new THREE.BoxGeometry(1.3,.12,.14),skinDk);
+  vein.position.set(.2*d,1.08,.3);vein.rotation.y=.3*d;g.add(vein);
   return g;
 }
 

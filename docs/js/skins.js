@@ -662,6 +662,7 @@ async function buyShopItem(itemId){
   // Sync localStorage (Firebase already updated above)
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
   if(typeof updateSaveUI==='function') updateSaveUI();
+  if(typeof sfxPurchase==='function') sfxPurchase();
   showNotif(item.name+' purchased!');
   openShopModal(itemId);
   buildItemShop();
@@ -671,6 +672,7 @@ function equipWeaponCamo(weaponId,camoId){
   if(!saveData.equippedWeaponCamos) saveData.equippedWeaponCamos={};
   saveData.equippedWeaponCamos[weaponId]=camoId;
   saveSave();
+  if(typeof sfxEquip==='function') sfxEquip();
   showNotif(camoId+' camo equipped!');
   if(typeof refreshWeaponMesh==='function'&&typeof gameActive!=='undefined'&&gameActive&&
      typeof currentWeapon!=='undefined'&&currentWeapon===weaponId) refreshWeaponMesh();

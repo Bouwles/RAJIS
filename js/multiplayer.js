@@ -886,6 +886,7 @@ function _showKillcam(won,next){
       </div>
     </div>`;
   ov.style.display='flex';
+  if(typeof sfxKillcam==='function') sfxKillcam();
   if(document.pointerLockElement){_suppressPauseLock=true;document.exitPointerLock();}
   const ch=document.getElementById('crosshair'); if(ch) ch.style.display='none';
   if(typeof weaponMesh!=='undefined'&&weaponMesh) weaponMesh.visible=false;

@@ -262,9 +262,7 @@ function fireProjectile(){
   fireCD=wep.fireCD;
   waveShotsFired++;
   recoilT=0.12;
-  if(currentWeapon==='pistol') sfxPistolFire();
-  else if(currentWeapon==='shotgun') sfxShotgunFire();
-  else sfxFire();
+  sfxWeaponFire(currentWeapon);
 
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);

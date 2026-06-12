@@ -845,7 +845,10 @@ function _sgPlayAnimation(profile,results){
 
       // Rim light intensifies as missile approaches; weapon charge pulse before firing
       if(elapsed>3.5&&!missileHit) rimLight.intensity=Math.min(2.5,(elapsed-3.5)*0.6);
-      if(elapsed>6.4&&elapsed<7.0&&!projFired) rimLight.intensity=2.2+Math.sin(elapsed*32)*1.4;
+      if(elapsed>6.4&&elapsed<7.0&&!projFired){
+        rimLight.intensity=2.2+Math.sin(elapsed*32)*1.4;
+        if(!tick._charged){tick._charged=true;if(typeof sfxSummonCharge==='function') sfxSummonCharge();}
+      }
 
       // Fire projectile
       if(elapsed>7.0&&!projFired&&!missileHit&&!reShotAt){
@@ -853,6 +856,7 @@ function _sgPlayAnimation(profile,results){
         projTarget.copy(missileGroup.position);
         const startPos=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);
         projGroup.position.copy(startPos);
+        if(typeof sfxFire==='function') sfxFire();
       }
       // Second (override) shot after a clash
       if(reShotAt&&elapsed>=reShotAt&&!projFired&&!missileHit){
@@ -878,6 +882,7 @@ function _sgPlayAnimation(profile,results){
             expGroup.visible=true;expGroup.position.copy(projTarget);expT=0;
             _spawnImpactDebris();
             lockRet.style.display='none';
+            if(typeof sfxSummonImpact==='function') sfxSummonImpact(profile.label.toLowerCase());
           }
         }else{
           const start=richardGroup?richardGroup.position.clone().add(new THREE.Vector3(0,1.5,0)):new THREE.Vector3(0,1.5,0);

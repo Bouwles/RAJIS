@@ -206,6 +206,57 @@ function _buildLobbyEnv(locId){
   if(locId==='sweden') _buildSwedenLobEnv();
   else if(locId==='dubai') _buildDubaiLobEnv();
   else _buildBeirutLobEnv();
+  _lobAddSharedDressing(locId);
+}
+
+// Shared depth dressing: far skyline silhouette, street lamps flanking
+// the stage, and a road strip — makes every lobby read as a real place
+function _lobAddSharedDressing(locId){
+  const skyCol={beirut:0x241C10,sweden:0x0E1420,dubai:0x261C0E}[locId]||0x141820;
+  const lampCol={beirut:0xFFB860,sweden:0xBFD4EC,dubai:0xFFD080}[locId]||0xFFCC88;
+  // Far skyline silhouette row (behind the main buildings)
+  const skyMat=new THREE.MeshLambertMaterial({color:skyCol});
+  for(let i=0;i<14;i++){
+    const w=1.2+Math.random()*2.4, h=4+Math.random()*9;
+    const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,1.2),skyMat);
+    b.position.set(-14+i*2.2+(Math.random()-.5),h/2,-9.5-Math.random()*2);
+    _lobScene.add(b); _lobEnvObjs.push(b);
+    // sparse lit windows on the silhouette
+    if(Math.random()>.4){
+      const wm=new THREE.MeshLambertMaterial({color:0xFFD080,emissive:new THREE.Color(0xCC8830),emissiveIntensity:.7});
+      const ww=new THREE.Mesh(new THREE.BoxGeometry(w*.5,.12,.06),wm);
+      ww.position.set(b.position.x,1+Math.random()*(h-1.5),b.position.z+.64);
+      _lobScene.add(ww); _lobEnvObjs.push(ww);
+    }
+  }
+  // Road strip behind the platforms + curb
+  const road=new THREE.Mesh(new THREE.PlaneGeometry(40,2.6),
+    new THREE.MeshLambertMaterial({color:0x14161A}));
+  road.rotation.x=-Math.PI/2;road.position.set(0,.01,-3.0);
+  _lobScene.add(road);_lobEnvObjs.push(road);
+  for(let i=-4;i<=4;i++){
+    const dash=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.12),
+      new THREE.MeshLambertMaterial({color:0x8A8E96}));
+    dash.rotation.x=-Math.PI/2;dash.position.set(i*4,.015,-3.0);
+    _lobScene.add(dash);_lobEnvObjs.push(dash);
+  }
+  // Street lamps flanking the character stage
+  [-5.4,5.4].forEach(x=>{
+    const g=new THREE.Group();
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.05,.07,3.4,6),
+      new THREE.MeshLambertMaterial({color:0x22262E}));
+    pole.position.y=1.7;g.add(pole);
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(.7,.06,.06),
+      new THREE.MeshLambertMaterial({color:0x22262E}));
+    arm.position.set(x>0?-.32:.32,3.35,0);g.add(arm);
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.3,.1,.16),
+      new THREE.MeshLambertMaterial({color:lampCol,emissive:new THREE.Color(lampCol),emissiveIntensity:.9}));
+    head.position.set(x>0?-.62:.62,3.3,0);g.add(head);
+    const pt=new THREE.PointLight(new THREE.Color(lampCol),.55,9);
+    pt.position.set(x>0?-.62:.62,3.1,0);g.add(pt);
+    g.position.set(x,0,-1.6);
+    _lobScene.add(g);_lobEnvObjs.push(g);
+  });
 }
 
 function _buildBeirutLobEnv(){

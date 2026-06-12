@@ -782,65 +782,149 @@ function updateRajpnFist(dt){
 // ═══════════════════════════════════════════════════════════════
 //  GADGETS
 // ═══════════════════════════════════════════════════════════════
+function _gadgetKillSoldier(i){
+  const s=soldiers[i];
+  scene.remove(s.group);
+  if(s.barEl) s.barEl.remove();
+  spawnAmmoPack(s.pos);
+  soldiers.splice(i,1);
+  score+=150; waveScore+=150;
+  saveData.totalSoldierKills=(saveData.totalSoldierKills||0)+1;
+}
+
 function useFlashbang(){
   if((activeGadgets.flashbang||0)<1){showNotif('No flashbangs!');return;}
   activeGadgets.flashbang--;
-  // Stun all soldiers in radius 18
-  let hit=0;
-  const fbRadius=18*(window._flashRad||1);
-  soldiers.forEach(s=>{
-    const d=Math.sqrt((s.pos.x-px)**2+(s.pos.z-pz)**2);
-    if(d<fbRadius){s._stunT=3.5;hit++;}
-  });
-  showNotif('Flashbang! '+hit+' stunned.');
-  // Flash white
+  // Concussion blast: stuns 5s, damages soldiers, knocks them back
+  let hit=0,killed=0;
+  const fbRadius=24*(window._flashRad||1);
+  for(let i=soldiers.length-1;i>=0;i--){
+    const s=soldiers[i];
+    const dx=s.pos.x-px,dz=s.pos.z-pz;
+    const d=Math.sqrt(dx*dx+dz*dz);
+    if(d<fbRadius){
+      s.health-=35;
+      if(s.health<=0){_gadgetKillSoldier(i);killed++;continue;}
+      s._stunT=5;hit++;
+      // knockback away from blast
+      const kl=Math.max(.5,d);
+      s.pos.x+=dx/kl*4; s.pos.z+=dz/kl*4;
+      if(s.fillEl) s.fillEl.style.width=Math.max(0,Math.round(s.health/s.maxHealth*100))+'%';
+    }
+  }
+  // expanding white shock ring on the ground
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.18,8,32),
+    new THREE.MeshBasicMaterial({color:0xFFFFEE,transparent:true,opacity:.9}));
+  ring.rotation.x=Math.PI/2;ring.position.set(px,.4,pz);scene.add(ring);
+  let rt=0;
+  const riv=setInterval(()=>{
+    rt+=0.04;ring.scale.setScalar(1+rt*fbRadius*.9);
+    ring.material.opacity=Math.max(0,.9-rt*1.4);
+    if(rt>=.7){clearInterval(riv);scene.remove(ring);}
+  },16);
+  triggerScreenShake(.5);
+  showNotif('CONCUSSION BLAST! '+hit+' stunned'+(killed?', '+killed+' down':'')+'!');
   const fl=document.getElementById('damageFlash');
   if(fl){fl.style.background='rgba(255,255,220,.85)';fl.classList.add('flash');
     setTimeout(()=>{fl.style.background='';fl.classList.remove('flash');},400);}
   playTone(3200,.25,'sine',.3);
+  sfxExplosion();
   updateGadgetHud();
 }
 
 function useAirstrike(){
   if((activeGadgets.airstrike||0)<1){showNotif('No airstrikes!');return;}
   activeGadgets.airstrike--;
-  // Drop missile from above onto nearest target cluster
+  // Real barrage: 5 bombs rain down across the hot zone over ~2.5s
   let tx=px,tz=pz;
   if(missiles.length>0){const m=missiles[0];tx=m.pos.x;tz=m.pos.z;}
-  // Delay then big explosion at target
-  showNotif('Airstrike incoming!');
-  playTone(880,.1,'square',.2);
-  setTimeout(()=>{
-    // Destroy all missiles in radius 12 around target
-    let destroyed=0;
-    for(let i=missiles.length-1;i>=0;i--){
-      const m=missiles[i];
-      const d=Math.sqrt((m.pos.x-tx)**2+(m.pos.z-tz)**2);
-      if(d<12&&!m.isDestroyed){destroyMissile(m,true);destroyed++;}
-    }
-    score+=destroyed*200; waveScore+=destroyed*200;
-    triggerScreenShake(.8);
-    spawnExplosion(new THREE.Vector3(tx,8,tz), 3, 0xFF4400);
-    showNotif('Airstrike! '+destroyed+' missiles destroyed!');
-  },3000);
+  showNotif('AIRSTRIKE INBOUND — DANGER CLOSE!');
+  sfxAlert();
+  let totalKills=0,totalMissiles=0;
+  for(let b=0;b<5;b++){
+    setTimeout(()=>{
+      const bx=tx+(Math.random()-.5)*18, bz=tz+(Math.random()-.5)*18;
+      // falling bomb mesh
+      const bomb=new THREE.Group();
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,1.4,8),
+        new THREE.MeshLambertMaterial({color:0x2A3038}));
+      const nose=new THREE.Mesh(new THREE.ConeGeometry(.22,.5,8),
+        new THREE.MeshLambertMaterial({color:0xB03020,emissive:0x501008,emissiveIntensity:.5}));
+      nose.position.y=-.95;nose.rotation.x=Math.PI;
+      bomb.add(body,nose);
+      bomb.position.set(bx,46,bz);
+      scene.add(bomb);
+      let bt=0;
+      const biv=setInterval(()=>{
+        bt+=0.035;
+        bomb.position.y=46-46*bt*bt; // accelerating fall
+        if(bt>=1){
+          clearInterval(biv);scene.remove(bomb);
+          // impact: missiles r10, soldiers r9
+          for(let i=missiles.length-1;i>=0;i--){
+            const m=missiles[i];
+            const d=Math.sqrt((m.pos.x-bx)**2+(m.pos.z-bz)**2);
+            if(d<10&&!m.isDestroyed){destroyMissile(m,true);totalMissiles++;}
+          }
+          for(let i=soldiers.length-1;i>=0;i--){
+            const s=soldiers[i];
+            const d=Math.sqrt((s.pos.x-bx)**2+(s.pos.z-bz)**2);
+            if(d<9){s.health-=120;if(s.health<=0){_gadgetKillSoldier(i);totalKills++;}}
+          }
+          score+=totalMissiles*200; waveScore+=totalMissiles*200;
+          triggerScreenShake(.7);
+          spawnExplosion(new THREE.Vector3(bx,2,bz),2.6,0xFF4400);
+          sfxExplosion();
+        }
+      },16);
+    },600+b*480);
+  }
+  setTimeout(()=>showNotif('AIRSTRIKE: '+totalMissiles+' missiles, '+totalKills+' hostiles destroyed!'),3600);
   updateGadgetHud();
 }
 
 function useCover(){
   if((activeGadgets.cover||0)<1){showNotif('No cover charges!');return;}
   activeGadgets.cover--;
-  // Place a barrier 4 units ahead of player
+  // Energy barricade: wide glowing wall + EMP pulse on deploy that
+  // wipes incoming enemy bullets and shoves nearby hostiles back
   const fwx=-Math.sin(yaw)*4, fwz=-Math.cos(yaw)*4;
-  const bGeo=new THREE.BoxGeometry(3,.1,1.2);// lay flat then rotate
-  const barrier=new THREE.Mesh(new THREE.BoxGeometry(3,2.5,0.3),
-    new THREE.MeshLambertMaterial({color:0x556633}));
-  barrier.position.set(px+fwx, 1.25, pz+fwz);
-  barrier.rotation.y=yaw;
-  scene.add(barrier);
-  // Remove after 20s
-  setTimeout(()=>scene.remove(barrier),20000);
-  showNotif('Cover deployed! (20s)');
-  playTone(330,.1,'sine',.15);
+  const wallG=new THREE.Group();
+  const frameM=new THREE.MeshLambertMaterial({color:0x1A2430});
+  const coreM=new THREE.MeshLambertMaterial({color:0x2A6AC8,emissive:0x1A4A98,emissiveIntensity:.8,transparent:true,opacity:.55});
+  const core=new THREE.Mesh(new THREE.BoxGeometry(5.4,2.8,.16),coreM);
+  core.position.y=1.5;wallG.add(core);
+  [[-2.8,1.5],[2.8,1.5]].forEach(([x,y])=>{
+    const post=new THREE.Mesh(new THREE.BoxGeometry(.3,3.1,.3),frameM);
+    post.position.set(x,y,0);wallG.add(post);
+  });
+  const top=new THREE.Mesh(new THREE.BoxGeometry(5.9,.22,.34),frameM);
+  top.position.y=3.05;wallG.add(top);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(5.9,.3,.8),frameM);
+  base.position.y=.15;wallG.add(base);
+  wallG.position.set(px+fwx,0,pz+fwz);
+  wallG.rotation.y=yaw;
+  scene.add(wallG);
+  // EMP pulse: clear enemy bullets, push hostiles
+  if(typeof soldierBullets!=='undefined'){
+    soldierBullets.forEach(b=>{if(b.mesh)scene.remove(b.mesh);});
+    soldierBullets.length=0;
+  }
+  soldiers.forEach(s=>{
+    const dx=s.pos.x-px,dz=s.pos.z-pz;
+    const d=Math.sqrt(dx*dx+dz*dz);
+    if(d<14){const kl=Math.max(.5,d);s.pos.x+=dx/kl*6;s.pos.z+=dz/kl*6;s._stunT=Math.max(s._stunT||0,1.5);}
+  });
+  // pulse + slow fade-out over 30s
+  let wt=0;
+  const wiv=setInterval(()=>{
+    wt+=0.016;
+    coreM.emissiveIntensity=.8+Math.sin(wt*5)*.25;
+    if(wt>=30){clearInterval(wiv);scene.remove(wallG);}
+    else if(wt>=27) coreM.opacity=.55*(1-(wt-27)/3);
+  },16);
+  showNotif('ENERGY BARRICADE DEPLOYED — EMP PULSE!');
+  sfxShockFire();
   updateGadgetHud();
 }
 

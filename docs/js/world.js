@@ -265,8 +265,9 @@ function buildWorld(locId){
   scene.background=new THREE.Color(loc.sky);
   scene.fog=new THREE.FogExp2(loc.fogColor,loc.fogDensity);
 
-  // Lights
-  addToWorld(new THREE.AmbientLight(loc.ambColor,loc.ambInt));
+  // Lights — ambient + sky/ground hemisphere for natural depth + sun
+  addToWorld(new THREE.AmbientLight(loc.ambColor,loc.ambInt*.7));
+  addToWorld(new THREE.HemisphereLight(loc.sky,loc.ground,.45));
   sunLight=new THREE.DirectionalLight(loc.sunColor,loc.sunInt);
   sunLight.position.set(...loc.sunPos);
   sunLight.castShadow=true;
@@ -276,6 +277,10 @@ function buildWorld(locId){
   sunLight.shadow.camera.left=-120;sunLight.shadow.camera.right=120;
   sunLight.shadow.camera.top=120;sunLight.shadow.camera.bottom=-120;
   addToWorld(sunLight);
+  // Cool counter-fill from the opposite side so shadows aren't dead flat
+  const fill=new THREE.DirectionalLight(loc.fogColor,.22);
+  fill.position.set(-loc.sunPos[0],loc.sunPos[1]*.5,-loc.sunPos[2]);
+  addToWorld(fill);
 
   // Ground
   const gGeo=new THREE.PlaneGeometry(400,400);
@@ -284,6 +289,19 @@ function buildWorld(locId){
   ground.rotation.x=-Math.PI/2;
   ground.receiveShadow=true;
   addToWorld(ground);
+  // Ground tonal variation: big soft patches kill the flat-plane look
+  {
+    const base=new THREE.Color(loc.ground);
+    for(let i=0;i<26;i++){
+      const shade=base.clone().multiplyScalar(.86+Math.random()*.26);
+      const r=7+Math.random()*16;
+      const patch=new THREE.Mesh(new THREE.CircleGeometry(r,10),
+        new THREE.MeshLambertMaterial({color:shade}));
+      patch.rotation.x=-Math.PI/2;
+      patch.position.set((Math.random()-.5)*180,.02+i*.0008,(Math.random()-.5)*180);
+      addToWorld(patch);
+    }
+  }
 
   // Ground detail
   if(locId==='sweden') buildSnowGround();

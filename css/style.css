@@ -1359,6 +1359,37 @@ body::after{content:'';position:fixed;inset:0;
 .cvs-role-desc{font-family:var(--font-ui);font-size:.6em;color:var(--text3);line-height:1.35;}
 .cvs-actions{display:flex;gap:10px;justify-content:center;margin-top:24px;}
 
+/* ── PLAY VS BOTS button (MP hub) ───────────────────────────── */
+.mp-bot-row{margin-top:18px;text-align:center;}
+.mp-bot-btn{width:100%;max-width:560px;padding:15px;border:none;cursor:pointer;
+  font-family:var(--font-ui);font-size:1.0em;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  background:linear-gradient(135deg,rgba(180,72,58,.4),rgba(90,30,24,.5));color:#FFD8CC;
+  border:1px solid rgba(180,72,58,.55);border-bottom:2px solid var(--red-light);
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:all var(--t-fast);}
+.mp-bot-btn:hover{background:linear-gradient(135deg,rgba(212,80,62,.55),rgba(120,40,30,.6));color:#fff;transform:translateY(-2px);box-shadow:0 0 18px rgba(180,72,58,.4);}
+.mp-bot-note{font-family:var(--font-ui);font-size:.66em;letter-spacing:.06em;color:var(--text3);text-transform:uppercase;margin-top:7px;}
+
+/* ── BOT ARENA HUD ──────────────────────────────────────────── */
+#botMatchHud{position:fixed;top:0;left:0;right:0;z-index:14;pointer-events:none;display:none;padding-top:10px;}
+.bm-top{display:flex;align-items:center;justify-content:center;gap:18px;}
+.bm-side{font-family:var(--font-ui);font-size:.92em;font-weight:800;letter-spacing:.16em;text-shadow:0 1px 4px #000;}
+.bm-you{color:#4AE870;} .bm-bots{color:#E84A4A;}
+.bm-mid{text-align:center;}
+.bm-score{font-family:var(--font-ui);font-size:1.3em;font-weight:900;letter-spacing:.12em;color:var(--amber);text-shadow:0 1px 4px #000;}
+.bm-rd{font-family:var(--font-ui);font-size:.6em;font-weight:700;letter-spacing:.14em;color:var(--text3);}
+.bm-hpwrap{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:6px;}
+.bm-hpwrap>span{font-family:var(--font-ui);font-size:.66em;font-weight:800;letter-spacing:.1em;color:var(--text2);text-shadow:0 1px 3px #000;}
+.bm-hpbar{position:relative;width:260px;height:12px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.15);overflow:hidden;}
+.bm-hpfill{position:absolute;inset:0;width:100%;background:linear-gradient(90deg,#4AE870,#2A8C46);transition:width .15s;}
+.bm-bot-bar{position:fixed;width:30px;height:4px;transform:translate(-50%,-50%);background:rgba(0,0,0,.6);z-index:13;pointer-events:none;display:none;}
+.bm-bot-fill{height:100%;background:#E05040;}
+#botMatchEndScreen.active{display:flex!important;align-items:center;justify-content:center;background:rgba(4,7,14,.96);}
+.bm-end-inner{text-align:center;max-width:480px;padding:20px;}
+.bm-end-title{font-family:var(--font-ui);font-size:3em;font-weight:900;letter-spacing:.14em;text-transform:uppercase;}
+.bm-end-sub{font-family:var(--font-ui);font-size:1.0em;letter-spacing:.14em;color:var(--text2);text-transform:uppercase;margin:6px 0 4px;}
+.bm-end-note{font-family:var(--font-ui);font-size:.7em;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;}
+.bm-end-rewards{font-family:var(--font-ui);font-size:1.1em;font-weight:800;letter-spacing:.1em;color:var(--amber);margin-top:14px;}
+
 /* ── FRIEND PROFILE MODAL + calling cards in friend rows ────── */
 .fp-modal{
   position:fixed;inset:0;z-index:80;display:none;

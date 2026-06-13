@@ -68,11 +68,14 @@ const MP_WEEKLY_POOL=[
   {id:'coopMissions',name:'Co-op Operative',    desc:'Complete co-op waves',          target:24,   reward:{credits:2000}},
   {id:'rolesUsed',   name:'All-Rounder',        desc:'Use every Convoy role once',    target:4,    reward:{title:'title_escort_elite'}},
 ];
+// Week key = the date of the most recent Monday (UAE time). Changes
+// every Monday 00:00 UAE, matching the displayed "resets in" countdown.
 function _mpWeekKey(){
-  const d=new Date(Date.now()+4*3600000);
-  const oneJan=new Date(d.getUTCFullYear(),0,1);
-  const week=Math.ceil(((d-oneJan)/86400000+oneJan.getDay()+1)/7);
-  return d.getUTCFullYear()+'-W'+week;
+  const now=new Date(Date.now()+4*3600000);
+  const day=now.getUTCDay();            // 0 Sun .. 6 Sat
+  const back=(day+6)%7;                 // days since Monday
+  const mon=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()-back));
+  return 'W'+mon.toISOString().slice(0,10);
 }
 function _mpWeeklyChallenges(){
   const key=_mpWeekKey();
@@ -166,8 +169,23 @@ function buildMpHubScreen(){
       </div>
     </div>
     <div class="mp-mode-grid">${cards}</div>
-    <div class="mp-chall-head">WEEKLY CHALLENGES · resets weekly</div>
-    <div class="mp-chall-list">${chall}</div>`;
+    <div class="mp-chall-head">WEEKLY CHALLENGES · resets ${_mpWeeklyResetIn()}</div>
+    <div class="mp-chall-list">${chall}</div>
+    <div class="mp-bot-row">
+      <button class="mp-bot-btn" onclick="startBotMatch()">🤖 PLAY VS BOTS — PRACTICE ARENA</button>
+      <div class="mp-bot-note">Fight a decent AI squad. Grants a little MP XP. No challenge or achievement progress.</div>
+    </div>`;
+}
+
+// Human-readable time until the weekly reset (next UAE Monday 00:00)
+function _mpWeeklyResetIn(){
+  const now=new Date(Date.now()+4*3600000);
+  const day=now.getUTCDay(); // 0 Sun .. 6 Sat
+  const daysToMon=((8-day)%7)||7;
+  const reset=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+daysToMon)-4*3600000;
+  const ms=reset-Date.now();
+  const d=Math.floor(ms/86400000), h=Math.floor((ms%86400000)/3600000);
+  return d>0?('in '+d+'d '+h+'h'):('in '+h+'h');
 }
 
 // ── Convoy setup (team + role select) ──────────────────────────

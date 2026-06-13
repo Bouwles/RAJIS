@@ -147,6 +147,8 @@ function showScreen(name){
 //  GAME START / STOP
 // ═══════════════════════════════════════════════════════════════
 function startGame(locId, wave){
+  if(typeof convoyActive!=='undefined') convoyActive=false;
+  if(typeof botMatchActive!=='undefined') botMatchActive=false;
   selectedLoc=locId;
   saveData.locId=locId; saveSave();
   waveNum=wave||1;
@@ -223,6 +225,8 @@ function resumeGame(){
 function returnToMenu(){
   // Commit current save so purchases + wave stats survive any page refresh
   saveSave();
+  if(typeof convoyActive!=='undefined') convoyActive=false;
+  if(typeof botMatchActive!=='undefined') botMatchActive=false;
   gameActive=false;
   gamePaused=false;
   battleActive=false;

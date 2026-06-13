@@ -73,6 +73,7 @@ function _cvLoc(){ return (typeof selectedLoc!=='undefined'&&selectedLoc)||saveD
 function startConvoyCrisis(team,role){
   _cvPlayer={team:team||'defender',role:role||'interceptor',score:0,kills:0,intercepts:0,
     repairs:0,convoyDmg:0,roadblocks:0,abilityCd:0};
+  if(typeof botMatchActive!=='undefined') botMatchActive=false;
   const loc=_cvLoc();
   selectedLoc=loc; saveData.locId=loc;
   if(typeof buildWorld==='function') buildWorld(loc);

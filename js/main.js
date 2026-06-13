@@ -356,6 +356,7 @@ function gameLoop(t){
 
   const _kc=typeof _kcActive!=='undefined'&&_kcActive;
   const _cv=typeof convoyActive!=='undefined'&&convoyActive;
+  const _bm=typeof botMatchActive!=='undefined'&&botMatchActive;
   if(_kc){
     // Killcam replay drives the camera; world stays frozen
     updateKillcam(dt);
@@ -367,6 +368,15 @@ function gameLoop(t){
     updateParticles(dt);
     updateDebris(dt);
     updateConvoy(dt);
+    updateScreenShake(dt);
+    updateHUD();
+  } else if(_bm&&gameActive&&!gamePaused){
+    if(isLocked) updatePlayer(dt);
+    updateWeapon(dt);
+    updateProjectiles(dt);
+    updateParticles(dt);
+    updateDebris(dt);
+    updateBotMatch(dt);
     updateScreenShake(dt);
     updateHUD();
   } else if(gameActive&&!gamePaused){

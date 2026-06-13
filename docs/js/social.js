@@ -367,7 +367,11 @@ function _listenFriendRequests(){
       }));
       updateFriendRequestBadge();
       if(currentScreen==='friendsScreen') renderFriendsScreen();
-    },e=>{});
+    },e=>{
+      console.warn('[Friends] incoming-request listener failed:',e.code,e.message);
+      _friendsDiagError='INCOMING REQUESTS BLOCKED ('+e.code+') — Firestore rules must allow reads on "friendRequests"';
+      if(currentScreen==='friendsScreen') renderFriendsScreen();
+    });
   _socialUnsubs.push(u1);
   // Outgoing
   const u2=_fbDb.collection('friendRequests').where('fromUid','==',uid)
@@ -377,7 +381,7 @@ function _listenFriendRequests(){
         id:doc.id, toUid:doc.data().toUid, toUsername:doc.data().toUsername
       }));
       if(currentScreen==='friendsScreen') renderFriendsScreen();
-    },e=>{});
+    },e=>{console.warn('[Friends] outgoing-request listener failed:',e.code,e.message);});
   _socialUnsubs.push(u2);
 }
 
@@ -671,9 +675,47 @@ function _renderSidebarFriends(){
 // ═══════════════════════════════════════════════════════════════
 //  FRIENDS SCREEN
 // ═══════════════════════════════════════════════════════════════
+let _friendsDiagError=null,_friendsDiagRan=false;
+// Self-test: one read on each social collection — names the exact
+// collection the security rules block, right on the Friends screen
+async function fbFriendsDiag(){
+  if(_friendsDiagRan||!_fbDb||!_fbUser) return;
+  _friendsDiagRan=true;
+  const tests=[
+    ['usernames',()=>_fbDb.collection('usernames').limit(1).get()],
+    ['friendRequests',()=>_fbDb.collection('friendRequests').where('toUid','==',_fbUser.uid).limit(1).get()],
+    ['friends',()=>_fbDb.collection('friends').doc(_fbUser.uid).collection('list').limit(1).get()],
+    ['presence',()=>_fbDb.collection('presence').doc(_fbUser.uid).get()],
+    ['globalChat',()=>_fbDb.collection('globalChat').limit(1).get()],
+  ];
+  const blocked=[];
+  for(const[name,fn]of tests){
+    try{await fn();}catch(e){blocked.push(name+' ('+e.code+')');}
+  }
+  if(blocked.length){
+    _friendsDiagError='BLOCKED COLLECTIONS: '+blocked.join(', ')+' — fix Firestore security rules in the Firebase console';
+  }
+  if(currentScreen==='friendsScreen') renderFriendsScreen();
+}
+
 function renderFriendsScreen(){
   updateNavUser();
   updateFriendRequestBadge();
+  fbFriendsDiag();
+  let diagEl=document.getElementById('friendsDiagBanner');
+  if(!diagEl){
+    const host=document.querySelector('.friends-layout');
+    if(host){
+      diagEl=document.createElement('div');
+      diagEl.id='friendsDiagBanner';
+      diagEl.style.cssText='display:none;background:rgba(180,40,40,.15);border:1px solid rgba(220,60,60,.5);color:#FF8878;font-family:var(--font-ui);font-size:.72em;letter-spacing:.06em;padding:10px 12px;margin-bottom:10px;text-transform:uppercase;line-height:1.5;';
+      host.insertBefore(diagEl,host.children[1]||null);
+    }
+  }
+  if(diagEl){
+    diagEl.style.display=_friendsDiagError?'block':'none';
+    if(_friendsDiagError) diagEl.textContent='⚠ '+_friendsDiagError;
+  }
 
   const reqEl=document.getElementById('friendRequestsList');
   if(reqEl){

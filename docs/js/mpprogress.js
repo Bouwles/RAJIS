@@ -188,10 +188,10 @@ function _mpWeeklyResetIn(){
   return d>0?('in '+d+'d '+h+'h'):('in '+h+'h');
 }
 
-// ── Convoy setup (team + role select) ──────────────────────────
-let _cvSetupTeam='defender',_cvSetupRole='interceptor';
+// ── Convoy setup (role select; ONLINE auto-assigns side, AI lets you pick)
+let _cvSetupSide='defender',_cvSetupRole='interceptor';
 function openConvoySetup(){
-  _cvSetupTeam='defender'; _cvSetupRole='interceptor';
+  _cvSetupSide='defender'; _cvSetupRole='interceptor';
   if(saveData.mpRolesUsed===undefined) saveData.mpRolesUsed={};
   _renderConvoySetup();
   showScreen('convoySetupScreen');
@@ -202,30 +202,40 @@ function _renderConvoySetup(){
   const roles=['interceptor','heavy','engineer','scout'];
   host.innerHTML=`
     <div class="cvs-title">CONVOY CRISIS</div>
-    <div class="cvs-sub">6 ATTACKERS vs 6 DEFENDERS · empty slots filled by bots</div>
-    <div class="cvs-section">CHOOSE SIDE</div>
-    <div class="cvs-teams">
-      <div class="cvs-team ${_cvSetupTeam==='defender'?'on':''}" onclick="_cvSetupTeam='defender';_renderConvoySetup()">
-        <div class="cvs-team-name">DEFENDERS</div><div class="cvs-team-desc">Escort & repair the convoy. Intercept missiles.</div></div>
-      <div class="cvs-team ${_cvSetupTeam==='attacker'?'on':''}" onclick="_cvSetupTeam='attacker';_renderConvoySetup()">
-        <div class="cvs-team-name">ATTACKERS</div><div class="cvs-team-desc">Ambush the convoy. Roadblocks & strikes.</div></div>
-    </div>
+    <div class="cvs-sub">6v6 ESCORT WARFARE · 2 rounds, sides swap · best defensive push wins</div>
     <div class="cvs-section">CHOOSE ROLE</div>
     <div class="cvs-roles">${roles.map(r=>{const R=CV_ROLES[r];
       return `<div class="cvs-role ${_cvSetupRole===r?'on':''}" onclick="_cvSetupRole='${r}';_renderConvoySetup()">
         <div class="cvs-role-icon">${R.icon}</div><div class="cvs-role-name">${R.name}</div>
         <div class="cvs-role-desc">${R.desc}</div></div>`;}).join('')}
     </div>
+    <div class="cvs-online-note">ONLINE: your side is assigned automatically and swaps each round.</div>
     <div class="cvs-actions">
       <button class="menu-btn btn-secondary" onclick="buildMpHubScreen();showScreen('mpHubScreen')">← Back</button>
-      <button class="menu-btn btn-primary" onclick="_cvDeploy()">DEPLOY</button>
+      <button class="menu-btn btn-primary" onclick="_cvDeployOnline()">⚔ PLAY ONLINE</button>
+    </div>
+    <div class="cvs-ai-row">
+      <div class="cvs-section" style="margin-top:6px;">PRACTICE</div>
+      <div class="cvs-ai-sides">
+        <button class="cvs-ai-side ${_cvSetupSide==='defender'?'on':''}" onclick="_cvSetupSide='defender';_renderConvoySetup()">START: DEFEND</button>
+        <button class="cvs-ai-side ${_cvSetupSide==='attacker'?'on':''}" onclick="_cvSetupSide='attacker';_renderConvoySetup()">START: ATTACK</button>
+      </div>
+      <button class="cvs-ai-btn" onclick="_cvDeployAI()">🤖 PLAY VS AI — grants XP only, no challenge progress</button>
     </div>`;
 }
-function _cvDeploy(){
+function _cvRoleChallenge(){
   if(!saveData.mpRolesUsed) saveData.mpRolesUsed={};
-  if(!saveData.mpRolesUsed[_cvSetupRole]){
-    saveData.mpRolesUsed[_cvSetupRole]=true;
-    _mpChallProgress('rolesUsed',1);
-  }
-  startConvoyCrisis(_cvSetupTeam,_cvSetupRole);
+  if(!saveData.mpRolesUsed[_cvSetupRole]){ saveData.mpRolesUsed[_cvSetupRole]=true; _mpChallProgress('rolesUsed',1); }
+}
+function _cvDeployAI(){
+  _cvRoleChallenge();
+  startConvoyAI(_cvSetupRole,_cvSetupSide);
+}
+function _cvDeployOnline(){
+  _cvRoleChallenge();
+  // route into the room system in convoy mode — create/join with friends
+  if(typeof mpSetMode==='function') mpSetMode('convoy');
+  window._cvPendingRole=_cvSetupRole;
+  showNotif('Create or join a room to start Convoy Crisis');
+  showScreen('lobbyScreen');
 }

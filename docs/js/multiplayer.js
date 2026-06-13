@@ -54,9 +54,12 @@ function mpGenCode(){
 // ── Mode toggle ─────────────────────────────────────────────────
 function mpSetMode(mode){
   mpMode=mode;
-  document.getElementById('mpTabCoop').classList.toggle('active',mode==='coop');
-  document.getElementById('mpTabBattle').classList.toggle('active',mode==='battle');
+  const tc=document.getElementById('mpTabCoop'); if(tc) tc.classList.toggle('active',mode==='coop');
+  const tb=document.getElementById('mpTabBattle'); if(tb) tb.classList.toggle('active',mode==='battle');
+  const sub=document.getElementById('lobbyUser');
+  if(mode==='convoy'&&sub) sub.textContent='Mode: 🚚 Convoy Crisis — create or join a room';
 }
+function _mpModeLabel(m){ return m==='battle'?'⚔️ Battle':m==='convoy'?'🚚 Convoy Crisis':'🤝 Coop'; }
 
 // ── Username setup ──────────────────────────────────────────────
 function mpSetUsername(){
@@ -79,7 +82,7 @@ function mpCreateRoom(){
   mpPeer.on('open',()=>{
     document.getElementById('waitingCode').textContent=code;
     document.getElementById('waitingTitle').textContent='Waiting Room';
-    document.getElementById('waitingMode').textContent='Mode: '+(mpMode==='battle'?'⚔️ Battle':'🤝 Coop');
+    document.getElementById('waitingMode').textContent='Mode: '+_mpModeLabel(mpMode);
     document.getElementById('btnStartMp').style.display='';
     mpRenderWaiting();
     _mpUpdateWaitingStage();
@@ -138,7 +141,7 @@ function mpHandleData(data, conn){
       mpMode=data.mode;
       if(data.custo&&data.hostName) mpWaitingCustos.set(data.hostName,data.custo);
       document.getElementById('waitingCode').textContent=data.code||mpRoom;
-      document.getElementById('waitingMode').textContent='Mode: '+(data.mode==='battle'?'⚔️ Battle':'🤝 Coop');
+      document.getElementById('waitingMode').textContent='Mode: '+_mpModeLabel(data.mode);
       document.getElementById('waitingTitle').textContent='Waiting Room';
       document.getElementById('btnStartMp').style.display='none';
       conn._mpName=data.hostName;
@@ -187,7 +190,10 @@ function mpHandleData(data, conn){
     case 'start':
       mpMode=data.mode;
       mpIsGuest=true;
-      if(mpMode==='battle'){
+      if(mpMode==='convoy'){
+        selectedLoc=data.locId||'beirut';
+        if(typeof startConvoyOnlineGuest==='function') startConvoyOnlineGuest(data);
+      } else if(mpMode==='battle'){
         mpMyTeam=data.myTeam||'B';
         _mpTeams=data.teams||null;
         _aiBotTeam=data.aiTeam||null;
@@ -209,6 +215,15 @@ function mpHandleData(data, conn){
       if(mpIsHost){
         mpConns.forEach(c=>{ if(c.open&&c._mpName!==data.username) c.send(data); });
       }
+      break;
+    case 'cv_state':
+      if(typeof cvApplyNetState==='function') cvApplyNetState(data);
+      break;
+    case 'cv_round':
+      if(typeof cvApplyRoundEnd==='function') cvApplyRoundEnd(data);
+      break;
+    case 'cv_hit':
+      if(typeof cvHostApplyHit==='function') cvHostApplyHit(data);
       break;
     case 'game_state':
       if(mpIsGuest) mpApplyGameState(data);
@@ -293,6 +308,21 @@ function mpStartGame(){
   if(mpConns.length===0){ showNotif('Need at least 1 more player!'); return; }
   const loc=saveData.locId||'beirut';
 
+  if(mpMode==='convoy'){
+    // Auto-assign sides — host defends round 1, guests split, bots fill.
+    const guests=mpConns.filter(c=>c._mpName);
+    const roster=[mpUser.username,...guests.map(c=>c._mpName)];
+    // host defends first; alternate guests between attack/defend
+    mpConns.forEach((c,i)=>{
+      if(!c.open||!c._mpName) return;
+      const gStart=(i%2===0)?'attacker':'defender';
+      c.send({type:'start',mode:'convoy',locId:saveData.locId||'beirut',startSide:gStart,
+        role:'interceptor',hostName:mpUser.username,roster});
+    });
+    mpIsGuest=false;
+    if(typeof startConvoyOnlineHost==='function') startConvoyOnlineHost(window._cvPendingRole||'interceptor',roster);
+    return;
+  }
   if(mpMode==='battle'){
     // Assign teams
     const allNames=[mpUser.username,...mpConns.filter(c=>c._mpName).map(c=>c._mpName)];

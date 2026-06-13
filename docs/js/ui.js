@@ -202,6 +202,7 @@ function startGame(locId, wave){
 function pauseGame(){
   if(!gameActive) return;
   gamePaused=true;
+  if(typeof _updateAimbotRow==='function') _updateAimbotRow();
   if(isLocked) document.exitPointerLock();
   showScreen('pauseMenu');
   document.getElementById('crosshair').style.display='none';

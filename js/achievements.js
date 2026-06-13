@@ -59,7 +59,17 @@
       custo:{outfitColor:'#181030',visorColor:'#40C8FF',skinTone:'#E8C49A',armorStyle:'stealth',helmet:true,backpack:'none',gear:'elite'}});
     addSkin({id:'richard_fat_paul',     name:'Fat Paul',       tagline:'RAJPN gold achievement — the legend himself', price:0, rarity:'mythic', source:'achievement',
       custo:{outfitColor:'#F2F2F2',visorColor:'#D02020',skinTone:'#E8C49A',armorStyle:'light',helmet:false,backpack:'none',gear:'fatpaul'}});
+    // Developer kit (code "iliketurtles") — blinding gold, code-exclusive
+    addSkin({id:'richard_dev_gold',     name:'Solid Gold Developer', tagline:'RAJIS developer exclusive', price:0, rarity:'mythic', source:'code',
+      custo:{outfitColor:'#FFD84A',visorColor:'#FFFFFF',skinTone:'#E8C49A',armorStyle:'heavy',helmet:true,backpack:'missile',gear:'elite'}});
   }
+  // Developer profile items (code-exclusive — never in shop/summon)
+  if(typeof CALLING_CARDS!=='undefined'&&!CALLING_CARDS.find(c=>c[0]==='card_rajis_dev'))
+    CALLING_CARDS.push(['card_rajis_dev','RAJIS Developer','#4A3800','#0E0A00','#FFE060','🜲','mythic']);
+  if(typeof PROFILE_TITLES!=='undefined'&&!PROFILE_TITLES.find(t=>t[0]==='title_rajis_dev'))
+    PROFILE_TITLES.push(['title_rajis_dev','RAJIS DEVELOPER','mythic']);
+  if(typeof PROFILE_ICONS!=='undefined'&&!PROFILE_ICONS.find(i=>i[0]==='icon_pregman'))
+    PROFILE_ICONS.push(['icon_pregman','The Developer','🫃','#3A2A10','mythic']);
 })();
 
 // ── Achievement catalog ────────────────────────────────────────
@@ -108,12 +118,12 @@ function _achVal(a){return a.statFn?a.statFn():(saveData[a.stat]||0);}
 function _achClaimed(a){return (saveData.achClaimed||{})[a.id]||0;}
 
 // ── Claim ──────────────────────────────────────────────────────
-function achClaim(achId){
+function achClaim(achId,silent,force){
   const a=ACHIEVEMENTS.find(x=>x.id===achId);
   if(!a) return;
   const done=_achClaimed(a);
   if(done>=3) return;
-  if(_achVal(a)<a.tiers[done]){showNotif('Milestone not reached yet!');return;}
+  if(!force&&_achVal(a)<a.tiers[done]){if(!silent)showNotif('Milestone not reached yet!');return;}
   const r=a.rewards[done];
   const upd=typeof _bpGrant==='function'?_bpGrant(r):{};
   if(!saveData.achClaimed) saveData.achClaimed={};
@@ -121,11 +131,13 @@ function achClaim(achId){
   upd['saveData.achClaimed.'+a.id]=done+1;
   if(_fbUser&&_fbDb) _fbDb.collection('users').doc(_fbUser.uid).update(upd).catch(e=>console.warn('[Ach] write failed:',e.message));
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
-  const info=typeof _bpRewardInfo==='function'?_bpRewardInfo(r):{label:'Reward'};
-  if(typeof sfxPurchase==='function') sfxPurchase();
-  showNotif(ACH_TIER_NAMES[done]+' · '+a.name+': '+info.label+' claimed!');
-  if(typeof updateSaveUI==='function') updateSaveUI();
-  buildAchievements();
+  if(!silent){
+    const info=typeof _bpRewardInfo==='function'?_bpRewardInfo(r):{label:'Reward'};
+    if(typeof sfxPurchase==='function') sfxPurchase();
+    showNotif(ACH_TIER_NAMES[done]+' · '+a.name+': '+info.label+' claimed!');
+    if(typeof updateSaveUI==='function') updateSaveUI();
+    buildAchievements();
+  }
 }
 
 // ── UI ─────────────────────────────────────────────────────────

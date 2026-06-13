@@ -69,7 +69,74 @@ async function fbSearchUser(query){
         results.push({uid:doc.data().uid, username:doc.id.toUpperCase()});
     });
     return results;
-  }catch(e){ return []; }
+  }catch(e){
+    console.warn('[Friends] search failed:',e.code,e.message);
+    showNotif(e.code==='permission-denied'
+      ?'Search blocked — Firestore rules must allow reads on "usernames"'
+      :'Search failed: '+e.message);
+    return [];
+  }
+}
+
+// Fetch a player's public profile (calling card + headline stats)
+async function fbFetchProfile(uid){
+  if(!_fbDb) return null;
+  try{
+    const doc=await _fbDb.collection('users').doc(uid).get();
+    if(!doc.exists) return null;
+    const sd=doc.data()?.saveData||{};
+    return{
+      username:doc.data()?.username||'?',
+      pc:sd.profileCustomization||{},
+      bpLevel:sd.bpLevel||0,
+      intercepted:sd.totalIntercepted||0,
+      waves:sd.totalWaves||0,
+      bestWave:sd.waveRecord||0,
+      mpWins:sd.mpMatchWins||0,
+      skins:(sd.ownedSkins||[]).length,
+      camos:Object.values(sd.ownedWeaponCamos||{}).reduce((a,c)=>a+(Array.isArray(c)?c.length:0),0),
+      equippedSkin:sd.equippedSkin||'richard_default',
+    };
+  }catch(e){console.warn('[Friends] profile fetch:',e.code,e.message);return null;}
+}
+
+// Full friend profile modal — calling card + stats + cosmetics counts
+async function showFriendProfile(uid){
+  let ov=document.getElementById('friendProfileModal');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='friendProfileModal';
+    ov.className='fp-modal';
+    ov.onclick=e=>{if(e.target===ov)ov.style.display='none';};
+    document.body.appendChild(ov);
+  }
+  ov.style.display='flex';
+  ov.innerHTML='<div class="fp-inner"><div class="pc-empty">LOADING PROFILE…</div></div>';
+  const p=await fbFetchProfile(uid);
+  if(!p){
+    ov.innerHTML=`<div class="fp-inner"><div class="pc-empty">PROFILE UNAVAILABLE</div>
+      <button class="menu-btn btn-secondary" onclick="document.getElementById('friendProfileModal').style.display='none'" style="margin:10px auto 0;">CLOSE</button></div>`;
+    return;
+  }
+  const skinName=(typeof RICHARD_SKINS!=='undefined'&&(RICHARD_SKINS.find(s=>s.id===p.equippedSkin)||{}).name)||'Operator';
+  const card=typeof renderCallingCard==='function'
+    ?renderCallingCard({username:p.username,level:p.bpLevel,icon:p.pc.icon,callingCard:p.pc.callingCard,title:p.pc.title,badge:p.pc.badge})
+    :'';
+  const row=(l,v)=>`<div class="fp-row"><span>${l}</span><span>${v}</span></div>`;
+  ov.innerHTML=`<div class="fp-inner">
+    <div class="fp-card">${card}</div>
+    <div class="fp-stats">
+      ${row('Equipped Outfit',skinName)}
+      ${row('BP Tier',p.bpLevel)}
+      ${row('Missiles Intercepted',p.intercepted.toLocaleString())}
+      ${row('Waves Completed',p.waves.toLocaleString())}
+      ${row('Best Wave',p.bestWave)}
+      ${row('Battle Wins',p.mpWins)}
+      ${row('Outfits Owned',p.skins)}
+      ${row('Camos Owned',p.camos)}
+    </div>
+    <button class="menu-btn btn-secondary" onclick="document.getElementById('friendProfileModal').style.display='none'" style="margin:12px auto 0;">CLOSE</button>
+  </div>`;
 }
 
 async function fbSendFriendRequest(targetUid, targetUsername){
@@ -85,7 +152,12 @@ async function fbSendFriendRequest(targetUid, targetUsername){
     });
     showNotif('Friend request sent to '+targetUsername+'!');
     renderFriendsScreen();
-  }catch(e){showNotif('Error sending request.');}
+  }catch(e){
+    console.warn('[Friends] send request failed:',e.code,e.message);
+    showNotif(e.code==='permission-denied'
+      ?'Request blocked — Firestore rules must allow writes on "friendRequests"'
+      :'Error sending request: '+e.message);
+  }
 }
 
 async function fbAcceptFriendRequest(reqId, fromUid, fromUsername){
@@ -100,7 +172,12 @@ async function fbAcceptFriendRequest(reqId, fromUid, fromUsername){
     batch.delete(_fbDb.collection('friendRequests').doc(reqId));
     await batch.commit();
     showNotif('You and '+fromUsername+' are now friends!');
-  }catch(e){showNotif('Error accepting request.');}
+  }catch(e){
+    console.warn('[Friends] accept failed:',e.code,e.message);
+    showNotif(e.code==='permission-denied'
+      ?'Accept blocked — Firestore rules must allow writes on "friends"'
+      :'Error accepting request: '+e.message);
+  }
 }
 
 async function fbDeclineFriendRequest(reqId){
@@ -256,7 +333,11 @@ function _listenFriends(){
       _listenFriendPresence();
       renderLobby();
       if(currentScreen==='friendsScreen') renderFriendsScreen();
-    },e=>{});
+    },e=>{
+      console.warn('[Friends] list listener failed:',e.code,e.message);
+      const el=document.getElementById('friendsList');
+      if(el) el.innerHTML='<div class="friends-empty">FRIENDS UNAVAILABLE — Firestore rules must allow the "friends" collection.</div>';
+    });
   _socialUnsubs.push(unsub);
 }
 
@@ -620,8 +701,8 @@ function renderFriendsScreen(){
         const status=socialState.presence[f.uid]||'offline';
         const lbl={in_match:'In Match',in_party:'In Party',lobby:'Online',online:'Online',offline:'Offline'}[status]||status;
         return `<div class="friend-row">
-          <div class="friend-av">${_initial(f.username)}</div>
-          <div class="friend-info">
+          <div class="friend-av" onclick="showFriendProfile('${f.uid}')" style="cursor:pointer">${_initial(f.username)}</div>
+          <div class="friend-info" onclick="showFriendProfile('${f.uid}')" style="cursor:pointer">
             <div class="friend-name">${f.username}</div>
             <div class="friend-sub s-${status==='in_match'?'match':status==='in_party'?'party':status==='offline'?'offline':'online'}">${lbl}</div>
           </div>
@@ -643,16 +724,19 @@ async function doFriendSearch(){
   resultsEl.innerHTML='<div class="friends-empty">Searching…</div>';
   const results=await fbSearchUser(q);
   if(results.length===0){resultsEl.innerHTML='<div class="friends-empty">No users found.</div>';return;}
-  resultsEl.innerHTML=results.map(r=>{
+  // Pull each result's profile so their calling card shows inline
+  const profiles=await Promise.all(results.map(r=>fbFetchProfile(r.uid)));
+  resultsEl.innerHTML=results.map((r,i)=>{
     const isFriend=socialState.friends.some(f=>f.uid===r.uid);
     const sent=socialState.sentRequests.some(s=>s.toUid===r.uid);
-    return `<div class="friend-row">
-      <div class="friend-av">${_initial(r.username)}</div>
-      <div class="friend-info">
-        <div class="friend-name">${r.username}</div>
-        <div class="friend-sub">${isFriend?'Already friends':sent?'Request sent':'Player'}</div>
-      </div>
+    const p=profiles[i];
+    const cardHtml=p&&typeof renderCallingCard==='function'
+      ?`<div class="friend-cc" onclick="showFriendProfile('${r.uid}')">${renderCallingCard({username:r.username,level:p.bpLevel,icon:p.pc.icon,callingCard:p.pc.callingCard,title:p.pc.title,badge:p.pc.badge})}</div>`
+      :`<div class="friend-av">${_initial(r.username)}</div><div class="friend-info"><div class="friend-name">${r.username}</div></div>`;
+    return `<div class="friend-row friend-row-cc">
+      ${cardHtml}
       <div class="friend-btns">
+        <div class="friend-sub">${isFriend?'Already friends':sent?'Request sent':''}</div>
         ${!isFriend&&!sent?`<button class="friend-btn add" onclick="fbSendFriendRequest('${r.uid}','${r.username}')">Add</button>`:''}
       </div>
     </div>`;

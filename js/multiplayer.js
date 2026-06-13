@@ -456,7 +456,8 @@ let _rpLastT=performance.now();
 function mpBroadcastState(){
   if(!mpRoom||!mpUser) return;
   const pos={type:'pos',username:mpUser.username,px,py,pz,yaw,
-    missiles:mpLocalStats.missiles,soldiers:mpLocalStats.soldiers};
+    missiles:mpLocalStats.missiles,soldiers:mpLocalStats.soldiers,
+    custo:saveData.customization}; // equipped skin visible to everyone
   if(mpIsHost){
     mpConns.forEach(c=>{ if(c.open) c.send(pos); });
     const gs={
@@ -478,6 +479,21 @@ function mpBroadcastState(){
 function mpApplyRemoteState(data){
   let rp=mpRemotePlayers.get(data.username);
   if(rp){ rp.targetPos.set(data.px,data.py,data.pz); rp.targetYaw=data.yaw; }
+  // Live skin sync: rebuild the remote mesh when their customization changes
+  if(rp&&data.custo){
+    const key=JSON.stringify(data.custo);
+    if(rp._custoKey!==key){
+      rp._custoKey=key;
+      try{
+        const fresh=makeCharModel(data.custo);
+        fresh.position.copy(rp.mesh.position);
+        fresh.rotation.y=rp.mesh.rotation.y;
+        scene.remove(rp.mesh);
+        rp.mesh=fresh;
+        scene.add(fresh);
+      }catch(e){}
+    }
+  }
   if(data.username&&data.missiles!==undefined){
     mpRemoteStats[data.username]={missiles:data.missiles,soldiers:data.soldiers||0};
     _updateCoopLb();
@@ -831,7 +847,7 @@ function _battleRoundEnd(won){
 //  while a calling-card panel and countdown overlay the screen.
 // ═══════════════════════════════════════════════════════════════
 let _kcActive=false,_kcBuf=[],_kcT=0,_kcDone=null,_kcKiller='o';
-let _kcVotes=new Set();
+let _kcVotes=new Set(),_kcWeapon=null,_kcTracers=[],_kcNextTracer=0,_kcFlash=null;
 const _KC_MAX=720;  // ~12s of footage at 60fps
 const _KC_DUR=8;    // seconds on screen (replays last ~10s, slow-mo tail)
 
@@ -874,10 +890,12 @@ function _showKillcam(won,next){
       ?renderCallingCard({username:killerName,level:'?',sub:'ROUND WINNER'})
       :`<div class="kc-name-fallback">${killerName}</div>`;
   const wep=WEAPONS[currentWeapon]||{};
+  const victimName=won?oppName:(mpUser?.username||'YOU');
   ov.innerHTML=`
     <div class="kc-label">KILLCAM</div>
     <div class="kc-sub">${won?'YOUR ELIMINATION':'ELIMINATED BY '+killerName}</div>
     <button id="kcSkip" class="kc-skip" onclick="_kcVoteSkip()">SKIP VOTE 0/${Math.floor(_kcPlayerCount()/2)+1}</button>
+    <div class="kc-versus"><span class="kc-vs-k">${killerName}</span> ▶ <span class="kc-vs-v">${victimName}</span></div>
     <div class="kc-bottom">
       <div class="kc-card">${cardHtml}</div>
       <div class="kc-right">
@@ -891,6 +909,13 @@ function _showKillcam(won,next){
   if(document.pointerLockElement){_suppressPauseLock=true;document.exitPointerLock();}
   const ch=document.getElementById('crosshair'); if(ch) ch.style.display='none';
   if(typeof weaponMesh!=='undefined'&&weaponMesh) weaponMesh.visible=false;
+  // First-person killer POV: round weapon mounted on the camera
+  try{
+    if(_kcWeapon) camera.remove(_kcWeapon);
+    _kcWeapon=makeWeaponMesh();
+    camera.add(_kcWeapon);
+  }catch(e){_kcWeapon=null;}
+  _kcTracers=[];_kcNextTracer=0;
   _kcKiller=won?'m':'o';
   _kcVotes=new Set();
   _kcT=0;_kcDone=next;_kcActive=true;
@@ -911,6 +936,9 @@ function _endKillcam(){
   if(ov) ov.style.display='none';
   const ch=document.getElementById('crosshair'); if(ch&&gameActive) ch.style.display='block';
   if(typeof weaponMesh!=='undefined'&&weaponMesh) weaponMesh.visible=true;
+  if(_kcWeapon){try{camera.remove(_kcWeapon);}catch(e){}_kcWeapon=null;}
+  _kcTracers.forEach(t=>{try{scene.remove(t.m);}catch(e){}});_kcTracers=[];
+  if(_kcFlash){try{scene.remove(_kcFlash);}catch(e){}_kcFlash=null;}
   _kcBuf=[];
   const fn=_kcDone;_kcDone=null;
   if(fn) fn();
@@ -931,8 +959,43 @@ function updateKillcam(dt){
   const s=_kcBuf[idx];
   const killer=_kcKiller==='m'?[s.mx,s.my,s.mz]:[s.ox,s.oy,s.oz];
   const victim=_kcKiller==='m'?[s.ox,s.oy,s.oz]:[s.mx,s.my,s.mz];
-  camera.position.set(killer[0],killer[1]+0.35,killer[2]);
-  camera.lookAt(victim[0],victim[1]+0.3,victim[2]);
+  camera.position.set(killer[0],killer[1]+0.45,killer[2]);
+  camera.lookAt(victim[0],victim[1]+0.4,victim[2]);
+
+  // Final-second firefight: tracers from the killer's muzzle into the
+  // victim, with muzzle flash light — you SEE the shots that landed
+  if(p>0.62&&p<0.97){
+    _kcNextTracer-=dt;
+    if(_kcNextTracer<=0){
+      _kcNextTracer=0.16;
+      const tm=new THREE.Mesh(new THREE.SphereGeometry(.09,6,6),
+        new THREE.MeshBasicMaterial({color:0xFFD060}));
+      tm.position.set(killer[0],killer[1]+0.35,killer[2]);
+      scene.add(tm);
+      _kcTracers.push({m:tm,t:0,fx:killer[0],fy:killer[1]+0.35,fz:killer[2],
+        tx:victim[0],ty:victim[1]+0.35,tz:victim[2]});
+      if(!_kcFlash){
+        _kcFlash=new THREE.PointLight(0xFFC860,0,8);
+        scene.add(_kcFlash);
+      }
+      _kcFlash.position.set(killer[0],killer[1]+0.3,killer[2]);
+      _kcFlash.intensity=2.4;
+      if(typeof sfxSmgFire==='function') sfxSmgFire();
+    }
+  }
+  if(_kcFlash&&_kcFlash.intensity>0) _kcFlash.intensity=Math.max(0,_kcFlash.intensity-dt*14);
+  for(let i=_kcTracers.length-1;i>=0;i--){
+    const t=_kcTracers[i];
+    t.t+=dt*5;
+    if(t.t>=1){
+      // impact spark at the victim
+      if(typeof spawnExplosion==='function'&&Math.random()>.5)
+        spawnExplosion(new THREE.Vector3(t.tx,t.ty,t.tz),.4,0xFF8040);
+      scene.remove(t.m);_kcTracers.splice(i,1);
+    } else {
+      t.m.position.set(t.fx+(t.tx-t.fx)*t.t,t.fy+(t.ty-t.fy)*t.t,t.fz+(t.tz-t.fz)*t.t);
+    }
+  }
 }
 
 function endBattleMode(won){
@@ -1057,6 +1120,7 @@ document.addEventListener('DOMContentLoaded',()=>{
           }
           try{ localStorage.setItem(SAVE_KEY,JSON.stringify(saveData)); }catch(e){}
           if(typeof _startSaveListener==='function') _startSaveListener(user.uid);
+          if(typeof _enforceCodes==='function') setTimeout(_enforceCodes,400);
           const uname=data?.username||user.displayName||'PLAYER';
           mpUser={username:uname};
           localStorage.setItem('raj_callsign',uname);

@@ -43,8 +43,98 @@ function applyAimbot(){
   }
 }
 const VALID_CODES={
-  'nercessian':{credits:9999999,chronoShards:999999,summonTickets:999999,featuredTickets:999999,maxBattlePass:true,message:'NERCESSIAN CODE ACTIVATED — ALL RESOURCES + MAX BATTLE PASS'}
+  'nercessian':{credits:9999999,chronoShards:999999,summonTickets:999999,featuredTickets:999999,maxBattlePass:true,message:'NERCESSIAN CODE ACTIVATED — ALL RESOURCES + MAX BATTLE PASS'},
+  'thakkar':{special:'aimbot',message:'THAKKAR PROTOCOL — AIMBOT MODULE UNLOCKED (toggle in pause menu)'},
+  'sarsri':{special:'maxall',message:'SARSRI — BATTLE PASS + ACHIEVEMENTS PERMANENTLY MAXED'},
+  'aboujamra':{special:'allcosmetics',message:'ABOUJAMRA — EVERY SKIN AND CAMO UNLOCKED, FOREVER'},
+  'iliketurtles':{special:'dev',message:'🐢 RAJIS DEVELOPER KIT GRANTED 🐢'},
 };
+
+// ── Code special effects + permanent enforcement ────────────────
+function toggleCodeAimbot(){
+  if(!saveData.codeAimbot) return;
+  mods.aimbot=!mods.aimbot;
+  const b=document.getElementById('btnAimbotToggle');
+  if(b){b.textContent=mods.aimbot?'ON':'OFF';b.style.color=mods.aimbot?'#FF6050':'';}
+}
+function _updateAimbotRow(){
+  const row=document.getElementById('aimbotRow');
+  if(row) row.style.display=saveData.codeAimbot?'block':'none';
+}
+// sarsri: max BP + achievements, re-applies forever (covers future content)
+function runSarsri(){
+  if(!saveData.sarsri) return;
+  if(typeof BP_TIERS!=='undefined'){
+    const top=BP_TIERS.length;
+    saveData.bpLevel=Math.max(saveData.bpLevel||0,top);
+    saveData.bpXP=Math.max(saveData.bpXP||0,top*500);
+    saveData.bpPremium=true;
+  }
+  if(typeof ACHIEVEMENTS!=='undefined'){
+    ACHIEVEMENTS.forEach(a=>{
+      if(a.stat&&(saveData[a.stat]||0)<a.tiers[2]) saveData[a.stat]=a.tiers[2];
+    });
+    // auto-claim every remaining milestone silently (force covers statFn achievements)
+    ACHIEVEMENTS.forEach(a=>{
+      let guard=0;
+      while(((saveData.achClaimed||{})[a.id]||0)<3&&guard++<4) achClaim(a.id,true,true);
+    });
+  }
+  if(typeof bpClaimAll==='function') bpClaimAll();
+}
+// aboujamra: own every skin + camo EXCEPT achievement/code exclusives;
+// re-runs on boot so future shop/summon content is auto-owned
+function runAboujamra(){
+  if(!saveData.aboujamra) return;
+  const upd={};
+  let added=0;
+  if(typeof RICHARD_SKINS!=='undefined'){
+    const news=[];
+    RICHARD_SKINS.forEach(s=>{
+      if(s.source==='achievement'||s.source==='code') return; // exclusives stay exclusive
+      if(!saveData.ownedSkins.includes(s.id)){saveData.ownedSkins.push(s.id);news.push(s.id);}
+    });
+    if(news.length){upd['saveData.ownedSkins']=firebase.firestore.FieldValue.arrayUnion(...news);added+=news.length;}
+  }
+  if(typeof WEAPON_CAMOS!=='undefined'){
+    Object.entries(WEAPON_CAMOS).forEach(([w,arr])=>{
+      const news=[];
+      if(!Array.isArray(saveData.ownedWeaponCamos[w])) saveData.ownedWeaponCamos[w]=[];
+      arr.forEach(c=>{
+        if(c.id==='default'||c.source==='achievement') return;
+        if(!saveData.ownedWeaponCamos[w].includes(c.id)){saveData.ownedWeaponCamos[w].push(c.id);news.push(c.id);}
+      });
+      if(news.length){upd[`saveData.ownedWeaponCamos.${w}`]=firebase.firestore.FieldValue.arrayUnion(...news);added+=news.length;}
+    });
+  }
+  if(added>0){
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify(saveData));}catch(e){}
+    if(_fbUser&&_fbDb) _fbDb.collection('users').doc(_fbUser.uid).update(upd).catch(()=>{});
+    showNotif('ABOUJAMRA: +'+added+' new cosmetics added to your locker');
+  }
+}
+function runDevKit(){
+  const grants=[
+    ['ownedSkins','richard_dev_gold'],
+    ['ownedCallingCards','card_rajis_dev'],
+    ['ownedTitles','title_rajis_dev'],
+    ['ownedProfileIcons','icon_pregman'],
+  ];
+  const upd={};
+  grants.forEach(([arr,id])=>{
+    if(!Array.isArray(saveData[arr])) saveData[arr]=[];
+    if(!saveData[arr].includes(id)){saveData[arr].push(id);upd['saveData.'+arr]=firebase.firestore.FieldValue.arrayUnion(id);}
+  });
+  if(_fbUser&&_fbDb&&Object.keys(upd).length) _fbDb.collection('users').doc(_fbUser.uid).update(upd).catch(()=>{});
+}
+// Called on boot + after login restore — keeps permanent codes enforced
+function _enforceCodes(){
+  try{
+    if(saveData.sarsri) runSarsri();
+    if(saveData.aboujamra) runAboujamra();
+    _updateAimbotRow();
+  }catch(e){console.warn('[Codes] enforce:',e.message);}
+}
 
 async function redeemCode(){
   const inp=document.getElementById('settingsCodeInput');
@@ -66,6 +156,10 @@ async function redeemCode(){
     saveData.bpXP=Math.max(saveData.bpXP||0,50*500);
     saveData.bpPremium=true;
   }
+  if(reward.special==='aimbot') saveData.codeAimbot=true;
+  if(reward.special==='maxall') saveData.sarsri=true;
+  if(reward.special==='allcosmetics') saveData.aboujamra=true;
+  if(reward.special==='dev') runDevKit();
   saveData.redeemedCodes.push(code);
   if(_fbUser&&_fbDb){
     const _cu={'saveData.redeemedCodes':firebase.firestore.FieldValue.arrayUnion(code)};
@@ -81,6 +175,17 @@ async function redeemCode(){
     await _fbDb.collection('users').doc(_fbUser.uid).update(_cu).catch(()=>{});
   }
   saveSave();
+  if(reward.special==='maxall') runSarsri();
+  if(reward.special==='allcosmetics') runAboujamra();
+  if(reward.special==='aimbot') _updateAimbotRow();
+  // Firebase: persist permanent code flags
+  if(_fbUser&&_fbDb&&reward.special){
+    const flagUpd={};
+    if(reward.special==='aimbot') flagUpd['saveData.codeAimbot']=true;
+    if(reward.special==='maxall') flagUpd['saveData.sarsri']=true;
+    if(reward.special==='allcosmetics') flagUpd['saveData.aboujamra']=true;
+    if(Object.keys(flagUpd).length) _fbDb.collection('users').doc(_fbUser.uid).update(flagUpd).catch(()=>{});
+  }
   inp.value='';
   fb.textContent=reward.message||'Code redeemed!';
   fb.style.color='#44FF88';
@@ -303,6 +408,7 @@ function init(){
   setupEvents();
   updateSaveUI();
   updateWeaponBar();
+  _enforceCodes();
   if(_fbUser&&typeof startSocialListeners==='function') startSocialListeners();
   document.getElementById('weaponBar').style.display='none';
   setTimeout(()=>{

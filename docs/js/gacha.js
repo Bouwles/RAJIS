@@ -706,9 +706,10 @@ function _sgPlayAnimation(profile,results,variant){
     overlay.innerHTML='';overlay.style.display='flex';
     let skipped=false;
 
-    // Three.js canvas
-    const W=Math.min(overlay.clientWidth||window.innerWidth,1280);
-    const H=Math.min(overlay.clientHeight||window.innerHeight,900);
+    // Three.js canvas — true overlay size, no caps (caps caused the
+    // render to stretch wide on large screens)
+    const W=overlay.clientWidth||window.innerWidth;
+    const H=overlay.clientHeight||window.innerHeight;
     const canvas=document.createElement('canvas');
     canvas.width=W;canvas.height=H;
     canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block;';

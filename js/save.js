@@ -89,6 +89,11 @@ function _normalizeInventory(sd){
   if(!sd.achClaimed||typeof sd.achClaimed!=='object') sd.achClaimed={};
   // Permanent code flags
   ['codeAimbot','sarsri','aboujamra'].forEach(k=>{if(typeof sd[k]!=='boolean')sd[k]=false;});
+  // Multiplayer progression + convoy stats
+  ['mpXp','mpLevel','convoyWins','mpKills','mpMatchWins'].forEach(k=>{if(typeof sd[k]!=='number')sd[k]=0;});
+  if(!sd.mpChallProg||typeof sd.mpChallProg!=='object') sd.mpChallProg={};
+  if(!sd.mpChallClaimed||typeof sd.mpChallClaimed!=='object') sd.mpChallClaimed={};
+  if(!sd.mpRolesUsed||typeof sd.mpRolesUsed!=='object') sd.mpRolesUsed={};
   if(!Array.isArray(sd.pickedCards)) sd.pickedCards=[];
   if(!Array.isArray(sd.seenCards)) sd.seenCards=[];
   if(!sd.upgrades) sd.upgrades={armor_plate:0,speed_chip:0,hot_rounds:0};

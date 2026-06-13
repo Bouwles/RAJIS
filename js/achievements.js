@@ -103,6 +103,8 @@ const ACHIEVEMENTS=[
    rewards:[{pcIcon:'achi_duelist'},{credits:8000},{camo:['railgun','ach_duelist']}]},
   {id:'mpwins',    cat:'multiplayer', name:'Duel King',    desc:'Win battle matches',        stat:'mpMatchWins',       tiers:[1,10,40],
    rewards:[{badge:'achb_skull_gold'},{title:'acht_duel_king'},{skin:'richard_ach_centurion'}]},
+  {id:'convoy',    cat:'multiplayer', name:'Escort Elite', desc:'Win Convoy Crisis matches', stat:'convoyWins',        tiers:[1,8,30],
+   rewards:[{pcIcon:'icon_convoy'},{badge:'badge_roadblock'},{skin:'richard_convoy_vet'}]},
 ];
 const ACH_TIER_NAMES=['BRONZE','SILVER','GOLD'];
 const ACH_TIER_COLORS=['#B07040','#B8C0CC','#E8C040'];

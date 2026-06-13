@@ -246,6 +246,7 @@ function mpHandleData(data, conn){
       }
       break;
     case 'battle_weapon':
+      if(data.modifier) _applyBattleModifier(data.modifier);
       _applyBattleWeapon(data.weapon);
       break;
     case 'rematch_vote':
@@ -531,6 +532,28 @@ let _rematchVoted=false;
 const BATTLE_MAX_HP=200;
 const BATTLE_WEAPONS=['pistol','shotgun','smg','sniper'];
 
+// ── 1v1 round modifiers — host rolls one per round, sent with the
+//    round weapon so both clients apply the same rules ──────────
+const BATTLE_MODIFIERS=[
+  {id:'none',     name:'STANDARD',        apply:()=>{}},
+  {id:'pistols',  name:'PISTOLS ONLY',    weapon:'pistol'},
+  {id:'launchers',name:'LAUNCHERS ONLY',  weapon:'launcher'},
+  {id:'shotguns', name:'SHOTGUN DUEL',    weapon:'shotgun'},
+  {id:'oneshot',  name:'ONE-SHOT RAIL',   weapon:'sniper', apply:()=>{battleHP.local=1;}},
+  {id:'lowgrav',  name:'LOW GRAVITY',     apply:()=>{window._battleGrav=0.4;}},
+  {id:'speed',    name:'DOUBLE SPEED',    apply:()=>{effectiveSpd=PLAYER_SPD*2;effectiveSprint=SPRINT_SPD*1.6;}},
+  {id:'random',   name:'RANDOM LOADOUT',  weapon:null},
+];
+let _battleModifier=null;
+function _applyBattleModifier(modId){
+  // reset transient modifier state each round
+  window._battleGrav=1;
+  const m=BATTLE_MODIFIERS.find(x=>x.id===modId)||BATTLE_MODIFIERS[0];
+  _battleModifier=m;
+  if(m.apply) m.apply();
+  if(m.id!=='none') showNotif('⚔ ROUND MODIFIER: '+m.name);
+}
+
 // Assign players to teams, AI bot for odd counts
 function _assignTeams(players){
   const shuffled=[...players].sort(()=>Math.random()-.5);
@@ -713,9 +736,12 @@ function startBattleMode(){
   // Host picks initial weapon
   if(mpIsHost){
     setTimeout(()=>{
-      const w=BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];
+      const mod=BATTLE_MODIFIERS[Math.floor(Math.random()*BATTLE_MODIFIERS.length)];
+      let w=mod.weapon!==undefined?mod.weapon:BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];
+      if(w===null) w=BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];
+      _applyBattleModifier(mod.id);
       _applyBattleWeapon(w);
-      mpConns.forEach(c=>{ if(c.open) c.send({type:'battle_weapon',weapon:w}); });
+      mpConns.forEach(c=>{ if(c.open) c.send({type:'battle_weapon',weapon:w,modifier:mod.id}); });
     },800);
   }
 
@@ -812,7 +838,11 @@ function mpBattleSendHit(dmg, targetUsername){
 
 function _battleRoundEnd(won){
   if(won) battleRounds.local++; else battleRounds.remote++;
-  if(won&&typeof achInc==='function') achInc('mpKills');
+  if(won){
+    if(typeof achInc==='function') achInc('mpKills');
+    if(typeof _mpChallProgress==='function'){ _mpChallProgress('duelWins',1); _mpChallProgress('battleKills',1); }
+    if(typeof addMpXp==='function') addMpXp(40);
+  }
   if(battleRounds.local>=2||battleRounds.remote>=2){
     // Killcam plays first — victory/rematch screen comes after it
     _showKillcam(won,()=>endBattleMode(battleRounds.local>=2));
@@ -832,9 +862,12 @@ function _battleRoundEnd(won){
       if(mpIsHost){
         // Reinit AI bot
         if(_aiBotTeam) _initAiBot(_aiBotTeam);
-        const w=BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];
+        const mod=BATTLE_MODIFIERS[Math.floor(Math.random()*BATTLE_MODIFIERS.length)];
+        let w=mod.weapon!==undefined?mod.weapon:BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];
+        if(w===null) w=BATTLE_WEAPONS[Math.floor(Math.random()*BATTLE_WEAPONS.length)];
+        _applyBattleModifier(mod.id);
         _applyBattleWeapon(w);
-        mpConns.forEach(c=>{ if(c.open) c.send({type:'battle_weapon',weapon:w}); });
+        mpConns.forEach(c=>{ if(c.open) c.send({type:'battle_weapon',weapon:w,modifier:mod.id}); });
       }
     });
   }
@@ -1015,6 +1048,7 @@ function endBattleMode(won){
     if(typeof achInc==='function') achInc('mpMatchWins');
     saveData.currency+=reward; saveSave();
   }
+  if(typeof addMpXp==='function') addMpXp(won?180:80);
 
   const title=document.getElementById('battleEndTitle');
   const sub=document.getElementById('battleEndSub');

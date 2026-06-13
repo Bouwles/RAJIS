@@ -80,7 +80,11 @@ function endWave(){
   document.getElementById('stCleanBonus').textContent=cleanBonus>0?`+${cleanBonus}`:'—';
 
   waveNum++;
-  if(typeof mpRemotePlayers!=='undefined'&&mpRemotePlayers.size>0&&!battleActive&&typeof achInc==='function') achInc('coopWaves');
+  if(typeof mpRemotePlayers!=='undefined'&&mpRemotePlayers.size>0&&!battleActive){
+    if(typeof achInc==='function') achInc('coopWaves');
+    if(typeof _mpChallProgress==='function') _mpChallProgress('coopMissions',1);
+    if(typeof addMpXp==='function') addMpXp(25);
+  }
   // XP for battle pass
   const xpGained=100+Math.max(0,waveNum-1)*10;
   saveData.bpXP=(saveData.bpXP||0)+xpGained;
@@ -165,7 +169,7 @@ function updatePlayer(dt){
   else{vx*=.82;vz*=.82;}
 
   if((keys['Space'])&&onGround){vy=JUMP_VEL;onGround=false;}
-  if(!onGround) vy+=GRAVITY*dt;
+  if(!onGround) vy+=GRAVITY*(window._battleGrav||1)*dt;
 
   px+=vx*dt; py+=vy*dt; pz+=vz*dt;
 

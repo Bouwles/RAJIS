@@ -153,7 +153,7 @@
       <div id="rlModePanel" class="rl-mode-panel"></div>
       <div id="lobbyPartyActions" class="rl-party-actions"></div>
       <div class="rl-mp-row">
-        <button class="rl-sm-btn" onclick="showScreen('lobbyScreen')">MULTIPLAYER</button>
+        <button class="rl-sm-btn" onclick="buildMpHubScreen();showScreen('mpHubScreen')">⚔ MULTIPLAYER</button>
       </div>
     </div>
 
@@ -490,6 +490,17 @@
   </div>
 </div>
 
+<!-- MULTIPLAYER HUB -->
+<div id="mpHubScreen" class="screen">
+  <div id="mpHubContent" class="mp-hub-wrap"></div>
+  <button class="back-btn" style="position:fixed;top:14px;left:18px;" onclick="showScreen('mainMenu');renderLobby()">← LOBBY</button>
+</div>
+
+<!-- CONVOY CRISIS SETUP -->
+<div id="convoySetupScreen" class="screen">
+  <div id="convoySetupContent" class="cvs-wrap"></div>
+</div>
+
 <!-- BATTLE END SCREEN -->
 <div id="battleEndScreen" class="screen">
   <div style="text-align:center;max-width:420px;">
@@ -744,6 +755,8 @@
 <script src="js/skins.js"></script>
 <script src="js/profilecards.js"></script>
 <script src="js/achievements.js"></script>
+<script src="js/mpprogress.js"></script>
+<script src="js/convoy.js"></script>
 <script src="js/gacha.js"></script>
 <script src="js/main.js"></script>
 <script src="js/multiplayer.js"></script>

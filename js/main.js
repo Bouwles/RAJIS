@@ -91,7 +91,7 @@ function runAboujamra(){
   if(typeof RICHARD_SKINS!=='undefined'){
     const news=[];
     RICHARD_SKINS.forEach(s=>{
-      if(s.source==='achievement'||s.source==='code') return; // exclusives stay exclusive
+      if(s.source==='achievement'||s.source==='code'||s.source==='convoy') return; // earned exclusives stay exclusive
       if(!saveData.ownedSkins.includes(s.id)){saveData.ownedSkins.push(s.id);news.push(s.id);}
     });
     if(news.length){upd['saveData.ownedSkins']=firebase.firestore.FieldValue.arrayUnion(...news);added+=news.length;}
@@ -101,7 +101,7 @@ function runAboujamra(){
       const news=[];
       if(!Array.isArray(saveData.ownedWeaponCamos[w])) saveData.ownedWeaponCamos[w]=[];
       arr.forEach(c=>{
-        if(c.id==='default'||c.source==='achievement') return;
+        if(c.id==='default'||c.source==='achievement'||c.source==='convoy') return;
         if(!saveData.ownedWeaponCamos[w].includes(c.id)){saveData.ownedWeaponCamos[w].push(c.id);news.push(c.id);}
       });
       if(news.length){upd[`saveData.ownedWeaponCamos.${w}`]=firebase.firestore.FieldValue.arrayUnion(...news);added+=news.length;}
@@ -259,7 +259,7 @@ function setupEvents(){
     if(!isLocked) return;
     if(e.code==='KeyR') startReload();
     if(e.code==='KeyF') fireCyberBullet();
-    if(e.code==='KeyV') fireRajpnFist();
+    if(e.code==='KeyV'){ if(typeof convoyActive!=='undefined'&&convoyActive) cvUseAbility(); else fireRajpnFist(); }
     if(e.code==='KeyG') useFlashbang();
     if(e.code==='KeyT') useAirstrike();
     if(e.code==='KeyB') useCover();
@@ -355,10 +355,20 @@ function gameLoop(t){
   lastT=t;
 
   const _kc=typeof _kcActive!=='undefined'&&_kcActive;
+  const _cv=typeof convoyActive!=='undefined'&&convoyActive;
   if(_kc){
     // Killcam replay drives the camera; world stays frozen
     updateKillcam(dt);
     updateParticles(dt);
+  } else if(_cv&&gameActive&&!gamePaused){
+    if(isLocked) updatePlayer(dt);
+    updateWeapon(dt);
+    updateProjectiles(dt);
+    updateParticles(dt);
+    updateDebris(dt);
+    updateConvoy(dt);
+    updateScreenShake(dt);
+    updateHUD();
   } else if(gameActive&&!gamePaused){
     if(mods.aimbot&&isLocked) applyAimbot();
     if(mods.infAmmo){ammo=WEAPONS[currentWeapon].maxAmmo;weaponAmmo[currentWeapon]=ammo;isReloading=false;}
